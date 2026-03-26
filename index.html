@@ -749,42 +749,70 @@ async function loadOneStudent(username, myRefreshId) {
         const actData = await actRes.json();
         if (myRefreshId && myRefreshId !== refreshId) return;
 
-        if (Array.isArray(actData)) {
+        // DEBUG: konsola ham aktivite verisini yaz (sorun tespiti için)
+        console.log(`[${username}] aktivite API ham veri (ilk 3 giriş):`, JSON.stringify(actData.slice(0,3)));
+
+        if (Array.isArray(actData) && actData.length > 0) {
           const todayKey = todayStr();
+          const yesterday = dateStr(-1);
+
+          if (!actLog[username]) actLog[username] = {};
 
           for (const entry of actData) {
-            // interval.start = "YYYY-MM-DD" formatında geliyor
-            const entryDate = entry.interval?.start;
-            if (!entryDate) continue;
+            // Lichess aktivite API iki format kullanıyor:
+            // Format A: { interval: { start: "YYYY-MM-DD", end: "YYYY-MM-DD" }, puzzles: {...}, games: {...} }
+            // Format B (eski): doğrudan obje, tarih dışarıda
+            // İkisini de dene:
+            let entryDate = entry.interval?.start || entry.date || null;
 
-            // ── Bulmaca sayısı: bugünün verisi ──
-            // Lichess bazen UTC+0 ile yerel saati kayıştırır;
-            // bu yüzden "bugün" ve "dün" tarihlerini ikisini de kontrol et
-            const yesterday = dateStr(-1);
+            // Tarih yoksa atla
+            if (!entryDate) {
+              console.warn(`[${username}] tarihsiz aktivite girişi:`, entry);
+              continue;
+            }
+
+            // Tarih formatını normalize et: bazen timestamp olarak gelir
+            if (typeof entryDate === 'number') {
+              const d = new Date(entryDate);
+              entryDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            }
+
+            // ── Bulmaca: bugün veya dün (timezone farkı için) ──
             if (entryDate === todayKey || entryDate === yesterday) {
+              // Format A: puzzles.score.{ win, loss, draw }
               if (entry.puzzles?.score) {
                 const s = entry.puzzles.score;
-                const cnt = (s.win || 0) + (s.loss || 0) + (s.draw || 0);
-                // Hangisi daha büyükse onu al (bugün ve dün çakışırsa)
-                if (cnt > puzzlesSolved) puzzlesSolved = cnt;
+                const cnt = (s.win||0) + (s.loss||0) + (s.draw||0);
+                if (cnt > puzzlesSolved) {
+                  puzzlesSolved = cnt;
+                  console.log(`[${username}] bulmaca bulundu (score): ${cnt} (${entryDate})`);
+                }
+              }
+              // Format B: puzzles.{ win, loss, draw } doğrudan
+              else if (entry.puzzles && typeof entry.puzzles === 'object') {
+                const p = entry.puzzles;
+                const cnt = (p.win||0) + (p.loss||0) + (p.draw||0);
+                if (cnt > puzzlesSolved) {
+                  puzzlesSolved = cnt;
+                  console.log(`[${username}] bulmaca bulundu (direkt): ${cnt} (${entryDate})`);
+                }
               }
             }
 
-            // ── Geçmiş hafta aktivite loguna işle (ilk kez açıldığında tarihi doldur) ──
-            // Son 7 günün maç ve bulmaca verilerini actLog'a yaz
-            // Daha önce yazılmışsa ve daha büyükse üzerine yaz
+            // ── Geçmiş 14 gün: actLog'a işle ──
             const dayDiff = daysBetween(todayKey, entryDate);
-            if (dayDiff >= 0 && dayDiff <= 7) {
-              if (!actLog[username]) actLog[username] = {};
+            if (dayDiff >= 0 && dayDiff <= 14) {
               const prev = actLog[username][entryDate] || { games: 0, puzzles: 0 };
 
-              // Maç sayısı: games objesi varsa topla
+              // Maç sayısı: games altında format bazlı topla
               let entryGames = prev.games;
-              if (entry.games) {
-                const gTotal = Object.values(entry.games).reduce((sum, v) => {
-                  // Her format: { win, loss, draw, rp? }
-                  return sum + (v.win||0) + (v.loss||0) + (v.draw||0);
-                }, 0);
+              if (entry.games && typeof entry.games === 'object') {
+                let gTotal = 0;
+                for (const fmt of Object.values(entry.games)) {
+                  if (fmt && typeof fmt === 'object') {
+                    gTotal += (fmt.win||0) + (fmt.loss||0) + (fmt.draw||0);
+                  }
+                }
                 if (gTotal > entryGames) entryGames = gTotal;
               }
 
@@ -794,13 +822,22 @@ async function loadOneStudent(username, myRefreshId) {
                 const s = entry.puzzles.score;
                 const cnt = (s.win||0) + (s.loss||0) + (s.draw||0);
                 if (cnt > entryPuzzles) entryPuzzles = cnt;
+              } else if (entry.puzzles && typeof entry.puzzles === 'object') {
+                const p = entry.puzzles;
+                const cnt = (p.win||0) + (p.loss||0) + (p.draw||0);
+                if (cnt > entryPuzzles) entryPuzzles = cnt;
               }
 
               actLog[username][entryDate] = { games: entryGames, puzzles: entryPuzzles };
             }
           }
           saveActLog();
+          console.log(`[${username}] actLog güncellendi. Bugün bulmaca: ${puzzlesSolved}`);
+        } else {
+          console.log(`[${username}] aktivite verisi boş veya dizi değil:`, typeof actData);
         }
+      } else {
+        console.warn(`[${username}] aktivite API hata kodu: ${actRes.status}`);
       }
     } catch (e) {
       console.warn(`[${username}] aktivite yüklenemedi:`, e.message);
@@ -840,8 +877,15 @@ function dateStr(offset) {
 function todayStr() { return dateStr(0); }
 
 // a - b kaç gün fark (a >= b ise pozitif)
+// "YYYY-MM-DD" stringleri timezone sorununa girmeden karşılaştır
 function daysBetween(a, b) {
-  return Math.round((new Date(a) - new Date(b)) / 86400000);
+  // new Date("YYYY-MM-DD") UTC gece yarısı alır, timezone'a göre kayar
+  // Bu yüzden parçalara ayırarak hesapla
+  const [ay, am, ad] = a.split('-').map(Number);
+  const [by, bm, bd] = b.split('-').map(Number);
+  const da = new Date(ay, am-1, ad);
+  const db = new Date(by, bm-1, bd);
+  return Math.round((da - db) / 86400000);
 }
 
 function logActivity(username, games, puzzles) {
@@ -945,7 +989,9 @@ function scoreFor(username) {
 function passes(username) {
   if (curFilters.size === 0) return true;
   const d = liveData[username];
-  if (!d || d.error) return curFilters.has('inactive');
+  // Filtre aktifken veri henüz yüklenmemişse göster (skeleton olarak)
+  if (!d) return true;
+  if (d.error) return curFilters.has('inactive');
   const total   = (d.wins||0) + (d.losses||0) + (d.draws||0);
   if (curFilters.has('active')   && total >= crit.minDailyGames) return true;
   if (curFilters.has('inactive') && total < crit.minDailyGames)  return true;
@@ -973,6 +1019,8 @@ function renderGrid() {
   const grid     = document.getElementById('cardsGrid');
   const students = loadStudentList();
 
+  console.log(`[renderGrid] toplam öğrenci: ${students.length}, liveData keys: ${Object.keys(liveData).length}`);
+
   if (students.length === 0) {
     grid.innerHTML = `<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>`;
     document.getElementById('lb').style.display = 'none';
@@ -983,13 +1031,30 @@ function renderGrid() {
   const rankMap  = Object.fromEntries(sorted.map((u,i) => [u, i+1]));
   const filtered = sorted.filter(passes);
 
+  console.log(`[renderGrid] sıralı: ${sorted.length}, filtrelenmiş: ${filtered.length}`);
+
   if (filtered.length === 0) {
     grid.innerHTML = `<div class="empty"><div class="ei">🔍</div><h3>Filtre eşleşmedi</h3><p>Bu kriterleri karşılayan öğrenci yok.</p></div>`;
   } else {
-    grid.innerHTML = filtered.map(u => {
+    // innerHTML birleştirmesi yerine güvenli fragment kullan
+    const fragment = document.createDocumentFragment();
+    for (const u of filtered) {
       const d = liveData[u];
-      return d ? buildCard(u, d, rankMap[u]) : skeletonCard(u);
-    }).join('');
+      const html = d ? buildCard(u, d, rankMap[u]) : skeletonCard(u);
+      const tmp = document.createElement('div');
+      try {
+        tmp.innerHTML = html;
+        if (tmp.firstElementChild) {
+          fragment.appendChild(tmp.firstElementChild);
+        } else {
+          console.warn(`[renderGrid] ${u} için kart oluşturulamadı`);
+        }
+      } catch(e) {
+        console.error(`[renderGrid] ${u} kart hatası:`, e);
+      }
+    }
+    grid.innerHTML = '';
+    grid.appendChild(fragment);
   }
 
   renderLB(sorted);
