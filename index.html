@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lichess Koç Paneli</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0f14; --surface:#13161e; --surface2:#1a1e2a; --border:#252a38;
+  --accent:#c8a84b; --accent2:#e8c86e; --text:#e8e4d8; --text-muted:#7a7a8a;
+  --win:#4caf7d; --loss:#e05a5a; --draw:#7a8aaa; --puzzle:#9b7fe8;
+  --glow:rgba(200,168,75,.15);
+  --gold:#f5c842; --silver:#b0bec5; --bronze:#cd7f32; --fire:#ff7043;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,168,75,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,168,75,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px 80px}
+
+/* ── GRUP SEKME ÇUBUĞU ── */
+.group-bar{
+  display:flex;align-items:stretch;gap:0;
+  border-bottom:1px solid var(--border);margin-bottom:0;
+  padding-top:28px;overflow-x:auto;
+  scrollbar-width:none;
+}
+.group-bar::-webkit-scrollbar{display:none}
+.group-tab{
+  display:flex;align-items:center;gap:7px;
+  padding:10px 18px;border:1px solid transparent;border-bottom:none;
+  border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;
+  color:var(--text-muted);background:transparent;white-space:nowrap;
+  transition:all .15s;position:relative;top:1px;
+}
+.group-tab:hover{color:var(--text);border-color:var(--border);background:var(--surface)}
+.group-tab.active{color:var(--accent2);border-color:var(--border);background:var(--surface);border-bottom-color:var(--surface)}
+.group-tab .tab-count{
+  font-size:10px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:1px 6px;color:var(--text-muted);
+}
+.group-tab.active .tab-count{background:rgba(200,168,75,.12);border-color:rgba(200,168,75,.25);color:var(--accent)}
+.new-group-btn{
+  display:flex;align-items:center;gap:5px;padding:8px 14px;
+  border:1px dashed var(--border);border-bottom:none;border-radius:8px 8px 0 0;
+  cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);
+  background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px;
+}
+.new-group-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+/* ── HEADER ── */
+header{
+  padding:20px 0 20px;border-bottom:1px solid var(--border);margin-bottom:22px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  background:var(--surface);margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;
+}
+.logo-area{display:flex;align-items:center;gap:12px}
+.chess-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 18px var(--glow)}
+.header-title-wrap h1{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--accent2);letter-spacing:-.5px;line-height:1.1}
+.header-title-wrap h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.group-name-display{
+  font-size:13px;font-weight:600;color:var(--text);
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:5px 12px;cursor:pointer;transition:border-color .2s;
+}
+.group-name-display:hover{border-color:var(--accent);color:var(--accent)}
+.icon-btn{
+  background:transparent;border:1px solid var(--border);color:var(--text-muted);
+  padding:6px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;
+  display:flex;align-items:center;gap:5px;transition:all .2s;
+}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.icon-btn.spinning svg{animation:spin 1s linear infinite}
+.icon-btn.danger:hover{border-color:var(--loss);color:var(--loss)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.last-update{font-size:11px;color:var(--text-muted)}
+
+/* ── EKLE SATIRI ── */
+.add-row{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px 18px;margin-bottom:18px;
+}
+.add-row label{font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+.add-row input{
+  flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);color:var(--text);
+  padding:8px 12px;border-radius:7px;font-family:inherit;font-size:13px;outline:none;transition:border-color .2s;
+}
+.add-row input:focus{border-color:var(--accent)}
+.add-row input::placeholder{color:var(--text-muted)}
+.add-btn{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;
+  padding:8px 16px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;
+  font-size:12px;transition:opacity .2s,transform .1s;white-space:nowrap;
+}
+.add-btn:hover{opacity:.9}.add-btn:active{transform:scale(.97)}
+.err{width:100%;color:var(--loss);font-size:11px;padding-top:2px}
+
+/* ── KRİTER PANELİ ── */
+.criteria-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:18px;overflow:hidden}
+.criteria-toggle{width:100%;background:none;border:none;color:var(--text-muted);padding:12px 18px;text-align:left;cursor:pointer;font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;transition:color .2s}
+.criteria-toggle:hover{color:var(--accent)}
+.criteria-body{padding:0 18px 14px;display:none}
+.criteria-body.open{display:block}
+.criteria-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-top:4px}
+.crit-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:9px}
+.crit-desc{flex:1}
+.crit-name{font-size:11px;font-weight:600;color:var(--text);margin-bottom:1px}
+.crit-rule{font-size:9px;color:var(--text-muted);line-height:1.5}
+.crit-input{width:50px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px 7px;border-radius:5px;font-family:inherit;font-size:12px;text-align:center;outline:none}
+.crit-input:focus{border-color:var(--accent)}
+.pip-legend{display:flex;gap:10px;align-items:center;font-size:10px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap}
+.pip-li{display:flex;align-items:center;gap:4px}
+.pip-dot{width:8px;height:8px;border-radius:2px}
+
+/* ── ÖZET BAR ── */
+.summary-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:18px}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:12px 14px;position:relative;overflow:hidden}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sum-card.s-total::before{background:var(--accent)}
+.sum-card.s-win::before{background:var(--win)}
+.sum-card.s-loss::before{background:var(--loss)}
+.sum-card.s-draw::before{background:var(--draw)}
+.sum-card.s-puzzle::before{background:var(--puzzle)}
+.sum-card.s-streak::before{background:var(--fire)}
+.sum-label{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+.sum-val{font-size:24px;font-weight:600;font-family:'Playfair Display',serif}
+.sum-card.s-total .sum-val{color:var(--accent2)}
+.sum-card.s-win   .sum-val{color:var(--win)}
+.sum-card.s-loss  .sum-val{color:var(--loss)}
+.sum-card.s-draw  .sum-val{color:var(--draw)}
+.sum-card.s-puzzle.sum-val{color:var(--puzzle)}
+.sum-card.s-streak .sum-val{color:var(--fire)}
+
+/* ── LIDERBOARD ── */
+.lb{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:18px}
+.lb-title{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.lb-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.lb-rows{display:flex;flex-direction:column;gap:4px}
+.lb-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:var(--bg);border:1px solid var(--border);transition:border-color .2s}
+.lb-row:hover{border-color:rgba(200,168,75,.3)}
+.lb-row.r1{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.03)}
+.lb-row.r2{border-color:rgba(176,190,197,.3)}
+.lb-row.r3{border-color:rgba(205,127,50,.3)}
+.lb-rank{width:24px;text-align:center;font-size:14px;font-weight:700;font-family:'Playfair Display',serif}
+.lb-row.r1 .lb-rank{color:var(--gold)}
+.lb-row.r2 .lb-rank{color:var(--silver)}
+.lb-row.r3 .lb-rank{color:var(--bronze)}
+.lb-name{flex:1;font-size:12px;font-weight:600}
+.lb-name a{color:var(--text);text-decoration:none}
+.lb-name a:hover{color:var(--accent)}
+.lb-badges{display:flex;gap:3px;flex-wrap:wrap}
+.lb-stat{font-size:11px;color:var(--text-muted);background:var(--surface2);border-radius:4px;padding:2px 7px;white-space:nowrap}
+.lb-stat .v{color:var(--text);font-weight:600}
+
+/* ── KONTROLLER ── */
+.controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.ctrl-label{font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
+.ctrl-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:5px 11px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;transition:all .2s}
+.ctrl-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.07)}
+.ctrl-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ctrl-div{width:1px;height:20px;background:var(--border)}
+
+/* ── ROZET ── */
+.badge{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:600;letter-spacing:.3px;white-space:nowrap;line-height:1.6;cursor:default}
+.badge.b-active {background:rgba(76,175,125,.15); color:var(--win);    border:1px solid rgba(76,175,125,.3)}
+.badge.b-gold   {background:rgba(245,200,66,.18);  color:var(--gold);   border:1px solid rgba(245,200,66,.3)}
+.badge.b-streak {background:rgba(255,112,67,.15);  color:var(--fire);   border:1px solid rgba(255,112,67,.3)}
+.badge.b-puzzle {background:rgba(155,127,232,.15); color:var(--puzzle); border:1px solid rgba(155,127,232,.3)}
+.badge.b-pstreak{background:rgba(155,127,232,.12); color:var(--puzzle); border:1px solid rgba(155,127,232,.25)}
+.badge.b-warn   {background:rgba(224,90,90,.12);   color:var(--loss);   border:1px solid rgba(224,90,90,.25)}
+.badge.b-info   {background:rgba(200,168,75,.12);  color:var(--accent); border:1px solid rgba(200,168,75,.25)}
+
+/* ── KART IZGARA ── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+
+/* ── ÖĞRENCİ KARTI ── */
+.s-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;animation:fadeUp .35s ease;position:relative;transition:border-color .2s}
+.s-card:hover{border-color:rgba(200,168,75,.22)}
+.s-card.t1{border-color:rgba(245,200,66,.45);box-shadow:0 0 16px rgba(245,200,66,.06)}
+.s-card.t2{border-color:rgba(176,190,197,.35)}
+.s-card.t3{border-color:rgba(205,127,50,.35)}
+.s-card.faded{opacity:.6}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.card-head{padding:12px 14px 10px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:7px}
+.s-info{display:flex;align-items:center;gap:9px}
+.avatar{width:34px;height:34px;background:linear-gradient(135deg,var(--surface),var(--border));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);border:1px solid var(--border);flex-shrink:0;position:relative}
+.rank-crown{position:absolute;top:-7px;right:-5px;font-size:11px;line-height:1}
+.s-name{font-size:13px;font-weight:600;color:var(--text);text-decoration:none}
+.s-name:hover{color:var(--accent2)}
+.s-sub{font-size:9px;color:var(--text-muted);margin-top:1px}
+.card-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.s-dot{width:7px;height:7px;border-radius:50%;background:var(--border)}
+.s-dot.on{background:var(--win);box-shadow:0 0 5px var(--win)}
+.rm-btn{background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:3px 4px;border-radius:3px;font-size:12px;transition:color .2s}
+.rm-btn:hover{color:var(--loss)}
+.day-tag{display:inline-flex;align-items:center;gap:3px;background:rgba(200,168,75,.09);border:1px solid rgba(200,168,75,.18);color:var(--accent);border-radius:3px;padding:1px 5px;font-size:9px;margin-top:2px}
+.card-badges{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px}
+.heat-row{display:flex;gap:2px;align-items:center}
+.pip{width:9px;height:9px;border-radius:2px;background:var(--border)}
+.pip.pg{background:var(--win)}.pip.pp{background:var(--puzzle)}.pip.pb{background:var(--accent)}
+.pip.today{outline:2px solid rgba(255,255,255,.28);outline-offset:1px}
+.heat-lbl{font-size:9px;color:var(--text-muted);margin-left:5px}
+
+/* ── RATİNG SATIRI ── */
+.ratings-row{display:flex;border-bottom:1px solid var(--border)}
+.r-item{flex:1;padding:7px 5px;text-align:center;border-right:1px solid var(--border)}
+.r-item:last-child{border-right:none}
+.r-type{font-size:8px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.r-val{font-size:14px;font-weight:600;color:var(--text)}
+.r-chg{font-size:9px;margin-top:1px}
+.r-chg.up{color:var(--win)}.r-chg.dn{color:var(--loss)}.r-chg.eq{color:var(--text-muted)}
+
+/* ── İSTATİSTİK ── */
+.stats{padding:11px 14px}
+.s-title{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:5px}
+.s-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.wld-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:7px}
+.wld-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 5px;text-align:center}
+.wld-lbl{font-size:8px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.wld-box.wb .wld-lbl{color:var(--win)}.wld-box.lb2 .wld-lbl{color:var(--loss)}.wld-box.db .wld-lbl{color:var(--draw)}
+.wld-val{font-size:19px;font-family:'Playfair Display',serif;font-weight:700}
+.wld-box.wb .wld-val{color:var(--win)}.wld-box.lb2 .wld-val{color:var(--loss)}.wld-box.db .wld-val{color:var(--draw)}
+.wr-wrap{margin-bottom:7px}
+.wr-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-bottom:2px}
+.wr-bar{height:5px;background:var(--bg);border-radius:10px;overflow:hidden;display:flex}
+.bw{background:var(--win);border-radius:10px 0 0 10px}.bd{background:var(--draw)}.bl{background:var(--loss);border-radius:0 10px 10px 0}
+.puz-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;margin-bottom:7px}
+.puz-left{display:flex;align-items:center;gap:6px}
+.puz-lbl{font-size:9px;color:var(--text-muted)}
+.puz-cnt{font-size:17px;font-family:'Playfair Display',serif;font-weight:700;color:var(--puzzle)}
+.puz-rat{font-size:10px;color:var(--text-muted);text-align:right}
+.puz-rat span{display:block;font-size:13px;font-weight:600;color:var(--puzzle)}
+.recent{margin-top:2px}
+.g-row{display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid rgba(37,42,56,.5);font-size:10px}
+.g-row:last-child{border-bottom:none}
+.g-res{width:17px;height:17px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
+.g-res.W{background:rgba(76,175,125,.2);color:var(--win)}.g-res.L{background:rgba(224,90,90,.2);color:var(--loss)}.g-res.D{background:rgba(122,138,170,.2);color:var(--draw)}
+.g-opp{color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-spd{color:var(--text-muted);font-size:9px}.g-t{color:var(--text-muted);font-size:9px;white-space:nowrap}
+
+/* ── YÜKLEME ── */
+.skel{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shim 1.5s infinite;border-radius:4px}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.load-ov{position:absolute;inset:0;background:rgba(13,15,20,.65);display:flex;align-items:center;justify-content:center;border-radius:11px;z-index:10}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+
+/* ── BOŞ DURUM ── */
+.empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty .ei{font-size:48px;margin-bottom:16px;opacity:.25}
+.empty h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--text);margin-bottom:5px}
+.empty p{font-size:12px;line-height:1.7}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:320px;max-width:420px;width:90%}
+.modal h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--accent2);margin-bottom:16px}
+.modal label{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px}
+.modal input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-family:inherit;font-size:14px;outline:none;transition:border-color .2s;margin-bottom:12px}
+.modal input:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.modal-cancel{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:8px 16px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;transition:all .2s}
+.modal-cancel:hover{border-color:var(--loss);color:var(--loss)}
+.modal-ok{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;padding:8px 18px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:13px;transition:opacity .2s}
+.modal-ok:hover{opacity:.9}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--text);padding:10px 15px;border-radius:8px;font-size:12px;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:280px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-left-color:var(--loss)}
+
+/* ── LOADING STATE ── */
+.load-status{font-size:11px;color:var(--text-muted);padding:8px 0;text-align:center;display:none}
+.load-status.show{display:block}
+
+@media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:18px}.controls{gap:5px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- SEKME ÇUBUĞU -->
+  <div class="group-bar" id="groupBar"></div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-area">
+      <div class="chess-icon">♞</div>
+      <div class="header-title-wrap">
+        <h1>Koç Paneli <span>Lichess · Satranç</span></h1>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="group-name-display" id="groupNameDisplay" onclick="openRenameModal()" title="Grubu yeniden adlandır">—</span>
+      <span class="last-update" id="lastUpdate">—</span>
+      <button class="icon-btn" id="refreshBtn" onclick="refreshAll()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M1 4v6h6M23 20v-6h-6"/>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+        </svg>
+        Yenile
+      </button>
+      <button class="icon-btn danger" onclick="confirmDeleteGroup()" title="Grubu sil">🗑 Grubu Sil</button>
+    </div>
+  </header>
+
+  <!-- ÖĞRENCİ EKLE -->
+  <div class="add-row">
+    <label>Öğrenci Ekle →</label>
+    <input type="text" id="addInput" placeholder="Lichess kullanıcı adı..."
+           onkeydown="if(event.key==='Enter') addStudent()">
+    <button class="add-btn" onclick="addStudent()">+ Ekle</button>
+    <div class="err" id="addErr"></div>
+  </div>
+
+  <!-- KRİTER PANELİ -->
+  <div class="criteria-panel">
+    <button class="criteria-toggle" onclick="toggleCrit()">
+      🏅 Rozet Kriterleri &amp; Ayarlar <span id="critArrow">▼</span>
+    </button>
+    <div class="criteria-body" id="critBody">
+      <div class="criteria-grid" id="critGrid"></div>
+      <div class="pip-legend">
+        <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Isı haritası:</span>
+        <div class="pip-li"><div class="pip-dot" style="background:var(--win)"></div>Maç</div>
+        <div class="pip-li"><div class="pip-dot" style="background:var(--puzzle)"></div>Bulmaca</div>
+        <div class="pip-li"><div class="pip-dot" style="background:var(--accent)"></div>İkisi birden</div>
+        <div class="pip-li"><div class="pip-dot" style="background:var(--border)"></div>Boş gün</div>
+        <span style="color:var(--text-muted)">↑ Sol = eski, sağ = bugün (14 gün)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÖZET -->
+  <div class="summary-bar">
+    <div class="sum-card s-total"><div class="sum-label">Toplam Maç</div><div class="sum-val" id="sTotal">—</div></div>
+    <div class="sum-card s-win">  <div class="sum-label">Kazanma</div>   <div class="sum-val" id="sWin">—</div></div>
+    <div class="sum-card s-loss"> <div class="sum-label">Kaybetme</div>  <div class="sum-val" id="sLoss">—</div></div>
+    <div class="sum-card s-draw"> <div class="sum-label">Beraberlik</div><div class="sum-val" id="sDraw">—</div></div>
+    <div class="sum-card s-puzzle"><div class="sum-label">Bulmaca</div>  <div class="sum-val" id="sPuzzle">—</div></div>
+    <div class="sum-card s-streak"><div class="sum-label">Aktif Seri</div><div class="sum-val" id="sStreak">—</div></div>
+  </div>
+
+  <!-- LİDERBOARD -->
+  <div class="lb" id="lb" style="display:none">
+    <div class="lb-title">🏆 Sıralama Tablosu</div>
+    <div class="lb-rows" id="lbRows"></div>
+  </div>
+
+  <!-- KONTROLLER -->
+  <div class="controls">
+    <span class="ctrl-label">Sırala:</span>
+    <button class="ctrl-btn active" data-sort="games"   onclick="setSort('games')">⚔ Maç</button>
+    <button class="ctrl-btn"        data-sort="winrate" onclick="setSort('winrate')">📈 Kazanma%</button>
+    <button class="ctrl-btn"        data-sort="puzzles" onclick="setSort('puzzles')">🧩 Bulmaca</button>
+    <button class="ctrl-btn"        data-sort="streak"  onclick="setSort('streak')">🔥 Seri</button>
+    <button class="ctrl-btn"        data-sort="name"    onclick="setSort('name')">🔤 İsim</button>
+    <div class="ctrl-div"></div>
+    <span class="ctrl-label">Filtre:</span>
+    <button class="ctrl-btn" data-filter="active"   onclick="togFilter('active')">✅ Aktif</button>
+    <button class="ctrl-btn" data-filter="inactive" onclick="togFilter('inactive')">⚠ Pasif</button>
+    <button class="ctrl-btn" data-filter="streak"   onclick="togFilter('streak')">🔥 Serili</button>
+    <button class="ctrl-btn" data-filter="puzzle"   onclick="togFilter('puzzle')">🧩 Bulmacalı</button>
+  </div>
+
+  <!-- YÜKLENİYOR DURUMU -->
+  <div class="load-status" id="loadStatus"></div>
+
+  <!-- KARTLAR -->
+  <div class="cards-grid" id="cardsGrid">
+    <div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>
+  </div>
+
+</div>
+
+<!-- MODALLER -->
+<div class="modal-bg" id="modalNewGroup" style="display:none" onclick="if(event.target===this)closeModal('modalNewGroup')">
+  <div class="modal">
+    <h3>Yeni Grup Oluştur</h3>
+    <label>Grup Adı</label>
+    <input type="text" id="newGroupName" placeholder="Örn: A Grubu, İleri Seviye..." maxlength="30"
+           onkeydown="if(event.key==='Enter')createGroup()">
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('modalNewGroup')">İptal</button>
+      <button class="modal-ok" onclick="createGroup()">Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalRename" style="display:none" onclick="if(event.target===this)closeModal('modalRename')">
+  <div class="modal">
+    <h3>Grubu Yeniden Adlandır</h3>
+    <label>Yeni Ad</label>
+    <input type="text" id="renameInput" placeholder="Grup adı..." maxlength="30"
+           onkeydown="if(event.key==='Enter')renameGroup()">
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('modalRename')">İptal</button>
+      <button class="modal-ok" onclick="renameGroup()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  VERİ MODELİ
+//
+//  localStorage:
+//    chess_groups      = [ { id, name }, … ]       — grup listesi
+//    chess_active_group = "id"                      — aktif grup id'si
+//    chess_students_<id> = ["user1","user2",…]      — her grubun üyeleri
+//    chess_activity    = { user: { "YYYY-MM-DD": { games, puzzles } } }
+//    chess_criteria    = { minDailyGames, … }
+// ═══════════════════════════════════════════════════════
+
+// ── Gruplar ──
+let groups      = JSON.parse(localStorage.getItem('chess_groups')       || 'null');
+let activeGid   = localStorage.getItem('chess_active_group')             || null;
+
+// İlk açılışta varsayılan grup oluştur
+if (!groups || groups.length === 0) {
+  const defId = uid();
+  groups = [{ id: defId, name: 'A Grubu' }];
+  saveGroups();
+  activeGid = defId;
+  saveActiveGid();
+}
+if (!activeGid || !groups.find(g => g.id === activeGid)) {
+  activeGid = groups[0].id;
+  saveActiveGid();
+}
+
+function saveGroups()    { localStorage.setItem('chess_groups', JSON.stringify(groups)); }
+function saveActiveGid() { localStorage.setItem('chess_active_group', activeGid); }
+function uid()           { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ── Aktif gruptaki öğrenciler ──
+function loadStudentList() {
+  return JSON.parse(localStorage.getItem('chess_students_' + activeGid) || '[]');
+}
+function saveStudentList(arr) {
+  localStorage.setItem('chess_students_' + activeGid, JSON.stringify(arr));
+}
+
+// ── Aktivite kaydı (tüm gruplar ortak) ──
+let actLog  = JSON.parse(localStorage.getItem('chess_activity')  || '{}');
+function saveActLog() { localStorage.setItem('chess_activity', JSON.stringify(actLog)); }
+
+// ── Kriterler (tüm gruplar ortak) ──
+let crit = JSON.parse(localStorage.getItem('chess_criteria') || 'null') || {
+  minDailyGames:    3,
+  minWinRate:       50,
+  streakDays:       3,
+  minPuzzleDaily:   5,
+  streakPuzzleDays: 3,
+};
+function saveCrit() { localStorage.setItem('chess_criteria', JSON.stringify(crit)); }
+
+// ── Anlık veri (her yenilemede sıfırlanır) ──
+let liveData = {};   // { username: { wins, losses, draws, puzzlesSolved, ... } }
+
+// ── Sıralama / filtre ──
+let curSort    = 'games';
+let curFilters = new Set();
+
+// ── Yükleme kilidi (race condition önlemek için) ──
+let loadingSet = new Set();   // şu an yüklenen kullanıcılar
+let refreshId  = 0;           // her refresh çağrısına benzersiz id
+
+// ═══════════════════════════════════════════════════════
+//  BAŞLANGIC
+// ═══════════════════════════════════════════════════════
+window.onload = () => {
+  buildCritPanel();
+  renderGroupBar();
+  renderHeader();
+  renderGrid();
+  if (loadStudentList().length > 0) refreshAll();
+};
+
+// ═══════════════════════════════════════════════════════
+//  GRUP YÖNETİMİ
+// ═══════════════════════════════════════════════════════
+function renderGroupBar() {
+  const bar = document.getElementById('groupBar');
+  bar.innerHTML = groups.map(g => {
+    const students = JSON.parse(localStorage.getItem('chess_students_' + g.id) || '[]');
+    const isActive = g.id === activeGid;
+    return `<button class="group-tab ${isActive ? 'active' : ''}" onclick="switchGroup('${g.id}')">
+      ${escHtml(g.name)}
+      <span class="tab-count">${students.length}</span>
+    </button>`;
+  }).join('') +
+  `<button class="new-group-btn" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
+}
+
+function switchGroup(id) {
+  if (id === activeGid) return;
+  // Aktif yüklemeyi iptal et (refreshId ile)
+  refreshId++;
+  loadingSet.clear();
+  liveData = {};
+  activeGid = id;
+  saveActiveGid();
+  curFilters.clear();
+  document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b => b.classList.remove('active'));
+  renderGroupBar();
+  renderHeader();
+  renderGrid();
+  const students = loadStudentList();
+  if (students.length > 0) refreshAll();
+}
+
+function openNewGroupModal() {
+  document.getElementById('newGroupName').value = '';
+  document.getElementById('modalNewGroup').style.display = 'flex';
+  setTimeout(() => document.getElementById('newGroupName').focus(), 50);
+}
+
+function createGroup() {
+  const name = document.getElementById('newGroupName').value.trim();
+  if (!name) return;
+  const g = { id: uid(), name };
+  groups.push(g);
+  saveGroups();
+  closeModal('modalNewGroup');
+  activeGid = g.id;
+  saveActiveGid();
+  liveData = {};
+  renderGroupBar();
+  renderHeader();
+  renderGrid();
+  showToast(`"${name}" grubu oluşturuldu ✓`);
+}
+
+function openRenameModal() {
+  const g = groups.find(x => x.id === activeGid);
+  if (!g) return;
+  document.getElementById('renameInput').value = g.name;
+  document.getElementById('modalRename').style.display = 'flex';
+  setTimeout(() => document.getElementById('renameInput').focus(), 50);
+}
+
+function renameGroup() {
+  const name = document.getElementById('renameInput').value.trim();
+  if (!name) return;
+  const g = groups.find(x => x.id === activeGid);
+  if (!g) return;
+  g.name = name;
+  saveGroups();
+  closeModal('modalRename');
+  renderGroupBar();
+  renderHeader();
+  showToast(`Grup adı "${name}" olarak değiştirildi ✓`);
+}
+
+function confirmDeleteGroup() {
+  if (groups.length <= 1) { showToast('Son grubu silemezsiniz!', true); return; }
+  const g = groups.find(x => x.id === activeGid);
+  if (!confirm(`"${g?.name}" grubunu ve içindeki öğrenci listesini silmek istiyor musunuz?`)) return;
+  localStorage.removeItem('chess_students_' + activeGid);
+  groups = groups.filter(x => x.id !== activeGid);
+  saveGroups();
+  activeGid = groups[0].id;
+  saveActiveGid();
+  liveData = {};
+  renderGroupBar();
+  renderHeader();
+  renderGrid();
+  showToast('Grup silindi', true);
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function renderHeader() {
+  const g = groups.find(x => x.id === activeGid);
+  document.getElementById('groupNameDisplay').textContent = g ? g.name : '—';
+  document.title = (g ? g.name + ' — ' : '') + 'Lichess Koç Paneli';
+}
+
+// ═══════════════════════════════════════════════════════
+//  ÖĞRENCİ EKLE / ÇIKAR
+// ═══════════════════════════════════════════════════════
+async function addStudent() {
+  const inp  = document.getElementById('addInput');
+  const errEl = document.getElementById('addErr');
+  const raw  = inp.value.trim();
+  const user = raw.toLowerCase();
+  errEl.textContent = '';
+  if (!user) return;
+
+  const students = loadStudentList();
+  if (students.includes(user)) { errEl.textContent = '⚠ Bu kullanıcı zaten listede.'; return; }
+
+  inp.disabled = true;
+  try {
+    const res = await fetchWithTimeout(`https://lichess.org/api/user/${user}`, {}, 8000);
+    if (!res.ok) { errEl.textContent = '✗ Kullanıcı bulunamadı.'; return; }
+    const data = await res.json();
+    students.push(user);
+    saveStudentList(students);
+    inp.value = '';
+    renderGroupBar(); // sayacı güncelle
+    renderGrid();
+    loadOneStudent(user);
+    showToast(`${data.username} eklendi ✓`);
+  } catch (e) {
+    errEl.textContent = e.name === 'AbortError' ? '✗ Bağlantı zaman aşımı.' : '✗ Bağlantı hatası.';
+  } finally {
+    inp.disabled = false;
+    inp.focus();
+  }
+}
+
+function removeStudent(username) {
+  const students = loadStudentList();
+  const updated  = students.filter(s => s !== username);
+  saveStudentList(updated);
+  delete liveData[username];
+  renderGroupBar();
+  renderGrid();
+  updateSummary();
+  showToast(`${username} listeden çıkarıldı`, true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  VERİ YÜKLEME  (race-condition güvenli)
+// ═══════════════════════════════════════════════════════
+
+// Tüm grubu sırayla yenile
+async function refreshAll() {
+  const myRefreshId = ++refreshId;   // bu çalışmaya özgü id
+  const students = loadStudentList();
+  if (students.length === 0) return;
+
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  setLoadStatus(`0 / ${students.length} yükleniyor…`);
+
+  // Önce mevcut liveData'yı temizle, skeleton göster
+  liveData = {};
+  renderGrid();
+
+  let done = 0;
+  // Sırayla yükle (paralel değil) — rate-limit ve tutarsızlık önlenir
+  for (const user of students) {
+    if (myRefreshId !== refreshId) break;  // grup değiştiyse dur
+    await loadOneStudent(user, myRefreshId);
+    done++;
+    if (myRefreshId !== refreshId) break;
+    setLoadStatus(`${done} / ${students.length} yüklendi`);
+    renderGrid();  // her yüklemeden sonra ızgarayı güncelle
+  }
+
+  if (myRefreshId === refreshId) {
+    btn.classList.remove('spinning');
+    setLoadStatus('');
+    document.getElementById('lastUpdate').textContent =
+      'Güncellendi: ' + new Date().toLocaleTimeString('tr-TR');
+    updateSummary();
+    renderGrid();
+  }
+}
+
+// Tek bir kullanıcıyı yükle
+async function loadOneStudent(username, myRefreshId) {
+  try {
+    // ── 1. Kullanıcı profili ──
+    const userRes = await fetchWithTimeout(`https://lichess.org/api/user/${username}`, {}, 10000);
+    if (!userRes.ok) throw new Error('user_not_found');
+    const user = await userRes.json();
+
+    if (myRefreshId && myRefreshId !== refreshId) return;
+
+    // ── Online durumu: seenAt son 5 dakika içindeyse çevrimiçi say ──
+    // (user.online bazen eksik geliyor, seenAt daha güvenilir)
+    let isOnline = false;
+    if (user.online === true) {
+      isOnline = true;
+    } else if (user.seenAt) {
+      isOnline = (Date.now() - user.seenAt) < 5 * 60 * 1000;
+    }
+
+    // ── 2. Bugünkü oyunlar ──
+    // Lichess UTC'de çalışır; yerel gün başını UTC'ye çevir
+    const now   = new Date();
+    const since = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const gamesRes = await fetchWithTimeout(
+      `https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false`,
+      { headers: { Accept: 'application/x-ndjson' } },
+      15000
+    );
+
+    if (myRefreshId && myRefreshId !== refreshId) return;
+
+    const gamesText = await gamesRes.text();
+    const games = gamesText.trim().split('\n')
+      .filter(l => l.trim())
+      .map(l => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean);
+
+    let wins = 0, losses = 0, draws = 0;
+    const recent = [];
+
+    for (const g of games) {
+      const whiteUser = (g.players?.white?.user?.name || '').toLowerCase();
+      const color  = whiteUser === username ? 'white' : 'black';
+      const winner = g.winner;
+
+      let result;
+      if (!winner) {
+        if (g.status === 'aborted' || g.status === 'noStart') continue;
+        draws++; result = 'draw';
+      } else if (winner === color) {
+        wins++; result = 'win';
+      } else {
+        losses++; result = 'loss';
+      }
+
+      const opp = color === 'white'
+        ? (g.players?.black?.user?.name  || 'Anonim')
+        : (g.players?.white?.user?.name || 'Anonim');
+      const ts = g.lastMoveAt || g.createdAt;
+      recent.push({ result, opponent: opp, speed: g.speed || '', time: ts ? fmtTime(new Date(ts)) : '' });
+    }
+
+    if (myRefreshId && myRefreshId !== refreshId) return;
+
+    // ── 3. Ratingler ──
+    const ratings = {};
+    const perf = user.perfs || {};
+    for (const k of ['bullet','blitz','rapid','classical']) {
+      if (perf[k] && perf[k].games > 0) {
+        ratings[k] = { int: perf[k].rating, prog: perf[k].prog || 0 };
+      }
+    }
+
+    // ── 4. Aktivite API — bulmaca + geçmiş hafta ──
+    let puzzlesSolved = 0;
+    let puzzleRating  = perf.puzzle ? perf.puzzle.rating : null;
+
+    try {
+      const actRes = await fetchWithTimeout(`https://lichess.org/api/user/${username}/activity`, {}, 12000);
+      if (actRes.ok) {
+        const actData = await actRes.json();
+        if (myRefreshId && myRefreshId !== refreshId) return;
+
+        if (Array.isArray(actData)) {
+          const todayKey = todayStr();
+
+          for (const entry of actData) {
+            // interval.start = "YYYY-MM-DD" formatında geliyor
+            const entryDate = entry.interval?.start;
+            if (!entryDate) continue;
+
+            // ── Bulmaca sayısı: bugünün verisi ──
+            // Lichess bazen UTC+0 ile yerel saati kayıştırır;
+            // bu yüzden "bugün" ve "dün" tarihlerini ikisini de kontrol et
+            const yesterday = dateStr(-1);
+            if (entryDate === todayKey || entryDate === yesterday) {
+              if (entry.puzzles?.score) {
+                const s = entry.puzzles.score;
+                const cnt = (s.win || 0) + (s.loss || 0) + (s.draw || 0);
+                // Hangisi daha büyükse onu al (bugün ve dün çakışırsa)
+                if (cnt > puzzlesSolved) puzzlesSolved = cnt;
+              }
+            }
+
+            // ── Geçmiş hafta aktivite loguna işle (ilk kez açıldığında tarihi doldur) ──
+            // Son 7 günün maç ve bulmaca verilerini actLog'a yaz
+            // Daha önce yazılmışsa ve daha büyükse üzerine yaz
+            const dayDiff = daysBetween(todayKey, entryDate);
+            if (dayDiff >= 0 && dayDiff <= 7) {
+              if (!actLog[username]) actLog[username] = {};
+              const prev = actLog[username][entryDate] || { games: 0, puzzles: 0 };
+
+              // Maç sayısı: games objesi varsa topla
+              let entryGames = prev.games;
+              if (entry.games) {
+                const gTotal = Object.values(entry.games).reduce((sum, v) => {
+                  // Her format: { win, loss, draw, rp? }
+                  return sum + (v.win||0) + (v.loss||0) + (v.draw||0);
+                }, 0);
+                if (gTotal > entryGames) entryGames = gTotal;
+              }
+
+              // Bulmaca sayısı
+              let entryPuzzles = prev.puzzles;
+              if (entry.puzzles?.score) {
+                const s = entry.puzzles.score;
+                const cnt = (s.win||0) + (s.loss||0) + (s.draw||0);
+                if (cnt > entryPuzzles) entryPuzzles = cnt;
+              }
+
+              actLog[username][entryDate] = { games: entryGames, puzzles: entryPuzzles };
+            }
+          }
+          saveActLog();
+        }
+      }
+    } catch (e) {
+      console.warn(`[${username}] aktivite yüklenemedi:`, e.message);
+    }
+
+    // ── 5. Kaydet ──
+    if (myRefreshId && myRefreshId !== refreshId) return;
+
+    liveData[username] = {
+      displayName: user.username,
+      title:       user.title || '',
+      online:      isOnline,
+      ratings,
+      wins, losses, draws,
+      puzzlesSolved,
+      puzzleRating,
+      recentGames: recent,
+      loadedAt:    Date.now(),
+    };
+
+    // Bugünkü aktiviteyi de loga işle (maç + bulmaca)
+    logActivity(username, wins + losses + draws, puzzlesSolved);
+
+  } catch (err) {
+    console.warn(`[${username}] yüklenemedi:`, err.message);
+    liveData[username] = { error: true, displayName: username };
+  }
+}
+
+// ── Aktivite logu ──
+// offset=0 bugün, offset=-1 dün, ...
+function dateStr(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + (offset || 0));
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function todayStr() { return dateStr(0); }
+
+// a - b kaç gün fark (a >= b ise pozitif)
+function daysBetween(a, b) {
+  return Math.round((new Date(a) - new Date(b)) / 86400000);
+}
+
+function logActivity(username, games, puzzles) {
+  if (!actLog[username]) actLog[username] = {};
+  const key = todayStr();
+  // Sadece büyük değerle güncelle (aynı gün birden fazla çağrı olursa)
+  const prev = actLog[username][key] || { games: 0, puzzles: 0 };
+  actLog[username][key] = {
+    games:   Math.max(prev.games,   games),
+    puzzles: Math.max(prev.puzzles, puzzles),
+  };
+  // 14 günden eski kayıtları temizle
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
+  for (const d of Object.keys(actLog[username])) {
+    if (new Date(d) < cutoff) delete actLog[username][d];
+  }
+  saveActLog();
+}
+
+function getStreak(username, type = 'games') {
+  const log = actLog[username] || {};
+  const thr = type === 'games' ? crit.minDailyGames : crit.minPuzzleDaily;
+  let streak = 0;
+  for (let i = 0; i < 14; i++) {
+    const key   = dateStr(-i);
+    const entry = log[key];
+    const val   = entry ? (type === 'games' ? entry.games : entry.puzzles) : 0;
+    if (val >= thr) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function get14Days(username) {
+  const log = actLog[username] || {};
+  const out = [];
+  for (let i = 13; i >= 0; i--) {
+    const key = dateStr(-i);
+    out.push({ date: key, ...(log[key] || { games:0, puzzles:0 }) });
+  }
+  return out;
+}
+
+// ── Fetch with timeout ──
+function fetchWithTimeout(url, opts = {}, ms = 10000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
+// ═══════════════════════════════════════════════════════
+//  ROZET MOTORU
+// ═══════════════════════════════════════════════════════
+function getBadges(username, d) {
+  if (!d || d.error) return [];
+  const badges = [];
+  const total   = (d.wins||0) + (d.losses||0) + (d.draws||0);
+  const winRate = total > 0 ? Math.round((d.wins/total)*100) : 0;
+  const puzzles = d.puzzlesSolved || 0;
+  const gStreak = getStreak(username, 'games');
+  const pStreak = getStreak(username, 'puzzles');
+
+  if (total >= crit.minDailyGames)
+    badges.push({ cls:'b-active', icon:'⚡', label:`Aktif`, tip:`Bugün ${total} maç ≥${crit.minDailyGames}` });
+  else if (total > 0)
+    badges.push({ cls:'b-info',   icon:'▷',  label:`${total} maç`, tip:'Bugün maç yaptı' });
+  else
+    badges.push({ cls:'b-warn',   icon:'💤', label:'Pasif', tip:'Bugün maç yok' });
+
+  if (total >= 3 && winRate >= crit.minWinRate)
+    badges.push({ cls:'b-gold',    icon:'🏆', label:`%${winRate} Kazanma`, tip:`≥%${crit.minWinRate} kazanma oranı` });
+
+  if (gStreak >= crit.streakDays)
+    badges.push({ cls:'b-streak',  icon:'🔥', label:`${gStreak}g Seri`, tip:`${gStreak} gün üst üste ≥${crit.minDailyGames} maç` });
+
+  if (puzzles >= crit.minPuzzleDaily)
+    badges.push({ cls:'b-puzzle',  icon:'🧩', label:`${puzzles} Bulmaca`, tip:`≥${crit.minPuzzleDaily} bulmaca bugün` });
+
+  if (pStreak >= crit.streakPuzzleDays)
+    badges.push({ cls:'b-pstreak', icon:'🎯', label:`${pStreak}g Bulmaca Seri`, tip:`${pStreak} gün bulmaca serisi` });
+
+  return badges;
+}
+
+// ═══════════════════════════════════════════════════════
+//  SIRALAMA / FİLTRE
+// ═══════════════════════════════════════════════════════
+function scoreFor(username) {
+  const d = liveData[username];
+  if (!d || d.error) return -9999;
+  const total   = (d.wins||0) + (d.losses||0) + (d.draws||0);
+  const winRate = total > 0 ? (d.wins/total)*100 : 0;
+  if (curSort === 'games')   return total;
+  if (curSort === 'winrate') return winRate;
+  if (curSort === 'puzzles') return d.puzzlesSolved || 0;
+  if (curSort === 'streak')  return getStreak(username,'games');
+  if (curSort === 'name')    return -(username.charCodeAt(0));
+  return total;
+}
+
+function passes(username) {
+  if (curFilters.size === 0) return true;
+  const d = liveData[username];
+  if (!d || d.error) return curFilters.has('inactive');
+  const total   = (d.wins||0) + (d.losses||0) + (d.draws||0);
+  if (curFilters.has('active')   && total >= crit.minDailyGames) return true;
+  if (curFilters.has('inactive') && total < crit.minDailyGames)  return true;
+  if (curFilters.has('streak')   && getStreak(username,'games') >= crit.streakDays) return true;
+  if (curFilters.has('puzzle')   && (d.puzzlesSolved||0) >= crit.minPuzzleDaily) return true;
+  return false;
+}
+
+function setSort(key) {
+  curSort = key;
+  document.querySelectorAll('.ctrl-btn[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === key));
+  renderGrid();
+}
+
+function togFilter(key) {
+  curFilters.has(key) ? curFilters.delete(key) : curFilters.add(key);
+  document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b => b.classList.toggle('active', curFilters.has(b.dataset.filter)));
+  renderGrid();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function renderGrid() {
+  const grid     = document.getElementById('cardsGrid');
+  const students = loadStudentList();
+
+  if (students.length === 0) {
+    grid.innerHTML = `<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>`;
+    document.getElementById('lb').style.display = 'none';
+    return;
+  }
+
+  const sorted   = [...students].sort((a,b) => scoreFor(b) - scoreFor(a));
+  const rankMap  = Object.fromEntries(sorted.map((u,i) => [u, i+1]));
+  const filtered = sorted.filter(passes);
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty"><div class="ei">🔍</div><h3>Filtre eşleşmedi</h3><p>Bu kriterleri karşılayan öğrenci yok.</p></div>`;
+  } else {
+    grid.innerHTML = filtered.map(u => {
+      const d = liveData[u];
+      return d ? buildCard(u, d, rankMap[u]) : skeletonCard(u);
+    }).join('');
+  }
+
+  renderLB(sorted);
+  updateSummary();
+}
+
+function renderLB(sorted) {
+  const lb   = document.getElementById('lb');
+  const rows = document.getElementById('lbRows');
+  const loaded = sorted.filter(u => liveData[u] && !liveData[u].error);
+  if (loaded.length < 2) { lb.style.display = 'none'; return; }
+  lb.style.display = 'block';
+
+  rows.innerHTML = loaded.slice(0,10).map((u,i) => {
+    const rank = i+1;
+    const d    = liveData[u];
+    const total   = (d.wins||0)+(d.losses||0)+(d.draws||0);
+    const winRate = total>0 ? Math.round((d.wins/total)*100) : 0;
+    const puzzles = d.puzzlesSolved || 0;
+    const streak  = getStreak(u,'games');
+    const medal   = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    const rCls    = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
+    const bdgs    = getBadges(u,d).slice(0,3).map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
+    return `<div class="lb-row ${rCls}">
+      <div class="lb-rank">${medal}</div>
+      <div class="lb-name"><a href="https://lichess.org/@/${u}" target="_blank">${escHtml(d.displayName||u)}</a></div>
+      <div class="lb-badges">${bdgs}</div>
+      <div class="lb-stat">⚔ <span class="v">${total}</span></div>
+      <div class="lb-stat">%<span class="v">${winRate}</span> G</div>
+      <div class="lb-stat">🧩 <span class="v">${puzzles}</span></div>
+      ${streak>0?`<div class="lb-stat">🔥 <span class="v">${streak}g</span></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  KART OLUŞTURMA
+// ═══════════════════════════════════════════════════════
+function skeletonCard(u) {
+  return `<div class="s-card" id="card-${u}">
+    <div class="card-head">
+      <div class="s-info">
+        <div class="avatar skel" style="width:34px;height:34px">&nbsp;</div>
+        <div><div class="skel" style="width:80px;height:12px;margin-bottom:4px">&nbsp;</div>
+             <div class="skel" style="width:50px;height:9px">&nbsp;</div></div>
+      </div>
+    </div>
+    <div style="padding:16px 14px"><div class="skel" style="height:48px;border-radius:6px">&nbsp;</div></div>
+    <div class="load-ov"><div class="spinner"></div></div>
+  </div>`;
+}
+
+function buildCard(username, d, rank) {
+  const total   = (d.wins||0)+(d.losses||0)+(d.draws||0);
+  const winPct  = total>0 ? Math.round((d.wins /total)*100) : 0;
+  const drawPct = total>0 ? Math.round((d.draws/total)*100) : 0;
+  const lossPct = 100-winPct-drawPct;
+  const badges  = getBadges(username, d);
+
+  const crown   = rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'';
+  const cardCls = rank===1?'t1':rank===2?'t2':rank===3?'t3':'';
+
+  // Ratingler
+  const rHTML = ['bullet','blitz','rapid','classical'].map(k => {
+    const r = d.ratings?.[k]; if (!r) return '';
+    const dif = r.prog||0;
+    const cc  = dif>0?'up':dif<0?'dn':'eq';
+    const ct  = dif>0?`▲${dif}`:dif<0?`▼${Math.abs(dif)}`:'—';
+    return `<div class="r-item">
+      <div class="r-type">${k==='bullet'?'🔴 BLT':k==='blitz'?'⚡ BLZ':k==='rapid'?'🕐 RPD':'♟ CLS'}</div>
+      <div class="r-val">${r.int}</div>
+      <div class="r-chg ${cc}">${ct}</div>
+    </div>`;
+  }).join('');
+
+  // Son oyunlar
+  const gHTML = (d.recentGames||[]).slice(0,4).map(g => {
+    const r = g.result==='win'?'W':g.result==='loss'?'L':'D';
+    return `<div class="g-row">
+      <div class="g-res ${r}">${r}</div>
+      <div class="g-opp" title="${escHtml(g.opponent||'?')}">${escHtml(g.opponent||'?')}</div>
+      <div class="g-spd">${g.speed||''}</div>
+      <div class="g-t">${g.time||''}</div>
+    </div>`;
+  }).join('');
+
+  // Isı pipleri
+  const days14 = get14Days(username);
+  const pipHtml = days14.map(day => {
+    const isToday = day.date === todayStr();
+    const hg = day.games   >= crit.minDailyGames;
+    const hp = day.puzzles >= crit.minPuzzleDaily;
+    const cls = (hg&&hp)?'pb':hg?'pg':hp?'pp':'';
+    return `<div class="pip ${cls}${isToday?' today':''}" title="${day.date}: ${day.games} maç, ${day.puzzles} bulmaca"></div>`;
+  }).join('');
+
+  const gs = getStreak(username,'games');
+  const ps = getStreak(username,'puzzles');
+  const heatLbl = gs>1?`🔥 ${gs}g seri`:ps>1?`🧩 ${ps}g seri`:'14 günlük aktivite';
+
+  const bdgHtml = badges.map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
+
+  return `<div class="s-card ${cardCls} ${total===0?'faded':''}" id="card-${username}">
+    <div class="card-head">
+      <div class="card-top">
+        <div class="s-info">
+          <div class="avatar">
+            ${username[0].toUpperCase()}
+            ${crown?`<span class="rank-crown">${crown}</span>`:''}
+          </div>
+          <div>
+            <a href="https://lichess.org/@/${username}" target="_blank" class="s-name">${escHtml(d.displayName||username)}</a>
+            <div class="s-sub">
+              ${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
+              <div class="day-tag">🎯 Bugün ${total} maç</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <div class="s-dot ${d.online?'on':''}" title="${d.online?'Çevrimiçi':'Çevrimdışı'}"></div>
+          <button class="rm-btn" onclick="removeStudent('${username}')" title="Listeden çıkar">✕</button>
+        </div>
+      </div>
+      <div class="card-badges">${bdgHtml}</div>
+      <div class="heat-row">${pipHtml}<span class="heat-lbl">${heatLbl}</span></div>
+    </div>
+
+    ${rHTML?`<div class="ratings-row">${rHTML}</div>`:''}
+
+    <div class="stats">
+      <div class="s-title">Bugünkü Maçlar</div>
+      <div class="wld-row">
+        <div class="wld-box wb"><div class="wld-lbl">Kazandı</div> <div class="wld-val">${d.wins||0}</div></div>
+        <div class="wld-box lb2"><div class="wld-lbl">Kaybetti</div><div class="wld-val">${d.losses||0}</div></div>
+        <div class="wld-box db"><div class="wld-lbl">Berabere</div><div class="wld-val">${d.draws||0}</div></div>
+      </div>
+      ${total>0?`<div class="wr-wrap">
+        <div class="wr-labels"><span style="color:var(--win)">%${winPct} G</span><span style="color:var(--draw)">%${drawPct} B</span><span style="color:var(--loss)">%${lossPct} K</span></div>
+        <div class="wr-bar"><div class="bw" style="width:${winPct}%"></div><div class="bd" style="width:${drawPct}%"></div><div class="bl" style="width:${lossPct}%"></div></div>
+      </div>`:''}
+      <div class="puz-row">
+        <div class="puz-left"><span style="font-size:15px">🧩</span>
+          <div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">Bulmacalar</div><div class="puz-lbl">bugün çözülen</div></div>
+        </div>
+        <div class="puz-cnt">${d.puzzlesSolved ?? 0}</div>
+        <div class="puz-rat"><div>Puan</div><span>${d.puzzleRating ?? '—'}</span></div>
+      </div>
+      ${gHTML?`<div class="s-title" style="margin-top:5px">Son Maçlar</div><div class="recent">${gHTML}</div>`:''}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ÖZET BAR
+// ═══════════════════════════════════════════════════════
+function updateSummary() {
+  const students = loadStudentList();
+  let tot=0,w=0,l=0,dr=0,puz=0,str=0;
+  for (const u of students) {
+    const d = liveData[u];
+    if (!d||d.error) continue;
+    w  += d.wins||0; l += d.losses||0; dr += d.draws||0;
+    puz += d.puzzlesSolved||0;
+    if (getStreak(u,'games') >= crit.streakDays) str++;
+  }
+  tot = w+l+dr;
+  document.getElementById('sTotal') .textContent = tot  || '—';
+  document.getElementById('sWin')   .textContent = w    || '—';
+  document.getElementById('sLoss')  .textContent = l    || '—';
+  document.getElementById('sDraw')  .textContent = dr   || '—';
+  document.getElementById('sPuzzle').textContent = puz  || '—';
+  document.getElementById('sStreak').textContent = str  || '—';
+}
+
+// ═══════════════════════════════════════════════════════
+//  KRİTER PANELİ
+// ═══════════════════════════════════════════════════════
+function toggleCrit() {
+  const body  = document.getElementById('critBody');
+  const arrow = document.getElementById('critArrow');
+  body.classList.toggle('open');
+  arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+function buildCritPanel() {
+  const defs = [
+    { key:'minDailyGames',    b:{cls:'b-active', icon:'⚡', lbl:'Aktif'},        name:'Aktif Oyuncu',        rule:'Günlük min. maç sayısı' },
+    { key:'minWinRate',       b:{cls:'b-gold',   icon:'🏆', lbl:'%Kazanma'},     name:'Yüksek Kazanma',      rule:'Min. kazanma oranı (%)' },
+    { key:'streakDays',       b:{cls:'b-streak', icon:'🔥', lbl:'Maç Seri'},     name:'Maç Serisi (gün)',    rule:'Üst üste kaç gün maç?' },
+    { key:'minPuzzleDaily',   b:{cls:'b-puzzle', icon:'🧩', lbl:'Bulmaca'},      name:'Günlük Bulmaca',      rule:'Günlük min. bulmaca sayısı' },
+    { key:'streakPuzzleDays', b:{cls:'b-pstreak',icon:'🎯', lbl:'Bulmaca Seri'}, name:'Bulmaca Serisi (gün)',rule:'Üst üste kaç gün bulmaca?' },
+  ];
+  document.getElementById('critGrid').innerHTML = defs.map(d => `
+    <div class="crit-item">
+      <span class="badge ${d.b.cls}">${d.b.icon} ${d.b.lbl}</span>
+      <div class="crit-desc">
+        <div class="crit-name">${d.name}</div>
+        <div class="crit-rule">${d.rule}</div>
+      </div>
+      <input class="crit-input" type="number" min="1" max="100" value="${crit[d.key]}"
+             onchange="updateCrit('${d.key}',this.value)">
+    </div>`).join('');
+}
+
+function updateCrit(key, val) {
+  crit[key] = Math.max(1, parseInt(val)||1);
+  saveCrit();
+  renderGrid();
+  updateSummary();
+}
+
+// ═══════════════════════════════════════════════════════
+//  YARDIMCILAR
+// ═══════════════════════════════════════════════════════
+function fmtTime(date) {
+  const diff = Math.floor((Date.now()-date.getTime())/60000);
+  if (diff < 1)    return 'az önce';
+  if (diff < 60)   return diff+'dk';
+  if (diff < 1440) return Math.floor(diff/60)+'sa';
+  return Math.floor(diff/1440)+'g';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setLoadStatus(msg) {
+  const el = document.getElementById('loadStatus');
+  if (msg) { el.textContent = msg; el.classList.add('show'); }
+  else      { el.textContent='';   el.classList.remove('show'); }
+}
+
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr?' err':'');
+  setTimeout(() => { t.className='toast'; }, 3000);
+}
+
+// Auto-refresh her 5 dakikada bir
+setInterval(() => { if (loadStudentList().length>0) refreshAll(); }, 5*60*1000);
+</script>
+</body>
+</html>
