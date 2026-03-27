@@ -201,7 +201,12 @@ header{
 .card-badges{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px}
 .heat-row{display:flex;gap:2px;align-items:center}
 .pip{width:9px;height:9px;border-radius:2px;background:var(--border)}
-.pip.pg{background:var(--win)}.pip.pp{background:var(--puzzle)}.pip.pb{background:var(--accent)}
+.pip.pg{background:var(--win)}
+.pip.pp{background:var(--puzzle)}
+.pip.pb{background:var(--accent)}
+.pip.pa-game{background:rgba(76,175,125,0.35)}
+.pip.pa-puzz{background:rgba(155,127,232,0.35)}
+.pip.pa-both{background:rgba(200,168,75,0.35)}
 .pip.today{outline:2px solid rgba(255,255,255,.28);outline-offset:1px}
 .heat-lbl{font-size:9px;color:var(--text-muted);margin-left:5px}
 
@@ -325,11 +330,13 @@ header{
       <div class="criteria-grid" id="critGrid"></div>
       <div class="pip-legend">
         <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Isı haritası:</span>
-        <div class="pip-li"><div class="pip-dot" style="background:var(--win)"></div>Maç</div>
-        <div class="pip-li"><div class="pip-dot" style="background:var(--puzzle)"></div>Bulmaca</div>
+        <div class="pip-li"><div class="pip-dot" style="background:var(--win)"></div>Maç (kriterde)</div>
+        <div class="pip-li"><div class="pip-dot" style="background:rgba(76,175,125,0.35)"></div>Maç (az)</div>
+        <div class="pip-li"><div class="pip-dot" style="background:var(--puzzle)"></div>Bulmaca (kriterde)</div>
+        <div class="pip-li"><div class="pip-dot" style="background:rgba(155,127,232,0.35)"></div>Bulmaca (az)</div>
         <div class="pip-li"><div class="pip-dot" style="background:var(--accent)"></div>İkisi birden</div>
         <div class="pip-li"><div class="pip-dot" style="background:var(--border)"></div>Boş gün</div>
-        <span style="color:var(--text-muted)">↑ Sol = eski, sağ = bugün (14 gün)</span>
+        <span style="color:var(--text-muted)">Sol=eski · Sağ=bugün</span>
       </div>
     </div>
   </div>
@@ -1141,14 +1148,28 @@ function buildCard(username, d, rank) {
     </div>`;
   }).join('');
 
-  // Isı pipleri
+  // Isı pipleri — 1+ aktivite bile olsa renklendir (kriter eşiğinden bağımsız)
   const days14 = get14Days(username);
   const pipHtml = days14.map(day => {
     const isToday = day.date === todayStr();
+    // Kriter eşiğini karşılıyor mu?
     const hg = day.games   >= crit.minDailyGames;
     const hp = day.puzzles >= crit.minPuzzleDaily;
-    const cls = (hg&&hp)?'pb':hg?'pg':hp?'pp':'';
-    return `<div class="pip ${cls}${isToday?' today':''}" title="${day.date}: ${day.games} maç, ${day.puzzles} bulmaca"></div>`;
+    // En az 1 aktivite var mı? (kriter altı ama aktif)
+    const anyGame   = day.games   > 0;
+    const anyPuzzle = day.puzzles > 0;
+
+    let cls = '';
+    if (hg && hp)          cls = 'pb';       // her ikisi de kriter üstü → altın
+    else if (hg)           cls = 'pg';       // maç kriteri karşılandı → yeşil
+    else if (hp)           cls = 'pp';       // bulmaca kriteri karşılandı → mor
+    else if (anyGame && anyPuzzle) cls = 'pa-both';  // her ikisi de var ama kriter altı → soluk altın
+    else if (anyGame)      cls = 'pa-game';  // en az 1 maç var, kriter altı → soluk yeşil
+    else if (anyPuzzle)    cls = 'pa-puzz';  // en az 1 bulmaca var, kriter altı → soluk mor
+
+    const todayCls = isToday ? ' today' : '';
+    const tip = `${day.date}: ${day.games} maç, ${day.puzzles} bulmaca`;
+    return `<div class="pip ${cls}${todayCls}" title="${tip}"></div>`;
   }).join('');
 
   const gs = getStreak(username,'games');
@@ -1157,16 +1178,17 @@ function buildCard(username, d, rank) {
 
   const bdgHtml = badges.map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
 
-  return `<div class="s-card ${cardCls} ${total===0?'faded':''}" id="card-${username}">
+  // ÖNEMLİ: onclick'te username'i data-attribute ile geç, tırnak sorunu olmasın
+  return `<div class="s-card ${cardCls} ${total===0?'faded':''}" data-user="${escHtml(username)}">
     <div class="card-head">
       <div class="card-top">
         <div class="s-info">
           <div class="avatar">
-            ${username[0].toUpperCase()}
+            ${escHtml(username[0].toUpperCase())}
             ${crown?`<span class="rank-crown">${crown}</span>`:''}
           </div>
           <div>
-            <a href="https://lichess.org/@/${username}" target="_blank" class="s-name">${escHtml(d.displayName||username)}</a>
+            <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(d.displayName||username)}</a>
             <div class="s-sub">
               ${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
               <div class="day-tag">🎯 Bugün ${total} maç</div>
@@ -1175,7 +1197,7 @@ function buildCard(username, d, rank) {
         </div>
         <div class="card-actions">
           <div class="s-dot ${d.online?'on':''}" title="${d.online?'Çevrimiçi':'Çevrimdışı'}"></div>
-          <button class="rm-btn" onclick="removeStudent('${username}')" title="Listeden çıkar">✕</button>
+          <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Listeden çıkar">✕</button>
         </div>
       </div>
       <div class="card-badges">${bdgHtml}</div>
@@ -1296,6 +1318,15 @@ function showToast(msg, isErr=false) {
 
 // Auto-refresh her 5 dakikada bir
 setInterval(() => { if (loadStudentList().length>0) refreshAll(); }, 5*60*1000);
+
+// ── Kart grid'i için event delegation (inline onclick sorununu önler) ──
+document.addEventListener('click', function(e) {
+  const rmBtn = e.target.closest('.rm-btn');
+  if (rmBtn) {
+    const user = rmBtn.dataset.rmuser;
+    if (user) removeStudent(user);
+  }
+});
 </script>
 </body>
 </html>
