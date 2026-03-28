@@ -6,361 +6,300 @@
 <title>Lichess Koç Paneli</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#0d0f14; --surface:#13161e; --surface2:#1a1e2a; --border:#252a38;
-  --accent:#c8a84b; --accent2:#e8c86e; --text:#e8e4d8; --text-muted:#7a7a8a;
-  --win:#4caf7d; --loss:#e05a5a; --draw:#7a8aaa; --puzzle:#9b7fe8;
-  --glow:rgba(200,168,75,.15);
-  --gold:#f5c842; --silver:#b0bec5; --bronze:#cd7f32; --fire:#ff7043;
+:root{
+  --bg:#0d0f14;--surface:#13161e;--surface2:#1a1e2a;--border:#252a38;
+  --accent:#c8a84b;--accent2:#e8c86e;--text:#e8e4d8;--text-muted:#7a7a8a;
+  --win:#4caf7d;--loss:#e05a5a;--draw:#7a8aaa;--puzzle:#9b7fe8;
+  --glow:rgba(200,168,75,.15);--gold:#f5c842;--silver:#b0bec5;--bronze:#cd7f32;--fire:#ff7043;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,168,75,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,168,75,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
 .wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px 80px}
 
-/* ── GRUP SEKME ÇUBUĞU ── */
-.group-bar{
-  display:flex;align-items:stretch;gap:0;
-  border-bottom:1px solid var(--border);margin-bottom:0;
-  padding-top:28px;overflow-x:auto;
-  scrollbar-width:none;
-}
+/* GRUP SEKMELERI */
+.group-bar{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--border);padding-top:24px;overflow-x:auto;scrollbar-width:none}
 .group-bar::-webkit-scrollbar{display:none}
-.group-tab{
-  display:flex;align-items:center;gap:7px;
-  padding:10px 18px;border:1px solid transparent;border-bottom:none;
-  border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;
-  color:var(--text-muted);background:transparent;white-space:nowrap;
-  transition:all .15s;position:relative;top:1px;
-}
+.group-tab{display:flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
 .group-tab:hover{color:var(--text);border-color:var(--border);background:var(--surface)}
 .group-tab.active{color:var(--accent2);border-color:var(--border);background:var(--surface);border-bottom-color:var(--surface)}
-.group-tab .tab-count{
-  font-size:10px;background:var(--surface2);border:1px solid var(--border);
-  border-radius:10px;padding:1px 6px;color:var(--text-muted);
-}
+.tab-count{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 6px;color:var(--text-muted)}
 .group-tab.active .tab-count{background:rgba(200,168,75,.12);border-color:rgba(200,168,75,.25);color:var(--accent)}
-.new-group-btn{
-  display:flex;align-items:center;gap:5px;padding:8px 14px;
-  border:1px dashed var(--border);border-bottom:none;border-radius:8px 8px 0 0;
-  cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);
-  background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px;
-}
+.new-group-btn{display:flex;align-items:center;gap:5px;padding:8px 14px;border:1px dashed var(--border);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
 .new-group-btn:hover{color:var(--accent);border-color:var(--accent)}
 
-/* ── HEADER ── */
-header{
-  padding:20px 0 20px;border-bottom:1px solid var(--border);margin-bottom:22px;
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-  background:var(--surface);margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;
-}
+/* HEADER */
+header{padding:18px 24px;border-bottom:1px solid var(--border);margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--surface);margin-left:-24px;margin-right:-24px}
 .logo-area{display:flex;align-items:center;gap:12px}
-.chess-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 18px var(--glow)}
-.header-title-wrap h1{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--accent2);letter-spacing:-.5px;line-height:1.1}
-.header-title-wrap h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
-.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.group-name-display{
-  font-size:13px;font-weight:600;color:var(--text);
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:6px;padding:5px 12px;cursor:pointer;transition:border-color .2s;
-}
+.chess-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 16px var(--glow)}
+h1{font-family:'Playfair Display',serif;font-size:21px;font-weight:900;color:var(--accent2);letter-spacing:-.5px;line-height:1.1}
+h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+.header-right{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.group-name-display{font-size:13px;font-weight:600;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer;transition:border-color .2s}
 .group-name-display:hover{border-color:var(--accent);color:var(--accent)}
-.icon-btn{
-  background:transparent;border:1px solid var(--border);color:var(--text-muted);
-  padding:6px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;
-  display:flex;align-items:center;gap:5px;transition:all .2s;
-}
+.icon-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:6px 11px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;display:flex;align-items:center;gap:5px;transition:all .2s}
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
 .icon-btn.spinning svg{animation:spin 1s linear infinite}
 .icon-btn.danger:hover{border-color:var(--loss);color:var(--loss)}
+.icon-btn.ok{border-color:rgba(76,175,125,.4);color:var(--win)}
 @keyframes spin{to{transform:rotate(360deg)}}
-.last-update{font-size:11px;color:var(--text-muted)}
+.last-update{font-size:10px;color:var(--text-muted)}
 
-/* ── EKLE SATIRI ── */
-.add-row{
-  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
-  background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  padding:14px 18px;margin-bottom:18px;
-}
+/* ADD ROW */
+.add-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px}
 .add-row label{font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
-.add-row input{
-  flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);color:var(--text);
-  padding:8px 12px;border-radius:7px;font-family:inherit;font-size:13px;outline:none;transition:border-color .2s;
-}
+.add-row input{flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:7px;font-family:inherit;font-size:13px;outline:none;transition:border-color .2s}
 .add-row input:focus{border-color:var(--accent)}
 .add-row input::placeholder{color:var(--text-muted)}
-.add-btn{
-  background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;
-  padding:8px 16px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;
-  font-size:12px;transition:opacity .2s,transform .1s;white-space:nowrap;
-}
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;padding:8px 15px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:12px;transition:opacity .2s,transform .1s;white-space:nowrap}
 .add-btn:hover{opacity:.9}.add-btn:active{transform:scale(.97)}
 .err{width:100%;color:var(--loss);font-size:11px;padding-top:2px}
 
-/* ── KRİTER PANELİ ── */
-.criteria-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:18px;overflow:hidden}
-.criteria-toggle{width:100%;background:none;border:none;color:var(--text-muted);padding:12px 18px;text-align:left;cursor:pointer;font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;transition:color .2s}
+/* KRİTER */
+.criteria-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.criteria-toggle{width:100%;background:none;border:none;color:var(--text-muted);padding:11px 16px;text-align:left;cursor:pointer;font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;transition:color .2s}
 .criteria-toggle:hover{color:var(--accent)}
-.criteria-body{padding:0 18px 14px;display:none}
+.criteria-body{padding:0 16px 14px;display:none}
 .criteria-body.open{display:block}
-.criteria-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-top:4px}
-.crit-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:9px}
+.criteria-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:7px;margin-top:4px}
+.crit-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:8px}
 .crit-desc{flex:1}
 .crit-name{font-size:11px;font-weight:600;color:var(--text);margin-bottom:1px}
-.crit-rule{font-size:9px;color:var(--text-muted);line-height:1.5}
-.crit-input{width:50px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px 7px;border-radius:5px;font-family:inherit;font-size:12px;text-align:center;outline:none}
+.crit-rule{font-size:9px;color:var(--text-muted)}
+.crit-input{width:48px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:5px;font-family:inherit;font-size:12px;text-align:center;outline:none}
 .crit-input:focus{border-color:var(--accent)}
-.pip-legend{display:flex;gap:10px;align-items:center;font-size:10px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap}
-.pip-li{display:flex;align-items:center;gap:4px}
+.pip-legend{display:flex;gap:9px;align-items:center;font-size:9px;color:var(--text-muted);margin-top:9px;padding-top:9px;border-top:1px solid var(--border);flex-wrap:wrap}
+.pip-li{display:flex;align-items:center;gap:3px}
 .pip-dot{width:8px;height:8px;border-radius:2px}
 
-/* ── ÖZET BAR ── */
-.summary-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:18px}
-.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:12px 14px;position:relative;overflow:hidden}
-.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.sum-card.s-total::before{background:var(--accent)}
-.sum-card.s-win::before{background:var(--win)}
-.sum-card.s-loss::before{background:var(--loss)}
-.sum-card.s-draw::before{background:var(--draw)}
-.sum-card.s-puzzle::before{background:var(--puzzle)}
-.sum-card.s-streak::before{background:var(--fire)}
-.sum-label{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
-.sum-val{font-size:24px;font-weight:600;font-family:'Playfair Display',serif}
-.sum-card.s-total .sum-val{color:var(--accent2)}
-.sum-card.s-win   .sum-val{color:var(--win)}
-.sum-card.s-loss  .sum-val{color:var(--loss)}
-.sum-card.s-draw  .sum-val{color:var(--draw)}
-.sum-card.s-puzzle.sum-val{color:var(--puzzle)}
-.sum-card.s-streak .sum-val{color:var(--fire)}
+/* ŞAMPİYON KARTLARI */
+.champ-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+.champ-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;position:relative;overflow:hidden;transition:border-color .2s}
+.champ-card:hover{border-color:rgba(200,168,75,.3)}
+.champ-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.champ-card.cc-games::before{background:var(--win)}
+.champ-card.cc-puzzle::before{background:var(--puzzle)}
+.champ-card.cc-win::before{background:var(--gold)}
+.champ-card.cc-streak::before{background:var(--fire)}
+.champ-card.cc-score::before{background:var(--accent)}
+.champ-card.cc-wscore::before{background:rgba(155,127,232,.8)}
+.champ-label{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.champ-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.champ-val{font-size:11px;color:var(--text-muted)}
+.champ-val strong{color:var(--accent2)}
+.champ-medal{position:absolute;top:10px;right:12px;font-size:18px;opacity:.8}
 
-/* ── LIDERBOARD ── */
-.lb{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:18px}
-.lb-title{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.lb-title::after{content:'';flex:1;height:1px;background:var(--border)}
-.lb-rows{display:flex;flex-direction:column;gap:4px}
-.lb-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:var(--bg);border:1px solid var(--border);transition:border-color .2s}
-.lb-row:hover{border-color:rgba(200,168,75,.3)}
-.lb-row.r1{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.03)}
-.lb-row.r2{border-color:rgba(176,190,197,.3)}
-.lb-row.r3{border-color:rgba(205,127,50,.3)}
-.lb-rank{width:24px;text-align:center;font-size:14px;font-weight:700;font-family:'Playfair Display',serif}
-.lb-row.r1 .lb-rank{color:var(--gold)}
-.lb-row.r2 .lb-rank{color:var(--silver)}
-.lb-row.r3 .lb-rank{color:var(--bronze)}
-.lb-name{flex:1;font-size:12px;font-weight:600}
-.lb-name a{color:var(--text);text-decoration:none}
-.lb-name a:hover{color:var(--accent)}
-.lb-badges{display:flex;gap:3px;flex-wrap:wrap}
-.lb-stat{font-size:11px;color:var(--text-muted);background:var(--surface2);border-radius:4px;padding:2px 7px;white-space:nowrap}
-.lb-stat .v{color:var(--text);font-weight:600}
+/* PUAN TABLOSU */
+.score-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.score-title{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.score-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.score-tabs{display:flex;gap:6px;margin-bottom:10px}
+.score-tab{background:var(--bg);border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:10px;transition:all .2s}
+.score-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.07)}
+.score-rows{display:flex;flex-direction:column;gap:3px}
+.score-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;background:var(--bg);border:1px solid var(--border)}
+.score-row.sr1{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.03)}
+.score-row.sr2{border-color:rgba(176,190,197,.3)}
+.score-row.sr3{border-color:rgba(205,127,50,.3)}
+.score-rank{width:22px;text-align:center;font-size:13px;font-weight:700;font-family:'Playfair Display',serif}
+.score-row.sr1 .score-rank{color:var(--gold)}.score-row.sr2 .score-rank{color:var(--silver)}.score-row.sr3 .score-rank{color:var(--bronze)}
+.score-name{flex:1;font-size:12px;font-weight:600;color:var(--text)}
+.score-pts{font-size:13px;font-weight:700;color:var(--accent2);font-family:'Playfair Display',serif;min-width:50px;text-align:right}
+.score-breakdown{font-size:9px;color:var(--text-muted);text-align:right}
+.score-bar-wrap{width:80px}
+.score-bar-bg{height:4px;background:var(--border);border-radius:10px;overflow:hidden}
+.score-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:10px;transition:width .4s}
+.score-badge{display:flex;gap:3px;flex-wrap:wrap}
 
-/* ── KONTROLLER ── */
-.controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+/* KONTROLLER */
+.controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .ctrl-label{font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
-.ctrl-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:5px 11px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;transition:all .2s}
+.ctrl-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;transition:all .2s}
 .ctrl-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.07)}
 .ctrl-btn:hover{border-color:var(--accent);color:var(--accent)}
-.ctrl-div{width:1px;height:20px;background:var(--border)}
+.ctrl-div{width:1px;height:18px;background:var(--border)}
 
-/* ── ROZET ── */
+/* ROZETLER */
 .badge{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:600;letter-spacing:.3px;white-space:nowrap;line-height:1.6;cursor:default}
-.badge.b-active {background:rgba(76,175,125,.15); color:var(--win);    border:1px solid rgba(76,175,125,.3)}
-.badge.b-gold   {background:rgba(245,200,66,.18);  color:var(--gold);   border:1px solid rgba(245,200,66,.3)}
-.badge.b-streak {background:rgba(255,112,67,.15);  color:var(--fire);   border:1px solid rgba(255,112,67,.3)}
-.badge.b-puzzle {background:rgba(155,127,232,.15); color:var(--puzzle); border:1px solid rgba(155,127,232,.3)}
-.badge.b-pstreak{background:rgba(155,127,232,.12); color:var(--puzzle); border:1px solid rgba(155,127,232,.25)}
-.badge.b-warn   {background:rgba(224,90,90,.12);   color:var(--loss);   border:1px solid rgba(224,90,90,.25)}
-.badge.b-info   {background:rgba(200,168,75,.12);  color:var(--accent); border:1px solid rgba(200,168,75,.25)}
+.badge.b-active{background:rgba(76,175,125,.15);color:var(--win);border:1px solid rgba(76,175,125,.3)}
+.badge.b-gold{background:rgba(245,200,66,.18);color:var(--gold);border:1px solid rgba(245,200,66,.3)}
+.badge.b-streak{background:rgba(255,112,67,.15);color:var(--fire);border:1px solid rgba(255,112,67,.3)}
+.badge.b-puzzle{background:rgba(155,127,232,.15);color:var(--puzzle);border:1px solid rgba(155,127,232,.3)}
+.badge.b-pstreak{background:rgba(155,127,232,.12);color:var(--puzzle);border:1px solid rgba(155,127,232,.25)}
+.badge.b-warn{background:rgba(224,90,90,.12);color:var(--loss);border:1px solid rgba(224,90,90,.25)}
+.badge.b-info{background:rgba(200,168,75,.12);color:var(--accent);border:1px solid rgba(200,168,75,.25)}
 
-/* ── KART IZGARA ── */
-.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+/* KART IZGARA */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:13px}
 
-/* ── ÖĞRENCİ KARTI ── */
-.s-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;animation:fadeUp .35s ease;position:relative;transition:border-color .2s}
+/* ÖĞRENCİ KARTI */
+.s-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;position:relative;transition:border-color .2s}
 .s-card:hover{border-color:rgba(200,168,75,.22)}
-.s-card.t1{border-color:rgba(245,200,66,.45);box-shadow:0 0 16px rgba(245,200,66,.06)}
+.s-card.t1{border-color:rgba(245,200,66,.45);box-shadow:0 0 14px rgba(245,200,66,.06)}
 .s-card.t2{border-color:rgba(176,190,197,.35)}
 .s-card.t3{border-color:rgba(205,127,50,.35)}
-.s-card.faded{opacity:.6}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-.card-head{padding:12px 14px 10px;border-bottom:1px solid var(--border);background:var(--surface2)}
-.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:7px}
-.s-info{display:flex;align-items:center;gap:9px}
-.avatar{width:34px;height:34px;background:linear-gradient(135deg,var(--surface),var(--border));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);border:1px solid var(--border);flex-shrink:0;position:relative}
-.rank-crown{position:absolute;top:-7px;right:-5px;font-size:11px;line-height:1}
+.s-card.faded{opacity:.58}
+.s-card.loading-card .card-head{opacity:.5}
+.card-head{padding:11px 13px 9px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px}
+.s-info{display:flex;align-items:center;gap:8px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--surface),var(--border));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);border:1px solid var(--border);flex-shrink:0;position:relative}
+.rank-crown{position:absolute;top:-6px;right:-4px;font-size:10px;line-height:1}
 .s-name{font-size:13px;font-weight:600;color:var(--text);text-decoration:none}
 .s-name:hover{color:var(--accent2)}
 .s-sub{font-size:9px;color:var(--text-muted);margin-top:1px}
 .card-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
-.s-dot{width:7px;height:7px;border-radius:50%;background:var(--border)}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--border)}
 .s-dot.on{background:var(--win);box-shadow:0 0 5px var(--win)}
-.rm-btn{background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:3px 4px;border-radius:3px;font-size:12px;transition:color .2s}
+.rm-btn{background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:2px 4px;border-radius:3px;font-size:11px;transition:color .2s}
 .rm-btn:hover{color:var(--loss)}
 .day-tag{display:inline-flex;align-items:center;gap:3px;background:rgba(200,168,75,.09);border:1px solid rgba(200,168,75,.18);color:var(--accent);border-radius:3px;padding:1px 5px;font-size:9px;margin-top:2px}
-.card-badges{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px}
+.score-tag{display:inline-flex;align-items:center;gap:2px;background:rgba(155,127,232,.1);border:1px solid rgba(155,127,232,.25);color:var(--puzzle);border-radius:3px;padding:1px 5px;font-size:9px;margin-top:2px;margin-left:4px}
+.card-badges{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px}
 .heat-row{display:flex;gap:2px;align-items:center}
 .pip{width:9px;height:9px;border-radius:2px;background:var(--border)}
-.pip.pg{background:var(--win)}
-.pip.pp{background:var(--puzzle)}
-.pip.pb{background:var(--accent)}
-.pip.pa-game{background:rgba(76,175,125,0.35)}
-.pip.pa-puzz{background:rgba(155,127,232,0.35)}
-.pip.pa-both{background:rgba(200,168,75,0.35)}
+.pip.pg{background:var(--win)}.pip.pp{background:var(--puzzle)}.pip.pb{background:var(--accent)}
+.pip.pa-game{background:rgba(76,175,125,.35)}.pip.pa-puzz{background:rgba(155,127,232,.35)}.pip.pa-both{background:rgba(200,168,75,.35)}
 .pip.today{outline:2px solid rgba(255,255,255,.28);outline-offset:1px}
 .heat-lbl{font-size:9px;color:var(--text-muted);margin-left:5px}
 
-/* ── RATİNG SATIRI ── */
+/* RATING */
 .ratings-row{display:flex;border-bottom:1px solid var(--border)}
-.r-item{flex:1;padding:7px 5px;text-align:center;border-right:1px solid var(--border)}
+.r-item{flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border)}
 .r-item:last-child{border-right:none}
-.r-type{font-size:8px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
-.r-val{font-size:14px;font-weight:600;color:var(--text)}
+.r-type{font-size:8px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:1px}
+.r-val{font-size:13px;font-weight:600;color:var(--text)}
 .r-chg{font-size:9px;margin-top:1px}
 .r-chg.up{color:var(--win)}.r-chg.dn{color:var(--loss)}.r-chg.eq{color:var(--text-muted)}
 
-/* ── İSTATİSTİK ── */
-.stats{padding:11px 14px}
-.s-title{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:5px}
+/* İSTATİSTİK */
+.stats{padding:10px 13px}
+.s-title{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px}
 .s-title::after{content:'';flex:1;height:1px;background:var(--border)}
-.wld-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:7px}
-.wld-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 5px;text-align:center}
+.wld-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:6px}
+.wld-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 4px;text-align:center}
 .wld-lbl{font-size:8px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
 .wld-box.wb .wld-lbl{color:var(--win)}.wld-box.lb2 .wld-lbl{color:var(--loss)}.wld-box.db .wld-lbl{color:var(--draw)}
-.wld-val{font-size:19px;font-family:'Playfair Display',serif;font-weight:700}
+.wld-val{font-size:18px;font-family:'Playfair Display',serif;font-weight:700}
 .wld-box.wb .wld-val{color:var(--win)}.wld-box.lb2 .wld-val{color:var(--loss)}.wld-box.db .wld-val{color:var(--draw)}
-.wr-wrap{margin-bottom:7px}
+.wr-wrap{margin-bottom:6px}
 .wr-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-bottom:2px}
-.wr-bar{height:5px;background:var(--bg);border-radius:10px;overflow:hidden;display:flex}
+.wr-bar{height:4px;background:var(--bg);border-radius:10px;overflow:hidden;display:flex}
 .bw{background:var(--win);border-radius:10px 0 0 10px}.bd{background:var(--draw)}.bl{background:var(--loss);border-radius:0 10px 10px 0}
-.puz-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;margin-bottom:7px}
-.puz-left{display:flex;align-items:center;gap:6px}
+.puz-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin-bottom:6px}
+.puz-left{display:flex;align-items:center;gap:5px}
 .puz-lbl{font-size:9px;color:var(--text-muted)}
-.puz-cnt{font-size:17px;font-family:'Playfair Display',serif;font-weight:700;color:var(--puzzle)}
-.puz-rat{font-size:10px;color:var(--text-muted);text-align:right}
+.puz-cnt{font-size:16px;font-family:'Playfair Display',serif;font-weight:700;color:var(--puzzle)}
+.puz-rat{font-size:9px;color:var(--text-muted);text-align:right}
 .puz-rat span{display:block;font-size:13px;font-weight:600;color:var(--puzzle)}
+.train-score-row{display:flex;align-items:center;justify-content:space-between;background:rgba(155,127,232,.06);border:1px solid rgba(155,127,232,.2);border-radius:6px;padding:6px 10px;margin-bottom:6px}
+.train-lbl{font-size:9px;color:var(--text-muted)}
+.train-pts{font-size:18px;font-family:'Playfair Display',serif;font-weight:700;color:var(--puzzle)}
+.train-breakdown{font-size:9px;color:var(--text-muted);text-align:right;line-height:1.6}
 .recent{margin-top:2px}
 .g-row{display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid rgba(37,42,56,.5);font-size:10px}
 .g-row:last-child{border-bottom:none}
-.g-res{width:17px;height:17px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
+.g-res{width:16px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
 .g-res.W{background:rgba(76,175,125,.2);color:var(--win)}.g-res.L{background:rgba(224,90,90,.2);color:var(--loss)}.g-res.D{background:rgba(122,138,170,.2);color:var(--draw)}
 .g-opp{color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .g-spd{color:var(--text-muted);font-size:9px}.g-t{color:var(--text-muted);font-size:9px;white-space:nowrap}
 
-/* ── YÜKLEME ── */
+/* YÜKLEME */
 .skel{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shim 1.5s infinite;border-radius:4px}
 @keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.load-ov{position:absolute;inset:0;background:rgba(13,15,20,.65);display:flex;align-items:center;justify-content:center;border-radius:11px;z-index:10}
-.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.load-ov{position:absolute;inset:0;background:rgba(13,15,20,.6);display:flex;align-items:center;justify-content:center;border-radius:11px;z-index:10}
+.spinner{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.empty{grid-column:1/-1;text-align:center;padding:55px 20px;color:var(--text-muted)}
+.empty .ei{font-size:44px;margin-bottom:14px;opacity:.22}
+.empty h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--text);margin-bottom:4px}
+.empty p{font-size:11px;line-height:1.7}
 
-/* ── BOŞ DURUM ── */
-.empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted)}
-.empty .ei{font-size:48px;margin-bottom:16px;opacity:.25}
-.empty h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--text);margin-bottom:5px}
-.empty p{font-size:12px;line-height:1.7}
-
-/* ── MODAL ── */
+/* MODAL */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:320px;max-width:420px;width:90%}
-.modal h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--accent2);margin-bottom:16px}
-.modal label{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px}
-.modal input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-family:inherit;font-size:14px;outline:none;transition:border-color .2s;margin-bottom:12px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;min-width:300px;max-width:400px;width:90%}
+.modal h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--accent2);margin-bottom:14px}
+.modal label{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px}
+.modal input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:7px;font-family:inherit;font-size:13px;outline:none;transition:border-color .2s;margin-bottom:11px}
 .modal input:focus{border-color:var(--accent)}
-.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
-.modal-cancel{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:8px 16px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;transition:all .2s}
+.modal-btns{display:flex;gap:7px;justify-content:flex-end;margin-top:3px}
+.modal-cancel{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:7px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12px;transition:all .2s}
 .modal-cancel:hover{border-color:var(--loss);color:var(--loss)}
-.modal-ok{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;padding:8px 18px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:13px;transition:opacity .2s}
+.modal-ok{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;padding:7px 16px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:12px;transition:opacity .2s}
 .modal-ok:hover{opacity:.9}
 
-/* ── TOAST ── */
-.toast{position:fixed;bottom:20px;right:20px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--text);padding:10px 15px;border-radius:8px;font-size:12px;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:280px}
+/* TOAST */
+.toast{position:fixed;bottom:18px;right:18px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--text);padding:9px 14px;border-radius:8px;font-size:11px;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:260px}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.err{border-left-color:var(--loss)}
-
-/* ── LOADING STATE ── */
-.load-status{font-size:11px;color:var(--text-muted);padding:8px 0;text-align:center;display:none}
+.load-status{font-size:11px;color:var(--text-muted);padding:6px 0;text-align:center;display:none}
 .load-status.show{display:block}
 
-@media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:18px}.controls{gap:5px}}
+@media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:17px}.controls{gap:4px}.champ-strip{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
-
-  <!-- SEKME ÇUBUĞU -->
   <div class="group-bar" id="groupBar"></div>
-
-  <!-- HEADER -->
   <header>
     <div class="logo-area">
       <div class="chess-icon">♞</div>
-      <div class="header-title-wrap">
-        <h1>Koç Paneli <span>Lichess · Satranç</span></h1>
-      </div>
+      <div><h1>Koç Paneli <span>Lichess · Satranç</span></h1></div>
     </div>
     <div class="header-right">
       <span class="group-name-display" id="groupNameDisplay" onclick="openRenameModal()" title="Grubu yeniden adlandır">—</span>
       <span class="last-update" id="lastUpdate">—</span>
       <button class="icon-btn" id="refreshBtn" onclick="refreshAll()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M1 4v6h6M23 20v-6h-6"/>
-          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-        </svg>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
         Yenile
       </button>
-      <button class="icon-btn danger" onclick="confirmDeleteGroup()" title="Grubu sil">🗑 Grubu Sil</button>
+      <button class="icon-btn ok" onclick="exportData()" title="Tüm verileri dışa aktar">⬇ Dışa Aktar</button>
+      <button class="icon-btn" onclick="document.getElementById('importFile').click()" title="Veri içe aktar">⬆ İçe Aktar</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="icon-btn danger" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
     </div>
   </header>
 
-  <!-- ÖĞRENCİ EKLE -->
   <div class="add-row">
     <label>Öğrenci Ekle →</label>
-    <input type="text" id="addInput" placeholder="Lichess kullanıcı adı..."
-           onkeydown="if(event.key==='Enter') addStudent()">
+    <input type="text" id="addInput" placeholder="Lichess kullanıcı adı..." onkeydown="if(event.key==='Enter') addStudent()">
     <button class="add-btn" onclick="addStudent()">+ Ekle</button>
     <div class="err" id="addErr"></div>
   </div>
 
-  <!-- KRİTER PANELİ -->
   <div class="criteria-panel">
-    <button class="criteria-toggle" onclick="toggleCrit()">
-      🏅 Rozet Kriterleri &amp; Ayarlar <span id="critArrow">▼</span>
-    </button>
+    <button class="criteria-toggle" onclick="toggleCrit()">🏅 Rozet Kriterleri &amp; Puanlama Ayarları <span id="critArrow">▼</span></button>
     <div class="criteria-body" id="critBody">
       <div class="criteria-grid" id="critGrid"></div>
       <div class="pip-legend">
         <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Isı haritası:</span>
         <div class="pip-li"><div class="pip-dot" style="background:var(--win)"></div>Maç (kriterde)</div>
-        <div class="pip-li"><div class="pip-dot" style="background:rgba(76,175,125,0.35)"></div>Maç (az)</div>
+        <div class="pip-li"><div class="pip-dot" style="background:rgba(76,175,125,.35)"></div>Maç (az)</div>
         <div class="pip-li"><div class="pip-dot" style="background:var(--puzzle)"></div>Bulmaca (kriterde)</div>
-        <div class="pip-li"><div class="pip-dot" style="background:rgba(155,127,232,0.35)"></div>Bulmaca (az)</div>
-        <div class="pip-li"><div class="pip-dot" style="background:var(--accent)"></div>İkisi birden</div>
+        <div class="pip-li"><div class="pip-dot" style="background:rgba(155,127,232,.35)"></div>Bulmaca (az)</div>
+        <div class="pip-li"><div class="pip-dot" style="background:var(--accent)"></div>Her ikisi</div>
         <div class="pip-li"><div class="pip-dot" style="background:var(--border)"></div>Boş gün</div>
         <span style="color:var(--text-muted)">Sol=eski · Sağ=bugün</span>
       </div>
     </div>
   </div>
 
-  <!-- ÖZET -->
-  <div class="summary-bar">
-    <div class="sum-card s-total"><div class="sum-label">Toplam Maç</div><div class="sum-val" id="sTotal">—</div></div>
-    <div class="sum-card s-win">  <div class="sum-label">Kazanma</div>   <div class="sum-val" id="sWin">—</div></div>
-    <div class="sum-card s-loss"> <div class="sum-label">Kaybetme</div>  <div class="sum-val" id="sLoss">—</div></div>
-    <div class="sum-card s-draw"> <div class="sum-label">Beraberlik</div><div class="sum-val" id="sDraw">—</div></div>
-    <div class="sum-card s-puzzle"><div class="sum-label">Bulmaca</div>  <div class="sum-val" id="sPuzzle">—</div></div>
-    <div class="sum-card s-streak"><div class="sum-label">Aktif Seri</div><div class="sum-val" id="sStreak">—</div></div>
+  <!-- ŞAMPİYONLAR -->
+  <div class="champ-strip" id="champStrip"></div>
+
+  <!-- PUAN TABLOSU -->
+  <div class="score-section">
+    <div class="score-title">🏆 Antrenman Puan Tablosu</div>
+    <div class="score-tabs">
+      <button class="score-tab active" data-period="week" onclick="setScorePeriod('week')">Bu Hafta</button>
+      <button class="score-tab" data-period="total" onclick="setScorePeriod('total')">Toplam (14 gün)</button>
+    </div>
+    <div class="score-rows" id="scoreRows"></div>
   </div>
 
-  <!-- LİDERBOARD -->
-  <div class="lb" id="lb" style="display:none">
-    <div class="lb-title">🏆 Sıralama Tablosu</div>
-    <div class="lb-rows" id="lbRows"></div>
-  </div>
-
-  <!-- KONTROLLER -->
   <div class="controls">
     <span class="ctrl-label">Sırala:</span>
-    <button class="ctrl-btn active" data-sort="games"   onclick="setSort('games')">⚔ Maç</button>
+    <button class="ctrl-btn active" data-sort="score"   onclick="setSort('score')">⭐ Puan</button>
+    <button class="ctrl-btn"        data-sort="games"   onclick="setSort('games')">⚔ Maç</button>
     <button class="ctrl-btn"        data-sort="winrate" onclick="setSort('winrate')">📈 Kazanma%</button>
     <button class="ctrl-btn"        data-sort="puzzles" onclick="setSort('puzzles')">🧩 Bulmaca</button>
     <button class="ctrl-btn"        data-sort="streak"  onclick="setSort('streak')">🔥 Seri</button>
@@ -373,23 +312,15 @@ header{
     <button class="ctrl-btn" data-filter="puzzle"   onclick="togFilter('puzzle')">🧩 Bulmacalı</button>
   </div>
 
-  <!-- YÜKLENİYOR DURUMU -->
   <div class="load-status" id="loadStatus"></div>
-
-  <!-- KARTLAR -->
-  <div class="cards-grid" id="cardsGrid">
-    <div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>
-  </div>
-
+  <div class="cards-grid" id="cardsGrid"></div>
 </div>
 
-<!-- MODALLER -->
 <div class="modal-bg" id="modalNewGroup" style="display:none" onclick="if(event.target===this)closeModal('modalNewGroup')">
   <div class="modal">
     <h3>Yeni Grup Oluştur</h3>
     <label>Grup Adı</label>
-    <input type="text" id="newGroupName" placeholder="Örn: A Grubu, İleri Seviye..." maxlength="30"
-           onkeydown="if(event.key==='Enter')createGroup()">
+    <input type="text" id="newGroupName" placeholder="Örn: A Grubu, İleri Seviye..." maxlength="30" onkeydown="if(event.key==='Enter')createGroup()">
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal('modalNewGroup')">İptal</button>
       <button class="modal-ok" onclick="createGroup()">Oluştur</button>
@@ -401,8 +332,7 @@ header{
   <div class="modal">
     <h3>Grubu Yeniden Adlandır</h3>
     <label>Yeni Ad</label>
-    <input type="text" id="renameInput" placeholder="Grup adı..." maxlength="30"
-           onkeydown="if(event.key==='Enter')renameGroup()">
+    <input type="text" id="renameInput" placeholder="Grup adı..." maxlength="30" onkeydown="if(event.key==='Enter')renameGroup()">
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal('modalRename')">İptal</button>
       <button class="modal-ok" onclick="renameGroup()">Kaydet</button>
@@ -413,803 +343,619 @@ header{
 <div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-//  VERİ MODELİ
-//
-//  localStorage:
-//    chess_groups      = [ { id, name }, … ]       — grup listesi
-//    chess_active_group = "id"                      — aktif grup id'si
-//    chess_students_<id> = ["user1","user2",…]      — her grubun üyeleri
-//    chess_activity    = { user: { "YYYY-MM-DD": { games, puzzles } } }
-//    chess_criteria    = { minDailyGames, … }
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// PUAN SİSTEMİ
+// Her maç kazanma: +3 puan
+// Her maç oynama: +1 puan
+// Her bulmaca: +0.5 puan
+// Günlük maç kriteri karşılama: +5 bonus
+// Günlük bulmaca kriteri karşılama: +3 bonus
+// Maç serisi (gün başına): +2 bonus
+// Kazanma oranı bonusu: %60+ → +5/gün, %50+ → +2/gün
+// ═══════════════════════════════════════════════════
 
-// ── Gruplar ──
-let groups      = JSON.parse(localStorage.getItem('chess_groups')       || 'null');
-let activeGid   = localStorage.getItem('chess_active_group')             || null;
+// ── VERİ MODELİ ──
+let groups    = JSON.parse(localStorage.getItem('chess_groups') || 'null');
+let activeGid = localStorage.getItem('chess_active_group') || null;
 
-// İlk açılışta varsayılan grup oluştur
 if (!groups || groups.length === 0) {
-  const defId = uid();
-  groups = [{ id: defId, name: 'A Grubu' }];
-  saveGroups();
-  activeGid = defId;
-  saveActiveGid();
+  const id = uid(); groups = [{id, name:'A Grubu'}]; saveGroups();
+  activeGid = id; saveActiveGid();
 }
 if (!activeGid || !groups.find(g => g.id === activeGid)) {
-  activeGid = groups[0].id;
-  saveActiveGid();
+  activeGid = groups[0].id; saveActiveGid();
 }
 
 function saveGroups()    { localStorage.setItem('chess_groups', JSON.stringify(groups)); }
 function saveActiveGid() { localStorage.setItem('chess_active_group', activeGid); }
 function uid()           { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function loadStudentList(){ return JSON.parse(localStorage.getItem('chess_students_'+activeGid)||'[]'); }
+function saveStudentList(a){ localStorage.setItem('chess_students_'+activeGid, JSON.stringify(a)); }
 
-// ── Aktif gruptaki öğrenciler ──
-function loadStudentList() {
-  return JSON.parse(localStorage.getItem('chess_students_' + activeGid) || '[]');
-}
-function saveStudentList(arr) {
-  localStorage.setItem('chess_students_' + activeGid, JSON.stringify(arr));
-}
+let actLog = JSON.parse(localStorage.getItem('chess_activity') || '{}');
+function saveActLog(){ localStorage.setItem('chess_activity', JSON.stringify(actLog)); }
 
-// ── Aktivite kaydı (tüm gruplar ortak) ──
-let actLog  = JSON.parse(localStorage.getItem('chess_activity')  || '{}');
-function saveActLog() { localStorage.setItem('chess_activity', JSON.stringify(actLog)); }
-
-// ── Kriterler (tüm gruplar ortak) ──
 let crit = JSON.parse(localStorage.getItem('chess_criteria') || 'null') || {
-  minDailyGames:    3,
-  minWinRate:       50,
-  streakDays:       3,
-  minPuzzleDaily:   5,
-  streakPuzzleDays: 3,
+  minDailyGames:3, minWinRate:50, streakDays:3, minPuzzleDaily:5, streakPuzzleDays:3,
+  ptWin:3, ptPlay:1, ptPuzzle:0.5, ptDailyBonus:5, ptPuzzleBonus:3, ptStreak:2
 };
-function saveCrit() { localStorage.setItem('chess_criteria', JSON.stringify(crit)); }
+function saveCrit(){ localStorage.setItem('chess_criteria', JSON.stringify(crit)); }
 
-// ── Anlık veri (her yenilemede sıfırlanır) ──
-let liveData = {};   // { username: { wins, losses, draws, puzzlesSolved, ... } }
-
-// ── Sıralama / filtre ──
-let curSort    = 'games';
+// ── CANLI VERİ (yenileme başına sıfırlanır) ──
+// KRITIK: liveData asla temizlenmez, sadece tekil güncellemeler yapılır
+// Bu sayede henüz yüklenmemiş öğrenciler bir önceki yükleme değerlerini korur
+let liveData   = {};
+let curSort    = 'score';
 let curFilters = new Set();
+let scorePeriod= 'week';
+let refreshId  = 0;
 
-// ── Yükleme kilidi (race condition önlemek için) ──
-let loadingSet = new Set();   // şu an yüklenen kullanıcılar
-let refreshId  = 0;           // her refresh çağrısına benzersiz id
-
-// ═══════════════════════════════════════════════════════
-//  BAŞLANGIC
-// ═══════════════════════════════════════════════════════
+// ── BAŞLANGIÇ ──
 window.onload = () => {
   buildCritPanel();
   renderGroupBar();
   renderHeader();
+  // Tüm öğrencileri hemen skeleton olarak göster
   renderGrid();
   if (loadStudentList().length > 0) refreshAll();
 };
 
-// ═══════════════════════════════════════════════════════
-//  GRUP YÖNETİMİ
-// ═══════════════════════════════════════════════════════
-function renderGroupBar() {
-  const bar = document.getElementById('groupBar');
-  bar.innerHTML = groups.map(g => {
-    const students = JSON.parse(localStorage.getItem('chess_students_' + g.id) || '[]');
-    const isActive = g.id === activeGid;
-    return `<button class="group-tab ${isActive ? 'active' : ''}" onclick="switchGroup('${g.id}')">
-      ${escHtml(g.name)}
-      <span class="tab-count">${students.length}</span>
-    </button>`;
-  }).join('') +
-  `<button class="new-group-btn" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
-}
-
-function switchGroup(id) {
-  if (id === activeGid) return;
-  // Aktif yüklemeyi iptal et (refreshId ile)
-  refreshId++;
-  loadingSet.clear();
-  liveData = {};
-  activeGid = id;
-  saveActiveGid();
-  curFilters.clear();
-  document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b => b.classList.remove('active'));
-  renderGroupBar();
-  renderHeader();
-  renderGrid();
-  const students = loadStudentList();
-  if (students.length > 0) refreshAll();
-}
-
-function openNewGroupModal() {
-  document.getElementById('newGroupName').value = '';
-  document.getElementById('modalNewGroup').style.display = 'flex';
-  setTimeout(() => document.getElementById('newGroupName').focus(), 50);
-}
-
-function createGroup() {
-  const name = document.getElementById('newGroupName').value.trim();
-  if (!name) return;
-  const g = { id: uid(), name };
-  groups.push(g);
-  saveGroups();
-  closeModal('modalNewGroup');
-  activeGid = g.id;
-  saveActiveGid();
-  liveData = {};
-  renderGroupBar();
-  renderHeader();
-  renderGrid();
-  showToast(`"${name}" grubu oluşturuldu ✓`);
-}
-
-function openRenameModal() {
-  const g = groups.find(x => x.id === activeGid);
-  if (!g) return;
-  document.getElementById('renameInput').value = g.name;
-  document.getElementById('modalRename').style.display = 'flex';
-  setTimeout(() => document.getElementById('renameInput').focus(), 50);
-}
-
-function renameGroup() {
-  const name = document.getElementById('renameInput').value.trim();
-  if (!name) return;
-  const g = groups.find(x => x.id === activeGid);
-  if (!g) return;
-  g.name = name;
-  saveGroups();
-  closeModal('modalRename');
-  renderGroupBar();
-  renderHeader();
-  showToast(`Grup adı "${name}" olarak değiştirildi ✓`);
-}
-
-function confirmDeleteGroup() {
-  if (groups.length <= 1) { showToast('Son grubu silemezsiniz!', true); return; }
-  const g = groups.find(x => x.id === activeGid);
-  if (!confirm(`"${g?.name}" grubunu ve içindeki öğrenci listesini silmek istiyor musunuz?`)) return;
-  localStorage.removeItem('chess_students_' + activeGid);
-  groups = groups.filter(x => x.id !== activeGid);
-  saveGroups();
-  activeGid = groups[0].id;
-  saveActiveGid();
-  liveData = {};
-  renderGroupBar();
-  renderHeader();
-  renderGrid();
-  showToast('Grup silindi', true);
-}
-
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-function renderHeader() {
-  const g = groups.find(x => x.id === activeGid);
-  document.getElementById('groupNameDisplay').textContent = g ? g.name : '—';
-  document.title = (g ? g.name + ' — ' : '') + 'Lichess Koç Paneli';
-}
-
-// ═══════════════════════════════════════════════════════
-//  ÖĞRENCİ EKLE / ÇIKAR
-// ═══════════════════════════════════════════════════════
-async function addStudent() {
-  const inp  = document.getElementById('addInput');
-  const errEl = document.getElementById('addErr');
-  const raw  = inp.value.trim();
-  const user = raw.toLowerCase();
-  errEl.textContent = '';
-  if (!user) return;
-
-  const students = loadStudentList();
-  if (students.includes(user)) { errEl.textContent = '⚠ Bu kullanıcı zaten listede.'; return; }
-
-  inp.disabled = true;
-  try {
-    const res = await fetchWithTimeout(`https://lichess.org/api/user/${user}`, {}, 8000);
-    if (!res.ok) { errEl.textContent = '✗ Kullanıcı bulunamadı.'; return; }
-    const data = await res.json();
-    students.push(user);
-    saveStudentList(students);
-    inp.value = '';
-    renderGroupBar(); // sayacı güncelle
-    renderGrid();
-    loadOneStudent(user);
-    showToast(`${data.username} eklendi ✓`);
-  } catch (e) {
-    errEl.textContent = e.name === 'AbortError' ? '✗ Bağlantı zaman aşımı.' : '✗ Bağlantı hatası.';
-  } finally {
-    inp.disabled = false;
-    inp.focus();
-  }
-}
-
-function removeStudent(username) {
-  const students = loadStudentList();
-  const updated  = students.filter(s => s !== username);
-  saveStudentList(updated);
-  delete liveData[username];
-  renderGroupBar();
-  renderGrid();
-  updateSummary();
-  showToast(`${username} listeden çıkarıldı`, true);
-}
-
-// ═══════════════════════════════════════════════════════
-//  VERİ YÜKLEME  (race-condition güvenli)
-// ═══════════════════════════════════════════════════════
-
-// Tüm grubu sırayla yenile
-async function refreshAll() {
-  const myRefreshId = ++refreshId;   // bu çalışmaya özgü id
-  const students = loadStudentList();
-  if (students.length === 0) return;
-
-  const btn = document.getElementById('refreshBtn');
-  btn.classList.add('spinning');
-  setLoadStatus(`0 / ${students.length} yükleniyor…`);
-
-  // Önce mevcut liveData'yı temizle, skeleton göster
-  liveData = {};
-  renderGrid();
-
-  let done = 0;
-  // Sırayla yükle (paralel değil) — rate-limit ve tutarsızlık önlenir
-  for (const user of students) {
-    if (myRefreshId !== refreshId) break;  // grup değiştiyse dur
-    await loadOneStudent(user, myRefreshId);
-    done++;
-    if (myRefreshId !== refreshId) break;
-    setLoadStatus(`${done} / ${students.length} yüklendi`);
-    renderGrid();  // her yüklemeden sonra ızgarayı güncelle
-  }
-
-  if (myRefreshId === refreshId) {
-    btn.classList.remove('spinning');
-    setLoadStatus('');
-    document.getElementById('lastUpdate').textContent =
-      'Güncellendi: ' + new Date().toLocaleTimeString('tr-TR');
-    updateSummary();
-    renderGrid();
-  }
-}
-
-// Tek bir kullanıcıyı yükle
-async function loadOneStudent(username, myRefreshId) {
-  try {
-    // ── 1. Kullanıcı profili ──
-    const userRes = await fetchWithTimeout(`https://lichess.org/api/user/${username}`, {}, 10000);
-    if (!userRes.ok) throw new Error('user_not_found');
-    const user = await userRes.json();
-
-    if (myRefreshId && myRefreshId !== refreshId) return;
-
-    // ── Online durumu: seenAt son 5 dakika içindeyse çevrimiçi say ──
-    // (user.online bazen eksik geliyor, seenAt daha güvenilir)
-    let isOnline = false;
-    if (user.online === true) {
-      isOnline = true;
-    } else if (user.seenAt) {
-      isOnline = (Date.now() - user.seenAt) < 5 * 60 * 1000;
-    }
-
-    // ── 2. Bugünkü oyunlar ──
-    // Lichess UTC'de çalışır; yerel gün başını UTC'ye çevir
-    const now   = new Date();
-    const since = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-    const gamesRes = await fetchWithTimeout(
-      `https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false`,
-      { headers: { Accept: 'application/x-ndjson' } },
-      15000
-    );
-
-    if (myRefreshId && myRefreshId !== refreshId) return;
-
-    const gamesText = await gamesRes.text();
-    const games = gamesText.trim().split('\n')
-      .filter(l => l.trim())
-      .map(l => { try { return JSON.parse(l); } catch { return null; } })
-      .filter(Boolean);
-
-    let wins = 0, losses = 0, draws = 0;
-    const recent = [];
-
-    for (const g of games) {
-      const whiteUser = (g.players?.white?.user?.name || '').toLowerCase();
-      const color  = whiteUser === username ? 'white' : 'black';
-      const winner = g.winner;
-
-      let result;
-      if (!winner) {
-        if (g.status === 'aborted' || g.status === 'noStart') continue;
-        draws++; result = 'draw';
-      } else if (winner === color) {
-        wins++; result = 'win';
-      } else {
-        losses++; result = 'loss';
-      }
-
-      const opp = color === 'white'
-        ? (g.players?.black?.user?.name  || 'Anonim')
-        : (g.players?.white?.user?.name || 'Anonim');
-      const ts = g.lastMoveAt || g.createdAt;
-      recent.push({ result, opponent: opp, speed: g.speed || '', time: ts ? fmtTime(new Date(ts)) : '' });
-    }
-
-    if (myRefreshId && myRefreshId !== refreshId) return;
-
-    // ── 3. Ratingler ──
-    const ratings = {};
-    const perf = user.perfs || {};
-    for (const k of ['bullet','blitz','rapid','classical']) {
-      if (perf[k] && perf[k].games > 0) {
-        ratings[k] = { int: perf[k].rating, prog: perf[k].prog || 0 };
-      }
-    }
-
-    // ── 4. Aktivite API — bulmaca + geçmiş hafta ──
-    let puzzlesSolved = 0;
-    let puzzleRating  = perf.puzzle ? perf.puzzle.rating : null;
-
-    try {
-      const actRes = await fetchWithTimeout(`https://lichess.org/api/user/${username}/activity`, {}, 12000);
-      if (actRes.ok) {
-        const actData = await actRes.json();
-        if (myRefreshId && myRefreshId !== refreshId) return;
-
-        // DEBUG: konsola ham aktivite verisini yaz (sorun tespiti için)
-        console.log(`[${username}] aktivite API ham veri (ilk 3 giriş):`, JSON.stringify(actData.slice(0,3)));
-
-        if (Array.isArray(actData) && actData.length > 0) {
-          const todayKey = todayStr();
-          const yesterday = dateStr(-1);
-
-          if (!actLog[username]) actLog[username] = {};
-
-          for (const entry of actData) {
-            // Lichess aktivite API iki format kullanıyor:
-            // Format A: { interval: { start: "YYYY-MM-DD", end: "YYYY-MM-DD" }, puzzles: {...}, games: {...} }
-            // Format B (eski): doğrudan obje, tarih dışarıda
-            // İkisini de dene:
-            let entryDate = entry.interval?.start || entry.date || null;
-
-            // Tarih yoksa atla
-            if (!entryDate) {
-              console.warn(`[${username}] tarihsiz aktivite girişi:`, entry);
-              continue;
-            }
-
-            // Tarih formatını normalize et: bazen timestamp olarak gelir
-            if (typeof entryDate === 'number') {
-              const d = new Date(entryDate);
-              entryDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            }
-
-            // ── Bulmaca: bugün veya dün (timezone farkı için) ──
-            if (entryDate === todayKey || entryDate === yesterday) {
-              // Format A: puzzles.score.{ win, loss, draw }
-              if (entry.puzzles?.score) {
-                const s = entry.puzzles.score;
-                const cnt = (s.win||0) + (s.loss||0) + (s.draw||0);
-                if (cnt > puzzlesSolved) {
-                  puzzlesSolved = cnt;
-                  console.log(`[${username}] bulmaca bulundu (score): ${cnt} (${entryDate})`);
-                }
-              }
-              // Format B: puzzles.{ win, loss, draw } doğrudan
-              else if (entry.puzzles && typeof entry.puzzles === 'object') {
-                const p = entry.puzzles;
-                const cnt = (p.win||0) + (p.loss||0) + (p.draw||0);
-                if (cnt > puzzlesSolved) {
-                  puzzlesSolved = cnt;
-                  console.log(`[${username}] bulmaca bulundu (direkt): ${cnt} (${entryDate})`);
-                }
-              }
-            }
-
-            // ── Geçmiş 14 gün: actLog'a işle ──
-            const dayDiff = daysBetween(todayKey, entryDate);
-            if (dayDiff >= 0 && dayDiff <= 14) {
-              const prev = actLog[username][entryDate] || { games: 0, puzzles: 0 };
-
-              // Maç sayısı: games altında format bazlı topla
-              let entryGames = prev.games;
-              if (entry.games && typeof entry.games === 'object') {
-                let gTotal = 0;
-                for (const fmt of Object.values(entry.games)) {
-                  if (fmt && typeof fmt === 'object') {
-                    gTotal += (fmt.win||0) + (fmt.loss||0) + (fmt.draw||0);
-                  }
-                }
-                if (gTotal > entryGames) entryGames = gTotal;
-              }
-
-              // Bulmaca sayısı
-              let entryPuzzles = prev.puzzles;
-              if (entry.puzzles?.score) {
-                const s = entry.puzzles.score;
-                const cnt = (s.win||0) + (s.loss||0) + (s.draw||0);
-                if (cnt > entryPuzzles) entryPuzzles = cnt;
-              } else if (entry.puzzles && typeof entry.puzzles === 'object') {
-                const p = entry.puzzles;
-                const cnt = (p.win||0) + (p.loss||0) + (p.draw||0);
-                if (cnt > entryPuzzles) entryPuzzles = cnt;
-              }
-
-              actLog[username][entryDate] = { games: entryGames, puzzles: entryPuzzles };
-            }
-          }
-          saveActLog();
-          console.log(`[${username}] actLog güncellendi. Bugün bulmaca: ${puzzlesSolved}`);
-        } else {
-          console.log(`[${username}] aktivite verisi boş veya dizi değil:`, typeof actData);
-        }
-      } else {
-        console.warn(`[${username}] aktivite API hata kodu: ${actRes.status}`);
-      }
-    } catch (e) {
-      console.warn(`[${username}] aktivite yüklenemedi:`, e.message);
-    }
-
-    // ── 5. Kaydet ──
-    if (myRefreshId && myRefreshId !== refreshId) return;
-
-    liveData[username] = {
-      displayName: user.username,
-      title:       user.title || '',
-      online:      isOnline,
-      ratings,
-      wins, losses, draws,
-      puzzlesSolved,
-      puzzleRating,
-      recentGames: recent,
-      loadedAt:    Date.now(),
-    };
-
-    // Bugünkü aktiviteyi de loga işle (maç + bulmaca)
-    logActivity(username, wins + losses + draws, puzzlesSolved);
-
-  } catch (err) {
-    console.warn(`[${username}] yüklenemedi:`, err.message);
-    liveData[username] = { error: true, displayName: username };
-  }
-}
-
-// ── Aktivite logu ──
-// offset=0 bugün, offset=-1 dün, ...
-function dateStr(offset) {
-  const d = new Date();
-  d.setDate(d.getDate() + (offset || 0));
+// ── DATE YARDIMCILARI ──
+function dateStr(offset){
+  const d = new Date(); d.setDate(d.getDate()+(offset||0));
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-function todayStr() { return dateStr(0); }
-
-// a - b kaç gün fark (a >= b ise pozitif)
-// "YYYY-MM-DD" stringleri timezone sorununa girmeden karşılaştır
-function daysBetween(a, b) {
-  // new Date("YYYY-MM-DD") UTC gece yarısı alır, timezone'a göre kayar
-  // Bu yüzden parçalara ayırarak hesapla
-  const [ay, am, ad] = a.split('-').map(Number);
-  const [by, bm, bd] = b.split('-').map(Number);
-  const da = new Date(ay, am-1, ad);
-  const db = new Date(by, bm-1, bd);
-  return Math.round((da - db) / 86400000);
+function todayStr(){ return dateStr(0); }
+function weekStart(){
+  // Bu haftanın Pazartesi günü
+  const d = new Date(); const day = d.getDay(); const diff = (day===0?-6:1-day);
+  d.setDate(d.getDate()+diff);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function daysBetween(a,b){
+  const [ay,am,ad]=a.split('-').map(Number); const [by,bm,bd]=b.split('-').map(Number);
+  return Math.round((new Date(ay,am-1,ad)-new Date(by,bm-1,bd))/86400000);
 }
 
-function logActivity(username, games, puzzles) {
-  if (!actLog[username]) actLog[username] = {};
-  const key = todayStr();
-  // Sadece büyük değerle güncelle (aynı gün birden fazla çağrı olursa)
-  const prev = actLog[username][key] || { games: 0, puzzles: 0 };
-  actLog[username][key] = {
-    games:   Math.max(prev.games,   games),
-    puzzles: Math.max(prev.puzzles, puzzles),
-  };
-  // 14 günden eski kayıtları temizle
-  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
-  for (const d of Object.keys(actLog[username])) {
-    if (new Date(d) < cutoff) delete actLog[username][d];
-  }
+// ── AKTİVİTE LOGU ──
+function logActivity(username, games, puzzles){
+  if(!actLog[username]) actLog[username]={};
+  const key=todayStr(), prev=actLog[username][key]||{games:0,puzzles:0};
+  actLog[username][key]={games:Math.max(prev.games,games), puzzles:Math.max(prev.puzzles,puzzles)};
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-14);
+  for(const d of Object.keys(actLog[username])){ if(new Date(d)<cutoff) delete actLog[username][d]; }
   saveActLog();
 }
 
-function getStreak(username, type = 'games') {
-  const log = actLog[username] || {};
-  const thr = type === 'games' ? crit.minDailyGames : crit.minPuzzleDaily;
-  let streak = 0;
-  for (let i = 0; i < 14; i++) {
-    const key   = dateStr(-i);
-    const entry = log[key];
-    const val   = entry ? (type === 'games' ? entry.games : entry.puzzles) : 0;
-    if (val >= thr) streak++;
-    else break;
+function getStreak(username, type='games'){
+  const log=actLog[username]||{}, thr=type==='games'?crit.minDailyGames:crit.minPuzzleDaily;
+  let s=0;
+  for(let i=0;i<14;i++){
+    const entry=log[dateStr(-i)]; const val=entry?(type==='games'?entry.games:entry.puzzles):0;
+    if(val>=thr) s++; else break;
   }
-  return streak;
+  return s;
 }
 
-function get14Days(username) {
-  const log = actLog[username] || {};
-  const out = [];
-  for (let i = 13; i >= 0; i--) {
-    const key = dateStr(-i);
-    out.push({ date: key, ...(log[key] || { games:0, puzzles:0 }) });
-  }
+function get14Days(username){
+  const log=actLog[username]||{}, out=[];
+  for(let i=13;i>=0;i--){ const k=dateStr(-i); out.push({date:k,...(log[k]||{games:0,puzzles:0})}); }
   return out;
 }
 
-// ── Fetch with timeout ──
-function fetchWithTimeout(url, opts = {}, ms = 10000) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), ms);
-  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+// ── PUAN HESAPLAMA ──
+function calcScore(username, period='week'){
+  const log = actLog[username]||{};
+  let totalPts = 0;
+  const ws = weekStart();
+
+  for(const [date, entry] of Object.entries(log)){
+    // Dönem filtresi
+    if(period==='week' && daysBetween(todayStr(), date) > 6) continue;
+    const games   = entry.games   || 0;
+    const puzzles = entry.puzzles || 0;
+    // Temel puanlar — bugünün maç sonuçlarını bilmiyoruz (sadece toplam),
+    // kazanma verisini liveData'dan al (bugün için)
+    const d = liveData[username];
+    let wins = 0;
+    if(date === todayStr() && d && !d.error){
+      wins = d.wins || 0;
+    }
+    // Maç puanı: kazanma × ptWin + (oyun-kazanma) × ptPlay
+    totalPts += wins * crit.ptWin + Math.max(0, games - wins) * crit.ptPlay;
+    // Bulmaca puanı
+    totalPts += puzzles * crit.ptPuzzle;
+    // Günlük maç bonusu
+    if(games >= crit.minDailyGames) totalPts += crit.ptDailyBonus;
+    // Günlük bulmaca bonusu
+    if(puzzles >= crit.minPuzzleDaily) totalPts += crit.ptPuzzleBonus;
+  }
+  // Seri bonusu
+  const streak = getStreak(username,'games');
+  totalPts += streak * crit.ptStreak;
+  // Kazanma oranı bonusu (bugün için)
+  const d = liveData[username];
+  if(d && !d.error){
+    const tot=(d.wins||0)+(d.losses||0)+(d.draws||0);
+    const wr = tot>0?(d.wins/tot)*100:0;
+    if(wr>=60) totalPts+=5; else if(wr>=50) totalPts+=2;
+  }
+  return Math.round(totalPts);
 }
 
-// ═══════════════════════════════════════════════════════
-//  ROZET MOTORU
-// ═══════════════════════════════════════════════════════
-function getBadges(username, d) {
-  if (!d || d.error) return [];
-  const badges = [];
-  const total   = (d.wins||0) + (d.losses||0) + (d.draws||0);
-  const winRate = total > 0 ? Math.round((d.wins/total)*100) : 0;
-  const puzzles = d.puzzlesSolved || 0;
-  const gStreak = getStreak(username, 'games');
-  const pStreak = getStreak(username, 'puzzles');
+function scoreBreakdown(username){
+  const d=liveData[username]; if(!d||d.error) return '';
+  const tot=(d.wins||0)+(d.losses||0)+(d.draws||0);
+  const puz=d.puzzlesSolved||0;
+  const streak=getStreak(username,'games');
+  const parts=[];
+  if(d.wins>0) parts.push(`⚔${d.wins}K×${crit.ptWin}`);
+  if(tot-d.wins>0) parts.push(`+${tot-d.wins}O×${crit.ptPlay}`);
+  if(puz>0) parts.push(`🧩${puz}×${crit.ptPuzzle}`);
+  if(streak>0) parts.push(`🔥${streak}g×${crit.ptStreak}`);
+  return parts.join(' ');
+}
 
-  if (total >= crit.minDailyGames)
-    badges.push({ cls:'b-active', icon:'⚡', label:`Aktif`, tip:`Bugün ${total} maç ≥${crit.minDailyGames}` });
-  else if (total > 0)
-    badges.push({ cls:'b-info',   icon:'▷',  label:`${total} maç`, tip:'Bugün maç yaptı' });
-  else
-    badges.push({ cls:'b-warn',   icon:'💤', label:'Pasif', tip:'Bugün maç yok' });
+// ── GRUP YÖNETİMİ ──
+function renderGroupBar(){
+  const bar=document.getElementById('groupBar');
+  bar.innerHTML = groups.map(g=>{
+    const n=(JSON.parse(localStorage.getItem('chess_students_'+g.id)||'[]')).length;
+    return `<button class="group-tab ${g.id===activeGid?'active':''}" onclick="switchGroup('${g.id}')">
+      ${escHtml(g.name)}<span class="tab-count">${n}</span></button>`;
+  }).join('') + `<button class="new-group-btn" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
+}
 
-  if (total >= 3 && winRate >= crit.minWinRate)
-    badges.push({ cls:'b-gold',    icon:'🏆', label:`%${winRate} Kazanma`, tip:`≥%${crit.minWinRate} kazanma oranı` });
+function switchGroup(id){
+  if(id===activeGid) return;
+  refreshId++;
+  activeGid=id; saveActiveGid();
+  curFilters.clear();
+  document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.remove('active'));
+  renderGroupBar(); renderHeader();
+  // liveData'yı TEMİZLEME — önceki grup verisi kalsa da yeni grup için skeleton göster
+  // Ama yeni gruptaki öğrenciler için eski liveData key'leri artık listede olmayacak
+  renderGrid();
+  if(loadStudentList().length>0) refreshAll();
+}
 
-  if (gStreak >= crit.streakDays)
-    badges.push({ cls:'b-streak',  icon:'🔥', label:`${gStreak}g Seri`, tip:`${gStreak} gün üst üste ≥${crit.minDailyGames} maç` });
+function openNewGroupModal(){ document.getElementById('newGroupName').value=''; document.getElementById('modalNewGroup').style.display='flex'; setTimeout(()=>document.getElementById('newGroupName').focus(),50); }
+function createGroup(){
+  const name=document.getElementById('newGroupName').value.trim(); if(!name) return;
+  const g={id:uid(),name}; groups.push(g); saveGroups();
+  closeModal('modalNewGroup'); activeGid=g.id; saveActiveGid();
+  renderGroupBar(); renderHeader(); renderGrid(); showToast(`"${name}" grubu oluşturuldu ✓`);
+}
+function openRenameModal(){
+  const g=groups.find(x=>x.id===activeGid); if(!g) return;
+  document.getElementById('renameInput').value=g.name;
+  document.getElementById('modalRename').style.display='flex';
+  setTimeout(()=>document.getElementById('renameInput').focus(),50);
+}
+function renameGroup(){
+  const name=document.getElementById('renameInput').value.trim(); if(!name) return;
+  const g=groups.find(x=>x.id===activeGid); if(!g) return;
+  g.name=name; saveGroups(); closeModal('modalRename'); renderGroupBar(); renderHeader(); showToast(`Grup "${name}" olarak yeniden adlandırıldı ✓`);
+}
+function confirmDeleteGroup(){
+  if(groups.length<=1){ showToast('Son grubu silemezsiniz!',true); return; }
+  const g=groups.find(x=>x.id===activeGid);
+  if(!confirm(`"${g?.name}" grubunu ve öğrenci listesini silmek istiyor musunuz?`)) return;
+  localStorage.removeItem('chess_students_'+activeGid);
+  groups=groups.filter(x=>x.id!==activeGid); saveGroups();
+  activeGid=groups[0].id; saveActiveGid(); renderGroupBar(); renderHeader(); renderGrid(); showToast('Grup silindi',true);
+}
+function closeModal(id){ document.getElementById(id).style.display='none'; }
+function renderHeader(){ const g=groups.find(x=>x.id===activeGid); document.getElementById('groupNameDisplay').textContent=g?g.name:'—'; document.title=(g?g.name+' — ':'')+'Lichess Koç Paneli'; }
 
-  if (puzzles >= crit.minPuzzleDaily)
-    badges.push({ cls:'b-puzzle',  icon:'🧩', label:`${puzzles} Bulmaca`, tip:`≥${crit.minPuzzleDaily} bulmaca bugün` });
+// ── DIŞA / İÇE AKTAR ──
+function exportData(){
+  const data = {
+    version:2, exportedAt: new Date().toISOString(),
+    groups, activeGid,
+    students: {}, activity: actLog, criteria: crit
+  };
+  groups.forEach(g=>{
+    data.students[g.id] = JSON.parse(localStorage.getItem('chess_students_'+g.id)||'[]');
+  });
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`lichess-panel-${dateStr(0)}.json`; a.click();
+  showToast('Veriler dışa aktarıldı ✓');
+}
 
-  if (pStreak >= crit.streakPuzzleDays)
-    badges.push({ cls:'b-pstreak', icon:'🎯', label:`${pStreak}g Bulmaca Seri`, tip:`${pStreak} gün bulmaca serisi` });
+function importData(event){
+  const file=event.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.groups||!data.students) throw new Error('Geçersiz dosya formatı');
+      // Grupları yükle
+      groups=data.groups; saveGroups();
+      // Her grubun öğrenci listesini yükle
+      for(const [gid,list] of Object.entries(data.students)){
+        localStorage.setItem('chess_students_'+gid, JSON.stringify(list));
+      }
+      // Aktivite logunu yükle (mevcut ile birleştir)
+      if(data.activity){
+        for(const [user,days] of Object.entries(data.activity)){
+          if(!actLog[user]) actLog[user]={};
+          for(const [day,vals] of Object.entries(days)){
+            const prev=actLog[user][day]||{games:0,puzzles:0};
+            actLog[user][day]={games:Math.max(prev.games,vals.games||0),puzzles:Math.max(prev.puzzles,vals.puzzles||0)};
+          }
+        }
+        saveActLog();
+      }
+      // Kriterleri yükle
+      if(data.criteria){ crit={...crit,...data.criteria}; saveCrit(); }
+      // Aktif grubu ayarla
+      if(data.activeGid && groups.find(g=>g.id===data.activeGid)) activeGid=data.activeGid;
+      else activeGid=groups[0].id;
+      saveActiveGid();
+      buildCritPanel(); renderGroupBar(); renderHeader(); renderGrid();
+      if(loadStudentList().length>0) refreshAll();
+      showToast('Veriler başarıyla içe aktarıldı ✓');
+    }catch(err){ showToast('İçe aktarma hatası: '+err.message, true); }
+  };
+  reader.readAsText(file);
+  event.target.value=''; // aynı dosyayı tekrar seçebilmek için sıfırla
+}
 
+// ── ÖĞRENCİ EKLE / ÇIKAR ──
+async function addStudent(){
+  const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
+  const user=inp.value.trim().toLowerCase(); errEl.textContent='';
+  if(!user) return;
+  const students=loadStudentList();
+  if(students.includes(user)){ errEl.textContent='⚠ Bu kullanıcı zaten listede.'; return; }
+  inp.disabled=true;
+  try{
+    const res=await fetchWT(`https://lichess.org/api/user/${user}`,{},8000);
+    if(!res.ok){ errEl.textContent='✗ Kullanıcı bulunamadı.'; return; }
+    const data=await res.json();
+    students.push(user); saveStudentList(students); inp.value='';
+    renderGroupBar(); renderGrid();
+    loadOneStudent(user,0); // 0 = tek öğrenci ekleme, refreshId kontrolü gerekmez
+    showToast(`${data.username} eklendi ✓`);
+  }catch(e){ errEl.textContent=e.name==='AbortError'?'✗ Zaman aşımı.':'✗ Bağlantı hatası.'; }
+  finally{ inp.disabled=false; inp.focus(); }
+}
+
+function removeStudent(username){
+  const updated=loadStudentList().filter(s=>s!==username);
+  saveStudentList(updated); delete liveData[username];
+  renderGroupBar(); renderGrid(); showToast(`${username} çıkarıldı`,true);
+}
+
+// ── VERİ YÜKLEME ──
+async function refreshAll(){
+  const myId = ++refreshId;
+  const students = loadStudentList();
+  if(students.length===0) return;
+  const btn=document.getElementById('refreshBtn'); btn.classList.add('spinning');
+  setLoadStatus(`Yükleniyor… 0/${students.length}`);
+  // KRITIK: liveData'yı temizlemiyoruz!
+  // Öğrencilerin mevcut verisi skeleton yerine son verilerini gösterir.
+  // Sadece yükleme durumunu belirt.
+  renderGrid(); // Tüm öğrencileri göster (veri var olanlar kartla, olmayanlar skeleton)
+  let done=0;
+  for(const user of students){
+    if(myId!==refreshId) break;
+    await loadOneStudent(user, myId);
+    done++;
+    if(myId!==refreshId) break;
+    setLoadStatus(`Yükleniyor… ${done}/${students.length}`);
+    // Her öğrenci yüklenince sadece o kartı güncelle (tüm grid'i yeniden çizme!)
+    updateOneCard(user, myId);
+  }
+  if(myId===refreshId){
+    btn.classList.remove('spinning'); setLoadStatus('');
+    document.getElementById('lastUpdate').textContent='Güncellendi: '+new Date().toLocaleTimeString('tr-TR');
+    renderGrid(); // Son tam render — tüm veriler hazır
+    renderChamps(); renderScoreTable();
+  }
+}
+
+async function loadOneStudent(username, myId){
+  try{
+    const userRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},10000);
+    if(!userRes.ok) throw new Error('not_found');
+    const user=await userRes.json();
+    if(myId && myId!==refreshId) return;
+
+    // Online durumu
+    let online=false;
+    if(user.online===true) online=true;
+    else if(user.seenAt) online=(Date.now()-user.seenAt)<5*60*1000;
+
+    // Bugünkü oyunlar
+    const now=new Date(), since=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false`,{headers:{Accept:'application/x-ndjson'}},15000);
+    if(myId && myId!==refreshId) return;
+    const gText=await gRes.text();
+    const games=gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
+    let wins=0,losses=0,draws=0; const recent=[];
+    for(const g of games){
+      const wu=(g.players?.white?.user?.name||'').toLowerCase();
+      const color=wu===username?'white':'black';
+      const winner=g.winner;
+      let result;
+      if(!winner){ if(g.status==='aborted'||g.status==='noStart') continue; draws++; result='draw'; }
+      else if(winner===color){ wins++; result='win'; }
+      else{ losses++; result='loss'; }
+      const opp=color==='white'?(g.players?.black?.user?.name||'Anonim'):(g.players?.white?.user?.name||'Anonim');
+      const ts=g.lastMoveAt||g.createdAt;
+      recent.push({result,opponent:opp,speed:g.speed||'',time:ts?fmtTime(new Date(ts)):''});
+    }
+    if(myId && myId!==refreshId) return;
+
+    // Ratingler
+    const ratings={}, perf=user.perfs||{};
+    for(const k of ['bullet','blitz','rapid','classical']){
+      if(perf[k]&&perf[k].games>0) ratings[k]={int:perf[k].rating,prog:perf[k].prog||0};
+    }
+
+    // Bulmaca
+    let puzzlesSolved=0, puzzleRating=perf.puzzle?perf.puzzle.rating:null;
+    try{
+      const aRes=await fetchWT(`https://lichess.org/api/user/${username}/activity`,{},12000);
+      if(aRes.ok){
+        const aData=await aRes.json();
+        if(myId && myId!==refreshId) return;
+        if(Array.isArray(aData)){
+          if(!actLog[username]) actLog[username]={};
+          for(const entry of aData){
+            let eDate=entry.interval?.start||entry.date||null;
+            if(!eDate) continue;
+            if(typeof eDate==='number'){ const d=new Date(eDate); eDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+            // Bulmaca: bugün veya dün
+            if(eDate===todayStr()||eDate===dateStr(-1)){
+              const cnt=getPuzzleCount(entry);
+              if(cnt>puzzlesSolved) puzzlesSolved=cnt;
+            }
+            // Geçmiş 14 gün actLog'a işle
+            if(daysBetween(todayStr(),eDate)>=0&&daysBetween(todayStr(),eDate)<=14){
+              const prev=actLog[username][eDate]||{games:0,puzzles:0};
+              let eg=prev.games;
+              if(entry.games&&typeof entry.games==='object'){
+                let gt=0; for(const v of Object.values(entry.games)) if(v&&typeof v==='object') gt+=(v.win||0)+(v.loss||0)+(v.draw||0);
+                if(gt>eg) eg=gt;
+              }
+              const ep=Math.max(prev.puzzles, getPuzzleCount(entry));
+              actLog[username][eDate]={games:eg,puzzles:ep};
+            }
+          }
+          saveActLog();
+        }
+      }
+    }catch(e){ console.warn(`[${username}] aktivite:`,e.message); }
+
+    if(myId && myId!==refreshId) return;
+    liveData[username]={displayName:user.username,title:user.title||'',online,ratings,wins,losses,draws,puzzlesSolved,puzzleRating,recentGames:recent,loadedAt:Date.now()};
+    logActivity(username, wins+losses+draws, puzzlesSolved);
+  }catch(err){
+    console.warn(`[${username}]:`,err.message);
+    if(!liveData[username]) liveData[username]={error:true,displayName:username};
+  }
+}
+
+function getPuzzleCount(entry){
+  if(entry.puzzles?.score){ const s=entry.puzzles.score; return(s.win||0)+(s.loss||0)+(s.draw||0); }
+  if(entry.puzzles&&typeof entry.puzzles==='object'){ const p=entry.puzzles; return(p.win||0)+(p.loss||0)+(p.draw||0); }
+  return 0;
+}
+
+// Tek kartı güncelle (tüm grid'i yeniden çizmeden)
+function updateOneCard(username, myId){
+  if(myId && myId!==refreshId) return;
+  const students=loadStudentList();
+  const sorted=[...students].sort((a,b)=>scoreForSort(b)-scoreForSort(a));
+  const rank=sorted.indexOf(username)+1;
+  const d=liveData[username]; if(!d) return;
+  const grid=document.getElementById('cardsGrid');
+  const existing=grid.querySelector(`[data-user="${CSS.escape(username)}"]`);
+  if(existing){
+    const html=buildCard(username,d,rank);
+    const tmp=document.createElement('div'); tmp.innerHTML=html;
+    if(tmp.firstElementChild) existing.replaceWith(tmp.firstElementChild);
+  }
+}
+
+// ── ROZET MOTORU ──
+function getBadges(username,d){
+  if(!d||d.error) return [];
+  const badges=[], total=(d.wins||0)+(d.losses||0)+(d.draws||0), winRate=total>0?Math.round((d.wins/total)*100):0;
+  const puzzles=d.puzzlesSolved||0, gs=getStreak(username,'games'), ps=getStreak(username,'puzzles');
+  if(total>=crit.minDailyGames) badges.push({cls:'b-active',icon:'⚡',label:'Aktif',tip:`Bugün ${total} maç ≥${crit.minDailyGames}`});
+  else if(total>0) badges.push({cls:'b-info',icon:'▷',label:`${total} maç`,tip:'Bugün maç yaptı'});
+  else badges.push({cls:'b-warn',icon:'💤',label:'Pasif',tip:'Bugün maç yok'});
+  if(total>=3&&winRate>=crit.minWinRate) badges.push({cls:'b-gold',icon:'🏆',label:`%${winRate}`,tip:`≥%${crit.minWinRate} kazanma`});
+  if(gs>=crit.streakDays) badges.push({cls:'b-streak',icon:'🔥',label:`${gs}g Seri`,tip:`${gs} gün üst üste maç`});
+  if(puzzles>=crit.minPuzzleDaily) badges.push({cls:'b-puzzle',icon:'🧩',label:`${puzzles}`,tip:`≥${crit.minPuzzleDaily} bulmaca bugün`});
+  if(ps>=crit.streakPuzzleDays) badges.push({cls:'b-pstreak',icon:'🎯',label:`${ps}g 🧩Seri`,tip:`${ps} gün bulmaca serisi`});
   return badges;
 }
 
-// ═══════════════════════════════════════════════════════
-//  SIRALAMA / FİLTRE
-// ═══════════════════════════════════════════════════════
-function scoreFor(username) {
-  const d = liveData[username];
-  if (!d || d.error) return -9999;
-  const total   = (d.wins||0) + (d.losses||0) + (d.draws||0);
-  const winRate = total > 0 ? (d.wins/total)*100 : 0;
-  if (curSort === 'games')   return total;
-  if (curSort === 'winrate') return winRate;
-  if (curSort === 'puzzles') return d.puzzlesSolved || 0;
-  if (curSort === 'streak')  return getStreak(username,'games');
-  if (curSort === 'name')    return -(username.charCodeAt(0));
-  return total;
+// ── SIRALAMA / FİLTRE ──
+function scoreForSort(username){
+  const d=liveData[username]; if(!d||d.error) return -9999;
+  const total=(d.wins||0)+(d.losses||0)+(d.draws||0);
+  const wr=total>0?(d.wins/total)*100:0;
+  if(curSort==='score')   return calcScore(username,'week');
+  if(curSort==='games')   return total;
+  if(curSort==='winrate') return wr;
+  if(curSort==='puzzles') return d.puzzlesSolved||0;
+  if(curSort==='streak')  return getStreak(username,'games');
+  if(curSort==='name')    return -(username.charCodeAt(0));
+  return calcScore(username,'week');
 }
 
-function passes(username) {
-  if (curFilters.size === 0) return true;
-  const d = liveData[username];
-  // Filtre aktifken veri henüz yüklenmemişse göster (skeleton olarak)
-  if (!d) return true;
-  if (d.error) return curFilters.has('inactive');
-  const total   = (d.wins||0) + (d.losses||0) + (d.draws||0);
-  if (curFilters.has('active')   && total >= crit.minDailyGames) return true;
-  if (curFilters.has('inactive') && total < crit.minDailyGames)  return true;
-  if (curFilters.has('streak')   && getStreak(username,'games') >= crit.streakDays) return true;
-  if (curFilters.has('puzzle')   && (d.puzzlesSolved||0) >= crit.minPuzzleDaily) return true;
+function passes(username){
+  if(curFilters.size===0) return true;
+  const d=liveData[username]; if(!d) return true;
+  if(d.error) return curFilters.has('inactive');
+  const total=(d.wins||0)+(d.losses||0)+(d.draws||0);
+  if(curFilters.has('active')   && total>=crit.minDailyGames) return true;
+  if(curFilters.has('inactive') && total<crit.minDailyGames)  return true;
+  if(curFilters.has('streak')   && getStreak(username,'games')>=crit.streakDays) return true;
+  if(curFilters.has('puzzle')   && (d.puzzlesSolved||0)>=crit.minPuzzleDaily) return true;
   return false;
 }
 
-function setSort(key) {
-  curSort = key;
-  document.querySelectorAll('.ctrl-btn[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === key));
-  renderGrid();
-}
+function setSort(k){ curSort=k; document.querySelectorAll('.ctrl-btn[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===k)); renderGrid(); }
+function togFilter(k){ curFilters.has(k)?curFilters.delete(k):curFilters.add(k); document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.toggle('active',curFilters.has(b.dataset.filter))); renderGrid(); }
+function setScorePeriod(p){ scorePeriod=p; document.querySelectorAll('.score-tab').forEach(b=>b.classList.toggle('active',b.dataset.period===p)); renderScoreTable(); }
 
-function togFilter(key) {
-  curFilters.has(key) ? curFilters.delete(key) : curFilters.add(key);
-  document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b => b.classList.toggle('active', curFilters.has(b.dataset.filter)));
-  renderGrid();
-}
-
-// ═══════════════════════════════════════════════════════
-//  RENDER
-// ═══════════════════════════════════════════════════════
-function renderGrid() {
-  const grid     = document.getElementById('cardsGrid');
-  const students = loadStudentList();
-
-  console.log(`[renderGrid] toplam öğrenci: ${students.length}, liveData keys: ${Object.keys(liveData).length}`);
-
-  if (students.length === 0) {
-    grid.innerHTML = `<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>`;
-    document.getElementById('lb').style.display = 'none';
+// ── RENDER ──
+function renderGrid(){
+  const grid=document.getElementById('cardsGrid');
+  const students=loadStudentList();
+  if(students.length===0){
+    grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>';
     return;
   }
-
-  const sorted   = [...students].sort((a,b) => scoreFor(b) - scoreFor(a));
-  const rankMap  = Object.fromEntries(sorted.map((u,i) => [u, i+1]));
+  // Sabit liste: öğrenci sırası değişmemeli, sadece veri güncellenince sırala
+  // Veri henüz yüklenmediyse öğrenci listesi sırasını koru (skeleton göster)
+  const allLoaded = students.every(u => liveData[u]);
+  const sorted = allLoaded
+    ? [...students].sort((a,b)=>scoreForSort(b)-scoreForSort(a))
+    : [...students]; // Henüz yüklenmemişse orijinal sırayı koru
+  const rankMap = Object.fromEntries(sorted.map((u,i)=>[u,i+1]));
   const filtered = sorted.filter(passes);
-
-  console.log(`[renderGrid] sıralı: ${sorted.length}, filtrelenmiş: ${filtered.length}`);
-
-  if (filtered.length === 0) {
-    grid.innerHTML = `<div class="empty"><div class="ei">🔍</div><h3>Filtre eşleşmedi</h3><p>Bu kriterleri karşılayan öğrenci yok.</p></div>`;
-  } else {
-    // innerHTML birleştirmesi yerine güvenli fragment kullan
-    const fragment = document.createDocumentFragment();
-    for (const u of filtered) {
-      const d = liveData[u];
-      const html = d ? buildCard(u, d, rankMap[u]) : skeletonCard(u);
-      const tmp = document.createElement('div');
-      try {
-        tmp.innerHTML = html;
-        if (tmp.firstElementChild) {
-          fragment.appendChild(tmp.firstElementChild);
-        } else {
-          console.warn(`[renderGrid] ${u} için kart oluşturulamadı`);
-        }
-      } catch(e) {
-        console.error(`[renderGrid] ${u} kart hatası:`, e);
-      }
-    }
-    grid.innerHTML = '';
-    grid.appendChild(fragment);
+  if(filtered.length===0){
+    grid.innerHTML='<div class="empty"><div class="ei">🔍</div><h3>Filtre eşleşmedi</h3></div>';
+    return;
   }
-
-  renderLB(sorted);
-  updateSummary();
+  const frag=document.createDocumentFragment();
+  for(const u of filtered){
+    const d=liveData[u];
+    const html=d?buildCard(u,d,rankMap[u]||0):skeletonCard(u);
+    const tmp=document.createElement('div'); tmp.innerHTML=html;
+    if(tmp.firstElementChild) frag.appendChild(tmp.firstElementChild);
+  }
+  grid.innerHTML=''; grid.appendChild(frag);
 }
 
-function renderLB(sorted) {
-  const lb   = document.getElementById('lb');
-  const rows = document.getElementById('lbRows');
-  const loaded = sorted.filter(u => liveData[u] && !liveData[u].error);
-  if (loaded.length < 2) { lb.style.display = 'none'; return; }
-  lb.style.display = 'block';
+// ── ŞAMPİYONLAR ──
+function renderChamps(){
+  const students=loadStudentList().filter(u=>liveData[u]&&!liveData[u].error);
+  if(students.length<2){ document.getElementById('champStrip').innerHTML=''; return; }
+  const get=(fn)=>{
+    const best=students.reduce((b,u)=>fn(u)>fn(b)?u:b);
+    return {user:best, val:fn(best), d:liveData[best]};
+  };
+  const champData=[
+    {cls:'cc-score',  label:'⭐ En Yüksek Puan',   medal:'🏆', ...get(u=>calcScore(u,'week')),   valLabel:u=>calcScore(u,'week')+' puan'},
+    {cls:'cc-games',  label:'⚔ En Çok Maç',        medal:'🎯', ...get(u=>(liveData[u].wins||0)+(liveData[u].losses||0)+(liveData[u].draws||0)), valLabel:u=>`${(liveData[u].wins||0)+(liveData[u].losses||0)+(liveData[u].draws||0)} maç bugün`},
+    {cls:'cc-puzzle', label:'🧩 En Çok Bulmaca',   medal:'🧩', ...get(u=>liveData[u].puzzlesSolved||0), valLabel:u=>`${liveData[u].puzzlesSolved||0} bulmaca`},
+    {cls:'cc-win',    label:'🏆 En Yüksek Kazanma', medal:'📈', ...get(u=>{ const d=liveData[u]; const t=(d.wins||0)+(d.losses||0)+(d.draws||0); return t>=3?(d.wins/t)*100:0; }), valLabel:u=>{ const d=liveData[u]; const t=(d.wins||0)+(d.losses||0)+(d.draws||0); return t>=3?`%${Math.round((d.wins/t)*100)} kazanma`:'az maç'; }},
+    {cls:'cc-streak', label:'🔥 En Uzun Seri',      medal:'🔥', ...get(u=>getStreak(u,'games')),  valLabel:u=>`${getStreak(u,'games')} günlük seri`},
+    {cls:'cc-wscore', label:'📅 Haftalık Puan',     medal:'⭐', ...get(u=>calcScore(u,'week')),   valLabel:u=>calcScore(u,'week')+' puan bu hafta'},
+  ];
+  document.getElementById('champStrip').innerHTML=champData.map(c=>`
+    <div class="champ-card ${c.cls}">
+      <div class="champ-label">${c.label}</div>
+      <div class="champ-name">${escHtml(c.d?.displayName||c.user)}</div>
+      <div class="champ-val"><strong>${c.valLabel(c.user)}</strong></div>
+      <div class="champ-medal">${c.medal}</div>
+    </div>`).join('');
+}
 
-  rows.innerHTML = loaded.slice(0,10).map((u,i) => {
-    const rank = i+1;
-    const d    = liveData[u];
-    const total   = (d.wins||0)+(d.losses||0)+(d.draws||0);
-    const winRate = total>0 ? Math.round((d.wins/total)*100) : 0;
-    const puzzles = d.puzzlesSolved || 0;
-    const streak  = getStreak(u,'games');
-    const medal   = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
-    const rCls    = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
-    const bdgs    = getBadges(u,d).slice(0,3).map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
-    return `<div class="lb-row ${rCls}">
-      <div class="lb-rank">${medal}</div>
-      <div class="lb-name"><a href="https://lichess.org/@/${u}" target="_blank">${escHtml(d.displayName||u)}</a></div>
-      <div class="lb-badges">${bdgs}</div>
-      <div class="lb-stat">⚔ <span class="v">${total}</span></div>
-      <div class="lb-stat">%<span class="v">${winRate}</span> G</div>
-      <div class="lb-stat">🧩 <span class="v">${puzzles}</span></div>
-      ${streak>0?`<div class="lb-stat">🔥 <span class="v">${streak}g</span></div>`:''}
+// ── PUAN TABLOSU ──
+function renderScoreTable(){
+  const students=loadStudentList().filter(u=>liveData[u]&&!liveData[u].error);
+  if(students.length===0){ document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Veri bekleniyor…</div>'; return; }
+  const scored=[...students].map(u=>({u,pts:calcScore(u,scorePeriod),bd:scoreBreakdown(u)})).sort((a,b)=>b.pts-a.pts);
+  const maxPts=scored[0]?.pts||1;
+  document.getElementById('scoreRows').innerHTML=scored.map(({u,pts,bd},i)=>{
+    const rank=i+1, d=liveData[u];
+    const rCls=rank===1?'sr1':rank===2?'sr2':rank===3?'sr3':'';
+    const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    const pct=Math.round((pts/maxPts)*100);
+    const bdgs=getBadges(u,d).slice(0,3).map(b=>`<span class="badge ${b.cls}">${b.icon} ${b.label}</span>`).join('');
+    return `<div class="score-row ${rCls}">
+      <div class="score-rank">${medal}</div>
+      <div class="score-name">${escHtml(d.displayName||u)}</div>
+      <div class="score-badge">${bdgs}</div>
+      <div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%"></div></div></div>
+      <div>
+        <div class="score-pts">${pts}</div>
+        <div class="score-breakdown">${bd}</div>
+      </div>
     </div>`;
   }).join('');
 }
 
-// ═══════════════════════════════════════════════════════
-//  KART OLUŞTURMA
-// ═══════════════════════════════════════════════════════
-function skeletonCard(u) {
-  return `<div class="s-card" id="card-${u}">
-    <div class="card-head">
-      <div class="s-info">
-        <div class="avatar skel" style="width:34px;height:34px">&nbsp;</div>
-        <div><div class="skel" style="width:80px;height:12px;margin-bottom:4px">&nbsp;</div>
-             <div class="skel" style="width:50px;height:9px">&nbsp;</div></div>
-      </div>
-    </div>
-    <div style="padding:16px 14px"><div class="skel" style="height:48px;border-radius:6px">&nbsp;</div></div>
+// ── KART OLUŞTURUCU ──
+function skeletonCard(u){
+  return `<div class="s-card loading-card" data-user="${escHtml(u)}">
+    <div class="card-head"><div class="s-info">
+      <div class="avatar skel" style="width:32px;height:32px">&nbsp;</div>
+      <div><div class="skel" style="width:80px;height:12px;margin-bottom:4px">&nbsp;</div><div class="skel" style="width:50px;height:9px">&nbsp;</div></div>
+    </div></div>
+    <div style="padding:14px 13px"><div class="skel" style="height:44px;border-radius:6px">&nbsp;</div></div>
     <div class="load-ov"><div class="spinner"></div></div>
   </div>`;
 }
 
-function buildCard(username, d, rank) {
-  const total   = (d.wins||0)+(d.losses||0)+(d.draws||0);
-  const winPct  = total>0 ? Math.round((d.wins /total)*100) : 0;
-  const drawPct = total>0 ? Math.round((d.draws/total)*100) : 0;
-  const lossPct = 100-winPct-drawPct;
-  const badges  = getBadges(username, d);
-
-  const crown   = rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'';
-  const cardCls = rank===1?'t1':rank===2?'t2':rank===3?'t3':'';
-
-  // Ratingler
-  const rHTML = ['bullet','blitz','rapid','classical'].map(k => {
-    const r = d.ratings?.[k]; if (!r) return '';
-    const dif = r.prog||0;
-    const cc  = dif>0?'up':dif<0?'dn':'eq';
-    const ct  = dif>0?`▲${dif}`:dif<0?`▼${Math.abs(dif)}`:'—';
-    return `<div class="r-item">
-      <div class="r-type">${k==='bullet'?'🔴 BLT':k==='blitz'?'⚡ BLZ':k==='rapid'?'🕐 RPD':'♟ CLS'}</div>
-      <div class="r-val">${r.int}</div>
-      <div class="r-chg ${cc}">${ct}</div>
-    </div>`;
+function buildCard(username, d, rank){
+  const total=(d.wins||0)+(d.losses||0)+(d.draws||0);
+  const winPct=total>0?Math.round((d.wins/total)*100):0;
+  const drawPct=total>0?Math.round((d.draws/total)*100):0;
+  const lossPct=100-winPct-drawPct;
+  const badges=getBadges(username,d);
+  const score=calcScore(username,'week');
+  const crown=rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'';
+  const cardCls=rank===1?'t1':rank===2?'t2':rank===3?'t3':'';
+  const rHTML=['bullet','blitz','rapid','classical'].map(k=>{
+    const r=d.ratings?.[k]; if(!r) return '';
+    const dif=r.prog||0, cc=dif>0?'up':dif<0?'dn':'eq', ct=dif>0?`▲${dif}`:dif<0?`▼${Math.abs(dif)}`:'—';
+    return `<div class="r-item"><div class="r-type">${k==='bullet'?'BLT':k==='blitz'?'BLZ':k==='rapid'?'RPD':'CLS'}</div><div class="r-val">${r.int}</div><div class="r-chg ${cc}">${ct}</div></div>`;
   }).join('');
-
-  // Son oyunlar
-  const gHTML = (d.recentGames||[]).slice(0,4).map(g => {
-    const r = g.result==='win'?'W':g.result==='loss'?'L':'D';
-    return `<div class="g-row">
-      <div class="g-res ${r}">${r}</div>
-      <div class="g-opp" title="${escHtml(g.opponent||'?')}">${escHtml(g.opponent||'?')}</div>
-      <div class="g-spd">${g.speed||''}</div>
-      <div class="g-t">${g.time||''}</div>
-    </div>`;
+  const gHTML=(d.recentGames||[]).slice(0,4).map(g=>{
+    const r=g.result==='win'?'W':g.result==='loss'?'L':'D';
+    return `<div class="g-row"><div class="g-res ${r}">${r}</div><div class="g-opp" title="${escHtml(g.opponent||'?')}">${escHtml(g.opponent||'?')}</div><div class="g-spd">${g.speed||''}</div><div class="g-t">${g.time||''}</div></div>`;
   }).join('');
-
-  // Isı pipleri — 1+ aktivite bile olsa renklendir (kriter eşiğinden bağımsız)
-  const days14 = get14Days(username);
-  const pipHtml = days14.map(day => {
-    const isToday = day.date === todayStr();
-    // Kriter eşiğini karşılıyor mu?
-    const hg = day.games   >= crit.minDailyGames;
-    const hp = day.puzzles >= crit.minPuzzleDaily;
-    // En az 1 aktivite var mı? (kriter altı ama aktif)
-    const anyGame   = day.games   > 0;
-    const anyPuzzle = day.puzzles > 0;
-
-    let cls = '';
-    if (hg && hp)          cls = 'pb';       // her ikisi de kriter üstü → altın
-    else if (hg)           cls = 'pg';       // maç kriteri karşılandı → yeşil
-    else if (hp)           cls = 'pp';       // bulmaca kriteri karşılandı → mor
-    else if (anyGame && anyPuzzle) cls = 'pa-both';  // her ikisi de var ama kriter altı → soluk altın
-    else if (anyGame)      cls = 'pa-game';  // en az 1 maç var, kriter altı → soluk yeşil
-    else if (anyPuzzle)    cls = 'pa-puzz';  // en az 1 bulmaca var, kriter altı → soluk mor
-
-    const todayCls = isToday ? ' today' : '';
-    const tip = `${day.date}: ${day.games} maç, ${day.puzzles} bulmaca`;
-    return `<div class="pip ${cls}${todayCls}" title="${tip}"></div>`;
+  const days14=get14Days(username);
+  const pipHtml=days14.map(day=>{
+    const isToday=day.date===todayStr();
+    const hg=day.games>=crit.minDailyGames, hp=day.puzzles>=crit.minPuzzleDaily;
+    const ag=day.games>0, ap=day.puzzles>0;
+    const cls=(hg&&hp)?'pb':hg?'pg':hp?'pp':(ag&&ap)?'pa-both':ag?'pa-game':ap?'pa-puzz':'';
+    return `<div class="pip ${cls}${isToday?' today':''}" title="${day.date}: ${day.games} maç, ${day.puzzles} bulmaca"></div>`;
   }).join('');
-
-  const gs = getStreak(username,'games');
-  const ps = getStreak(username,'puzzles');
-  const heatLbl = gs>1?`🔥 ${gs}g seri`:ps>1?`🧩 ${ps}g seri`:'14 günlük aktivite';
-
-  const bdgHtml = badges.map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
-
-  // ÖNEMLİ: onclick'te username'i data-attribute ile geç, tırnak sorunu olmasın
+  const gs=getStreak(username,'games'), ps=getStreak(username,'puzzles');
+  const heatLbl=gs>1?`🔥 ${gs}g seri`:ps>1?`🧩 ${ps}g seri`:'14 gün';
+  const bdgHtml=badges.map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
+  const bd=scoreBreakdown(username);
   return `<div class="s-card ${cardCls} ${total===0?'faded':''}" data-user="${escHtml(username)}">
     <div class="card-head">
       <div class="card-top">
         <div class="s-info">
-          <div class="avatar">
-            ${escHtml(username[0].toUpperCase())}
-            ${crown?`<span class="rank-crown">${crown}</span>`:''}
-          </div>
+          <div class="avatar">${escHtml(username[0].toUpperCase())}${crown?`<span class="rank-crown">${crown}</span>`:''}</div>
           <div>
             <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(d.displayName||username)}</a>
-            <div class="s-sub">
-              ${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
-              <div class="day-tag">🎯 Bugün ${total} maç</div>
+            <div class="s-sub">${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
+              <div class="day-tag">🎯 ${total} maç</div>
+              <div class="score-tag">⭐ ${score} puan</div>
             </div>
           </div>
         </div>
         <div class="card-actions">
           <div class="s-dot ${d.online?'on':''}" title="${d.online?'Çevrimiçi':'Çevrimdışı'}"></div>
-          <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Listeden çıkar">✕</button>
+          <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Çıkar">✕</button>
         </div>
       </div>
       <div class="card-badges">${bdgHtml}</div>
       <div class="heat-row">${pipHtml}<span class="heat-lbl">${heatLbl}</span></div>
     </div>
-
     ${rHTML?`<div class="ratings-row">${rHTML}</div>`:''}
-
     <div class="stats">
       <div class="s-title">Bugünkü Maçlar</div>
       <div class="wld-row">
-        <div class="wld-box wb"><div class="wld-lbl">Kazandı</div> <div class="wld-val">${d.wins||0}</div></div>
+        <div class="wld-box wb"><div class="wld-lbl">Kazandı</div><div class="wld-val">${d.wins||0}</div></div>
         <div class="wld-box lb2"><div class="wld-lbl">Kaybetti</div><div class="wld-val">${d.losses||0}</div></div>
         <div class="wld-box db"><div class="wld-lbl">Berabere</div><div class="wld-val">${d.draws||0}</div></div>
       </div>
@@ -1218,115 +964,66 @@ function buildCard(username, d, rank) {
         <div class="wr-bar"><div class="bw" style="width:${winPct}%"></div><div class="bd" style="width:${drawPct}%"></div><div class="bl" style="width:${lossPct}%"></div></div>
       </div>`:''}
       <div class="puz-row">
-        <div class="puz-left"><span style="font-size:15px">🧩</span>
-          <div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">Bulmacalar</div><div class="puz-lbl">bugün çözülen</div></div>
-        </div>
-        <div class="puz-cnt">${d.puzzlesSolved ?? 0}</div>
-        <div class="puz-rat"><div>Puan</div><span>${d.puzzleRating ?? '—'}</span></div>
+        <div class="puz-left"><span style="font-size:14px">🧩</span><div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">Bulmacalar</div><div class="puz-lbl">bugün çözülen</div></div></div>
+        <div class="puz-cnt">${d.puzzlesSolved??0}</div>
+        <div class="puz-rat"><div>Puan</div><span>${d.puzzleRating??'—'}</span></div>
+      </div>
+      <div class="train-score-row">
+        <div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">⭐ Antrenman Puanı</div><div class="puz-lbl">bu hafta</div></div>
+        <div class="train-pts">${score}</div>
+        <div class="train-breakdown">${bd||'—'}</div>
       </div>
       ${gHTML?`<div class="s-title" style="margin-top:5px">Son Maçlar</div><div class="recent">${gHTML}</div>`:''}
     </div>
   </div>`;
 }
 
-// ═══════════════════════════════════════════════════════
-//  ÖZET BAR
-// ═══════════════════════════════════════════════════════
-function updateSummary() {
-  const students = loadStudentList();
-  let tot=0,w=0,l=0,dr=0,puz=0,str=0;
-  for (const u of students) {
-    const d = liveData[u];
-    if (!d||d.error) continue;
-    w  += d.wins||0; l += d.losses||0; dr += d.draws||0;
-    puz += d.puzzlesSolved||0;
-    if (getStreak(u,'games') >= crit.streakDays) str++;
-  }
-  tot = w+l+dr;
-  document.getElementById('sTotal') .textContent = tot  || '—';
-  document.getElementById('sWin')   .textContent = w    || '—';
-  document.getElementById('sLoss')  .textContent = l    || '—';
-  document.getElementById('sDraw')  .textContent = dr   || '—';
-  document.getElementById('sPuzzle').textContent = puz  || '—';
-  document.getElementById('sStreak').textContent = str  || '—';
-}
-
-// ═══════════════════════════════════════════════════════
-//  KRİTER PANELİ
-// ═══════════════════════════════════════════════════════
-function toggleCrit() {
-  const body  = document.getElementById('critBody');
-  const arrow = document.getElementById('critArrow');
-  body.classList.toggle('open');
-  arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
-}
-
-function buildCritPanel() {
-  const defs = [
-    { key:'minDailyGames',    b:{cls:'b-active', icon:'⚡', lbl:'Aktif'},        name:'Aktif Oyuncu',        rule:'Günlük min. maç sayısı' },
-    { key:'minWinRate',       b:{cls:'b-gold',   icon:'🏆', lbl:'%Kazanma'},     name:'Yüksek Kazanma',      rule:'Min. kazanma oranı (%)' },
-    { key:'streakDays',       b:{cls:'b-streak', icon:'🔥', lbl:'Maç Seri'},     name:'Maç Serisi (gün)',    rule:'Üst üste kaç gün maç?' },
-    { key:'minPuzzleDaily',   b:{cls:'b-puzzle', icon:'🧩', lbl:'Bulmaca'},      name:'Günlük Bulmaca',      rule:'Günlük min. bulmaca sayısı' },
-    { key:'streakPuzzleDays', b:{cls:'b-pstreak',icon:'🎯', lbl:'Bulmaca Seri'}, name:'Bulmaca Serisi (gün)',rule:'Üst üste kaç gün bulmaca?' },
+// ── KRİTER PANELİ ──
+function toggleCrit(){ const b=document.getElementById('critBody'),a=document.getElementById('critArrow'); b.classList.toggle('open'); a.textContent=b.classList.contains('open')?'▲':'▼'; }
+function buildCritPanel(){
+  const defs=[
+    {key:'minDailyGames',   b:{cls:'b-active',icon:'⚡',lbl:'Aktif'},       name:'Aktif Oyuncu',      rule:'Günlük min. maç sayısı'},
+    {key:'minWinRate',      b:{cls:'b-gold',  icon:'🏆',lbl:'%Kazanma'},    name:'Yüksek Kazanma',    rule:'Min. kazanma oranı (%)'},
+    {key:'streakDays',      b:{cls:'b-streak',icon:'🔥',lbl:'Seri'},        name:'Maç Serisi (gün)',  rule:'Üst üste kaç gün?'},
+    {key:'minPuzzleDaily',  b:{cls:'b-puzzle',icon:'🧩',lbl:'Bulmaca'},     name:'Günlük Bulmaca',    rule:'Günlük min. bulmaca'},
+    {key:'streakPuzzleDays',b:{cls:'b-pstreak',icon:'🎯',lbl:'Bulmaca Seri'},name:'Bulmaca Serisi',   rule:'Üst üste kaç gün?'},
+    {key:'ptWin',           b:{cls:'b-gold',  icon:'⭐',lbl:'Kazanma pt'}, name:'Kazanma Puanı',     rule:'Her kazanılan maç puanı'},
+    {key:'ptPlay',          b:{cls:'b-info',  icon:'⭐',lbl:'Oynama pt'},  name:'Oynama Puanı',      rule:'Her oynanan maç puanı'},
+    {key:'ptPuzzle',        b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca pt'}, name:'Bulmaca Puanı',     rule:'Her bulmaca puanı'},
+    {key:'ptDailyBonus',    b:{cls:'b-active',icon:'⭐',lbl:'Günlük bonus'},name:'Günlük Maç Bonusu', rule:'Günlük kriteri karşılama'},
+    {key:'ptPuzzleBonus',   b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca bonus'},name:'Bulmaca Bonusu',   rule:'Bulmaca kriteri karşılama'},
+    {key:'ptStreak',        b:{cls:'b-streak',icon:'⭐',lbl:'Seri bonus'},  name:'Seri Günlük Bonus', rule:'Aktif seri başına puan'},
   ];
-  document.getElementById('critGrid').innerHTML = defs.map(d => `
+  document.getElementById('critGrid').innerHTML=defs.map(d=>`
     <div class="crit-item">
       <span class="badge ${d.b.cls}">${d.b.icon} ${d.b.lbl}</span>
-      <div class="crit-desc">
-        <div class="crit-name">${d.name}</div>
-        <div class="crit-rule">${d.rule}</div>
-      </div>
-      <input class="crit-input" type="number" min="1" max="100" value="${crit[d.key]}"
-             onchange="updateCrit('${d.key}',this.value)">
+      <div class="crit-desc"><div class="crit-name">${d.name}</div><div class="crit-rule">${d.rule}</div></div>
+      <input class="crit-input" type="number" min="0" max="100" step="${d.key.startsWith('pt')&&d.key==='ptPuzzle'?'0.5':'1'}" value="${crit[d.key]}" onchange="updateCrit('${d.key}',this.value)">
     </div>`).join('');
 }
-
-function updateCrit(key, val) {
-  crit[key] = Math.max(1, parseInt(val)||1);
-  saveCrit();
-  renderGrid();
-  updateSummary();
+function updateCrit(key,val){
+  crit[key]=Math.max(0,parseFloat(val)||0); saveCrit();
+  renderGrid(); renderChamps(); renderScoreTable();
 }
 
-// ═══════════════════════════════════════════════════════
-//  YARDIMCILAR
-// ═══════════════════════════════════════════════════════
-function fmtTime(date) {
-  const diff = Math.floor((Date.now()-date.getTime())/60000);
-  if (diff < 1)    return 'az önce';
-  if (diff < 60)   return diff+'dk';
-  if (diff < 1440) return Math.floor(diff/60)+'sa';
-  return Math.floor(diff/1440)+'g';
+// ── YARDIMCILAR ──
+function fetchWT(url,opts={},ms=10000){
+  const ctrl=new AbortController(), t=setTimeout(()=>ctrl.abort(),ms);
+  return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(t));
 }
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function fmtTime(date){
+  const diff=Math.floor((Date.now()-date.getTime())/60000);
+  if(diff<1) return 'az önce'; if(diff<60) return diff+'dk'; if(diff<1440) return Math.floor(diff/60)+'sa'; return Math.floor(diff/1440)+'g';
 }
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function setLoadStatus(msg){ const el=document.getElementById('loadStatus'); if(msg){el.textContent=msg;el.classList.add('show');}else{el.textContent='';el.classList.remove('show');} }
+function showToast(msg,isErr=false){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(isErr?' err':''); setTimeout(()=>{t.className='toast';},3000); }
 
-function setLoadStatus(msg) {
-  const el = document.getElementById('loadStatus');
-  if (msg) { el.textContent = msg; el.classList.add('show'); }
-  else      { el.textContent='';   el.classList.remove('show'); }
-}
+// Event delegation — rm butonu
+document.addEventListener('click',e=>{ const b=e.target.closest('.rm-btn'); if(b){ const u=b.dataset.rmuser; if(u) removeStudent(u); } });
 
-function showToast(msg, isErr=false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (isErr?' err':'');
-  setTimeout(() => { t.className='toast'; }, 3000);
-}
-
-// Auto-refresh her 5 dakikada bir
-setInterval(() => { if (loadStudentList().length>0) refreshAll(); }, 5*60*1000);
-
-// ── Kart grid'i için event delegation (inline onclick sorununu önler) ──
-document.addEventListener('click', function(e) {
-  const rmBtn = e.target.closest('.rm-btn');
-  if (rmBtn) {
-    const user = rmBtn.dataset.rmuser;
-    if (user) removeStudent(user);
-  }
-});
+// Auto-refresh 5 dakikada bir
+setInterval(()=>{ if(loadStudentList().length>0) refreshAll(); },5*60*1000);
 </script>
 </body>
 </html>
