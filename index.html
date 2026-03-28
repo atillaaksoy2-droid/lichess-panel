@@ -17,8 +17,16 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospac
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,168,75,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,168,75,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
 .wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px 80px}
 
+/* SYNC BANNER */
+.sync-banner{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-muted);margin-left:-24px;margin-right:-24px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0}
+.sync-dot.syncing{background:var(--accent);animation:pulse 1s infinite}
+.sync-dot.ok{background:var(--win)}
+.sync-dot.err{background:var(--loss)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
 /* GRUP SEKMELERI */
-.group-bar{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--border);padding-top:24px;overflow-x:auto;scrollbar-width:none}
+.group-bar{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--border);padding-top:20px;overflow-x:auto;scrollbar-width:none}
 .group-bar::-webkit-scrollbar{display:none}
 .group-tab{display:flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
 .group-tab:hover{color:var(--text);border-color:var(--border);background:var(--surface)}
@@ -29,7 +37,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .new-group-btn:hover{color:var(--accent);border-color:var(--accent)}
 
 /* HEADER */
-header{padding:18px 24px;border-bottom:1px solid var(--border);margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--surface);margin-left:-24px;margin-right:-24px}
+header{padding:16px 24px;border-bottom:1px solid var(--border);margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--surface);margin-left:-24px;margin-right:-24px}
 .logo-area{display:flex;align-items:center;gap:12px}
 .chess-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 16px var(--glow)}
 h1{font-family:'Playfair Display',serif;font-size:21px;font-weight:900;color:var(--accent2);letter-spacing:-.5px;line-height:1.1}
@@ -41,7 +49,6 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
 .icon-btn.spinning svg{animation:spin 1s linear infinite}
 .icon-btn.danger:hover{border-color:var(--loss);color:var(--loss)}
-.icon-btn.ok{border-color:rgba(76,175,125,.4);color:var(--win)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .last-update{font-size:10px;color:var(--text-muted)}
 
@@ -61,7 +68,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .criteria-toggle:hover{color:var(--accent)}
 .criteria-body{padding:0 16px 14px;display:none}
 .criteria-body.open{display:block}
-.criteria-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:7px;margin-top:4px}
+.criteria-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:7px;margin-top:4px}
 .crit-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:8px}
 .crit-desc{flex:1}
 .crit-name{font-size:11px;font-weight:600;color:var(--text);margin-bottom:1px}
@@ -73,17 +80,16 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .pip-dot{width:8px;height:8px;border-radius:2px}
 
 /* ŞAMPİYON KARTLARI */
-.champ-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+.champ-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:16px}
 .champ-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;position:relative;overflow:hidden;transition:border-color .2s}
 .champ-card:hover{border-color:rgba(200,168,75,.3)}
 .champ-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.champ-card.cc-score::before{background:var(--accent)}
 .champ-card.cc-games::before{background:var(--win)}
 .champ-card.cc-puzzle::before{background:var(--puzzle)}
 .champ-card.cc-win::before{background:var(--gold)}
 .champ-card.cc-streak::before{background:var(--fire)}
-.champ-card.cc-score::before{background:var(--accent)}
-.champ-card.cc-wscore::before{background:rgba(155,127,232,.8)}
-.champ-label{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.champ-label{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
 .champ-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .champ-val{font-size:11px;color:var(--text-muted)}
 .champ-val strong{color:var(--accent2)}
@@ -104,12 +110,12 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .score-rank{width:22px;text-align:center;font-size:13px;font-weight:700;font-family:'Playfair Display',serif}
 .score-row.sr1 .score-rank{color:var(--gold)}.score-row.sr2 .score-rank{color:var(--silver)}.score-row.sr3 .score-rank{color:var(--bronze)}
 .score-name{flex:1;font-size:12px;font-weight:600;color:var(--text)}
-.score-pts{font-size:13px;font-weight:700;color:var(--accent2);font-family:'Playfair Display',serif;min-width:50px;text-align:right}
+.score-pts{font-size:13px;font-weight:700;color:var(--accent2);font-family:'Playfair Display',serif;min-width:46px;text-align:right}
 .score-breakdown{font-size:9px;color:var(--text-muted);text-align:right}
-.score-bar-wrap{width:80px}
+.score-bar-wrap{width:70px}
 .score-bar-bg{height:4px;background:var(--border);border-radius:10px;overflow:hidden}
-.score-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:10px;transition:width .4s}
-.score-badge{display:flex;gap:3px;flex-wrap:wrap}
+.score-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:10px}
+.score-badge{display:flex;gap:3px;flex-wrap:wrap;flex:1}
 
 /* KONTROLLER */
 .controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
@@ -131,15 +137,12 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 
 /* KART IZGARA */
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:13px}
-
-/* ÖĞRENCİ KARTI */
 .s-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;position:relative;transition:border-color .2s}
 .s-card:hover{border-color:rgba(200,168,75,.22)}
 .s-card.t1{border-color:rgba(245,200,66,.45);box-shadow:0 0 14px rgba(245,200,66,.06)}
 .s-card.t2{border-color:rgba(176,190,197,.35)}
 .s-card.t3{border-color:rgba(205,127,50,.35)}
 .s-card.faded{opacity:.58}
-.s-card.loading-card .card-head{opacity:.5}
 .card-head{padding:11px 13px 9px;border-bottom:1px solid var(--border);background:var(--surface2)}
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px}
 .s-info{display:flex;align-items:center;gap:8px}
@@ -154,7 +157,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .rm-btn{background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:2px 4px;border-radius:3px;font-size:11px;transition:color .2s}
 .rm-btn:hover{color:var(--loss)}
 .day-tag{display:inline-flex;align-items:center;gap:3px;background:rgba(200,168,75,.09);border:1px solid rgba(200,168,75,.18);color:var(--accent);border-radius:3px;padding:1px 5px;font-size:9px;margin-top:2px}
-.score-tag{display:inline-flex;align-items:center;gap:2px;background:rgba(155,127,232,.1);border:1px solid rgba(155,127,232,.25);color:var(--puzzle);border-radius:3px;padding:1px 5px;font-size:9px;margin-top:2px;margin-left:4px}
+.score-tag{display:inline-flex;align-items:center;gap:2px;background:rgba(155,127,232,.1);border:1px solid rgba(155,127,232,.25);color:var(--puzzle);border-radius:3px;padding:1px 5px;font-size:9px;margin-top:2px;margin-left:3px}
 .card-badges{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px}
 .heat-row{display:flex;gap:2px;align-items:center}
 .pip{width:9px;height:9px;border-radius:2px;background:var(--border)}
@@ -162,8 +165,6 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .pip.pa-game{background:rgba(76,175,125,.35)}.pip.pa-puzz{background:rgba(155,127,232,.35)}.pip.pa-both{background:rgba(200,168,75,.35)}
 .pip.today{outline:2px solid rgba(255,255,255,.28);outline-offset:1px}
 .heat-lbl{font-size:9px;color:var(--text-muted);margin-left:5px}
-
-/* RATING */
 .ratings-row{display:flex;border-bottom:1px solid var(--border)}
 .r-item{flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border)}
 .r-item:last-child{border-right:none}
@@ -171,8 +172,6 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .r-val{font-size:13px;font-weight:600;color:var(--text)}
 .r-chg{font-size:9px;margin-top:1px}
 .r-chg.up{color:var(--win)}.r-chg.dn{color:var(--loss)}.r-chg.eq{color:var(--text-muted)}
-
-/* İSTATİSTİK */
 .stats{padding:10px 13px}
 .s-title{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px}
 .s-title::after{content:'';flex:1;height:1px;background:var(--border)}
@@ -193,7 +192,6 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .puz-rat{font-size:9px;color:var(--text-muted);text-align:right}
 .puz-rat span{display:block;font-size:13px;font-weight:600;color:var(--puzzle)}
 .train-score-row{display:flex;align-items:center;justify-content:space-between;background:rgba(155,127,232,.06);border:1px solid rgba(155,127,232,.2);border-radius:6px;padding:6px 10px;margin-bottom:6px}
-.train-lbl{font-size:9px;color:var(--text-muted)}
 .train-pts{font-size:18px;font-family:'Playfair Display',serif;font-weight:700;color:var(--puzzle)}
 .train-breakdown{font-size:9px;color:var(--text-muted);text-align:right;line-height:1.6}
 .recent{margin-top:2px}
@@ -203,8 +201,6 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .g-res.W{background:rgba(76,175,125,.2);color:var(--win)}.g-res.L{background:rgba(224,90,90,.2);color:var(--loss)}.g-res.D{background:rgba(122,138,170,.2);color:var(--draw)}
 .g-opp{color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .g-spd{color:var(--text-muted);font-size:9px}.g-t{color:var(--text-muted);font-size:9px;white-space:nowrap}
-
-/* YÜKLEME */
 .skel{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shim 1.5s infinite;border-radius:4px}
 @keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .load-ov{position:absolute;inset:0;background:rgba(13,15,20,.6);display:flex;align-items:center;justify-content:center;border-radius:11px;z-index:10}
@@ -213,8 +209,6 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .empty .ei{font-size:44px;margin-bottom:14px;opacity:.22}
 .empty h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--text);margin-bottom:4px}
 .empty p{font-size:11px;line-height:1.7}
-
-/* MODAL */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;min-width:300px;max-width:400px;width:90%}
 .modal h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--accent2);margin-bottom:14px}
@@ -226,18 +220,19 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .modal-cancel:hover{border-color:var(--loss);color:var(--loss)}
 .modal-ok{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;padding:7px 16px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:12px;transition:opacity .2s}
 .modal-ok:hover{opacity:.9}
-
-/* TOAST */
 .toast{position:fixed;bottom:18px;right:18px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--text);padding:9px 14px;border-radius:8px;font-size:11px;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:260px}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.err{border-left-color:var(--loss)}
 .load-status{font-size:11px;color:var(--text-muted);padding:6px 0;text-align:center;display:none}
 .load-status.show{display:block}
-
 @media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:17px}.controls{gap:4px}.champ-strip{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
+<div class="sync-banner">
+  <div class="sync-dot" id="syncDot"></div>
+  <span id="syncStatus">Firebase bağlanıyor…</span>
+</div>
 <div class="wrap">
   <div class="group-bar" id="groupBar"></div>
   <header>
@@ -252,9 +247,6 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
         Yenile
       </button>
-      <button class="icon-btn ok" onclick="exportData()" title="Tüm verileri dışa aktar">⬇ Dışa Aktar</button>
-      <button class="icon-btn" onclick="document.getElementById('importFile').click()" title="Veri içe aktar">⬆ İçe Aktar</button>
-      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
       <button class="icon-btn danger" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
     </div>
   </header>
@@ -283,17 +275,15 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     </div>
   </div>
 
-  <!-- ŞAMPİYONLAR -->
   <div class="champ-strip" id="champStrip"></div>
 
-  <!-- PUAN TABLOSU -->
   <div class="score-section">
     <div class="score-title">🏆 Antrenman Puan Tablosu</div>
     <div class="score-tabs">
       <button class="score-tab active" data-period="week" onclick="setScorePeriod('week')">Bu Hafta</button>
       <button class="score-tab" data-period="total" onclick="setScorePeriod('total')">Toplam (14 gün)</button>
     </div>
-    <div class="score-rows" id="scoreRows"></div>
+    <div class="score-rows" id="scoreRows"><div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Yükleniyor…</div></div>
   </div>
 
   <div class="controls">
@@ -311,11 +301,11 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     <button class="ctrl-btn" data-filter="streak"   onclick="togFilter('streak')">🔥 Serili</button>
     <button class="ctrl-btn" data-filter="puzzle"   onclick="togFilter('puzzle')">🧩 Bulmacalı</button>
   </div>
-
   <div class="load-status" id="loadStatus"></div>
   <div class="cards-grid" id="cardsGrid"></div>
 </div>
 
+<!-- MODALLER -->
 <div class="modal-bg" id="modalNewGroup" style="display:none" onclick="if(event.target===this)closeModal('modalNewGroup')">
   <div class="modal">
     <h3>Yeni Grup Oluştur</h3>
@@ -327,7 +317,6 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     </div>
   </div>
 </div>
-
 <div class="modal-bg" id="modalRename" style="display:none" onclick="if(event.target===this)closeModal('modalRename')">
   <div class="modal">
     <h3>Grubu Yeniden Adlandır</h3>
@@ -339,348 +328,339 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
-<script>
-// ═══════════════════════════════════════════════════
-// PUAN SİSTEMİ
-// Her maç kazanma: +3 puan
-// Her maç oynama: +1 puan
-// Her bulmaca: +0.5 puan
-// Günlük maç kriteri karşılama: +5 bonus
-// Günlük bulmaca kriteri karşılama: +3 bonus
-// Maç serisi (gün başına): +2 bonus
-// Kazanma oranı bonusu: %60+ → +5/gün, %50+ → +2/gün
-// ═══════════════════════════════════════════════════
+<!-- FIREBASE SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ── VERİ MODELİ ──
-let groups    = JSON.parse(localStorage.getItem('chess_groups') || 'null');
-let activeGid = localStorage.getItem('chess_active_group') || null;
-
-if (!groups || groups.length === 0) {
-  const id = uid(); groups = [{id, name:'A Grubu'}]; saveGroups();
-  activeGid = id; saveActiveGid();
-}
-if (!activeGid || !groups.find(g => g.id === activeGid)) {
-  activeGid = groups[0].id; saveActiveGid();
-}
-
-function saveGroups()    { localStorage.setItem('chess_groups', JSON.stringify(groups)); }
-function saveActiveGid() { localStorage.setItem('chess_active_group', activeGid); }
-function uid()           { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-function loadStudentList(){ return JSON.parse(localStorage.getItem('chess_students_'+activeGid)||'[]'); }
-function saveStudentList(a){ localStorage.setItem('chess_students_'+activeGid, JSON.stringify(a)); }
-
-let actLog = JSON.parse(localStorage.getItem('chess_activity') || '{}');
-function saveActLog(){ localStorage.setItem('chess_activity', JSON.stringify(actLog)); }
-
-let crit = JSON.parse(localStorage.getItem('chess_criteria') || 'null') || {
-  minDailyGames:3, minWinRate:50, streakDays:3, minPuzzleDaily:5, streakPuzzleDays:3,
-  ptWin:3, ptPlay:1, ptPuzzle:0.5, ptDailyBonus:5, ptPuzzleBonus:3, ptStreak:2
+// ── FIREBASE YAPILANDIRMA ──────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDnlmt4l0o8dBZ4ygX0iiKmBpcgtKn9s1k",
+  authDomain: "lichess-takip.firebaseapp.com",
+  projectId: "lichess-takip",
+  storageBucket: "lichess-takip.firebasestorage.app",
+  messagingSenderId: "293092721340",
+  appId: "1:293092721340:web:4baa61bad8ba68c60c46b9"
 };
-function saveCrit(){ localStorage.setItem('chess_criteria', JSON.stringify(crit)); }
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 
-// ── CANLI VERİ (yenileme başına sıfırlanır) ──
-// KRITIK: liveData asla temizlenmez, sadece tekil güncellemeler yapılır
-// Bu sayede henüz yüklenmemiş öğrenciler bir önceki yükleme değerlerini korur
-let liveData   = {};
-let curSort    = 'score';
-let curFilters = new Set();
-let scorePeriod= 'week';
-let refreshId  = 0;
+// ── SYNC DURUM GÖSTERGESI ────────────────────────────
+function setSyncStatus(state, msg){
+  const dot=document.getElementById('syncDot'), txt=document.getElementById('syncStatus');
+  dot.className='sync-dot '+state; txt.textContent=msg;
+}
 
-// ── BAŞLANGIÇ ──
-window.onload = () => {
-  buildCritPanel();
-  renderGroupBar();
-  renderHeader();
-  // Tüm öğrencileri hemen skeleton olarak göster
-  renderGrid();
-  if (loadStudentList().length > 0) refreshAll();
+// ── FIRESTORE OKUMA / YAZMA ──────────────────────────
+// Veri yapısı:
+//   /panel/config  → { groups, activeGid, criteria }
+//   /panel/activity → { [username]: { [date]: { games, puzzles } } }
+
+async function fbLoad(){
+  setSyncStatus('syncing','Firebase yükleniyor…');
+  try{
+    const cfgSnap = await getDoc(doc(db,'panel','config'));
+    const actSnap = await getDoc(doc(db,'panel','activity'));
+    const cfg = cfgSnap.exists() ? cfgSnap.data() : null;
+    const act = actSnap.exists() ? actSnap.data() : {};
+
+    if(cfg && cfg.groups && cfg.groups.length>0){
+      APP.groups    = cfg.groups;
+      APP.activeGid = cfg.activeGid || cfg.groups[0].id;
+      APP.crit      = { ...APP.crit, ...(cfg.criteria||{}) };
+    }
+    // Öğrenci listelerini yükle
+    for(const g of APP.groups){
+      const snap = await getDoc(doc(db,'panel','students_'+g.id));
+      if(snap.exists()) APP.studentLists[g.id] = snap.data().list || [];
+    }
+    APP.actLog = act;
+    setSyncStatus('ok','Firebase bağlı ✓');
+    return true;
+  }catch(e){
+    console.error('Firebase yükleme hatası:',e);
+    setSyncStatus('err','Firebase bağlantı hatası — çevrimdışı çalışılıyor');
+    return false;
+  }
+}
+
+async function fbSaveConfig(){
+  try{
+    await setDoc(doc(db,'panel','config'),{
+      groups: APP.groups,
+      activeGid: APP.activeGid,
+      criteria: APP.crit,
+      updatedAt: Date.now()
+    });
+  }catch(e){ console.warn('Config kayıt hatası:',e); setSyncStatus('err','Kayıt hatası'); }
+}
+
+async function fbSaveStudents(gid){
+  try{
+    const list = APP.studentLists[gid] || [];
+    await setDoc(doc(db,'panel','students_'+gid),{ list, updatedAt: Date.now() });
+  }catch(e){ console.warn('Öğrenci kayıt hatası:',e); }
+}
+
+async function fbSaveActivity(){
+  try{
+    await setDoc(doc(db,'panel','activity'), APP.actLog);
+  }catch(e){ console.warn('Aktivite kayıt hatası:',e); }
+}
+
+// Gerçek zamanlı dinleyici — başka cihazdan değişiklik olunca güncelle
+function fbListen(){
+  onSnapshot(doc(db,'panel','config'), snap=>{
+    if(!snap.exists()) return;
+    const d=snap.data();
+    const changed = JSON.stringify(d.groups)!==JSON.stringify(APP.groups)
+                 || d.activeGid!==APP.activeGid;
+    if(changed){
+      APP.groups    = d.groups;
+      APP.crit      = {...APP.crit,...(d.criteria||{})};
+      // Aktif grup değiştiyse güncelle
+      for(const g of APP.groups){
+        const snap2 = doc(db,'panel','students_'+g.id);
+        getDoc(snap2).then(s=>{ if(s.exists()) APP.studentLists[g.id]=s.data().list||[]; });
+      }
+      renderGroupBar(); renderHeader(); buildCritPanel();
+      setSyncStatus('ok','Başka cihazdan güncelleme alındı');
+      setTimeout(()=>setSyncStatus('ok','Firebase bağlı ✓'),3000);
+    }
+  });
+  onSnapshot(doc(db,'panel','activity'), snap=>{
+    if(!snap.exists()) return;
+    const newAct=snap.data();
+    // Mevcut ile birleştir (en büyük değeri koru)
+    for(const [u,days] of Object.entries(newAct)){
+      if(!APP.actLog[u]) APP.actLog[u]={};
+      for(const [d,v] of Object.entries(days)){
+        const p=APP.actLog[u][d]||{games:0,puzzles:0};
+        APP.actLog[u][d]={games:Math.max(p.games,v.games||0),puzzles:Math.max(p.puzzles,v.puzzles||0)};
+      }
+    }
+    renderGrid(); renderChamps(); renderScoreTable();
+  });
+}
+
+// ── UYGULAMA DURUMU ──────────────────────────────────
+const APP = {
+  groups: [{id:'default',name:'A Grubu'}],
+  activeGid: 'default',
+  studentLists: {},  // { [gid]: [username,...] }
+  actLog: {},
+  liveData: {},
+  crit: {
+    minDailyGames:3, minWinRate:50, streakDays:3,
+    minPuzzleDaily:5, streakPuzzleDays:3,
+    ptWin:3, ptPlay:1, ptPuzzle:0.5,
+    ptDailyBonus:5, ptPuzzleBonus:3, ptStreak:2
+  },
+  curSort: 'score',
+  curFilters: new Set(),
+  scorePeriod: 'week',
+  refreshId: 0
 };
 
-// ── DATE YARDIMCILARI ──
-function dateStr(offset){
-  const d = new Date(); d.setDate(d.getDate()+(offset||0));
+function getStudents(){ return APP.studentLists[APP.activeGid] || []; }
+function setStudents(arr){
+  APP.studentLists[APP.activeGid] = arr;
+  fbSaveStudents(APP.activeGid);
+}
+
+// ── TARİH YARDIMCILARI ───────────────────────────────
+function dateStr(off){
+  const d=new Date(); d.setDate(d.getDate()+(off||0));
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function todayStr(){ return dateStr(0); }
 function weekStart(){
-  // Bu haftanın Pazartesi günü
-  const d = new Date(); const day = d.getDay(); const diff = (day===0?-6:1-day);
+  const d=new Date(), day=d.getDay(), diff=(day===0?-6:1-day);
   d.setDate(d.getDate()+diff);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function daysBetween(a,b){
-  const [ay,am,ad]=a.split('-').map(Number); const [by,bm,bd]=b.split('-').map(Number);
-  return Math.round((new Date(ay,am-1,ad)-new Date(by,bm-1,bd))/86400000);
+  const p=s=>{ const[y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+  return Math.round((p(a)-p(b))/86400000);
 }
 
-// ── AKTİVİTE LOGU ──
+// ── AKTİVİTE ─────────────────────────────────────────
 function logActivity(username, games, puzzles){
-  if(!actLog[username]) actLog[username]={};
-  const key=todayStr(), prev=actLog[username][key]||{games:0,puzzles:0};
-  actLog[username][key]={games:Math.max(prev.games,games), puzzles:Math.max(prev.puzzles,puzzles)};
+  if(!APP.actLog[username]) APP.actLog[username]={};
+  const key=todayStr(), prev=APP.actLog[username][key]||{games:0,puzzles:0};
+  APP.actLog[username][key]={games:Math.max(prev.games,games),puzzles:Math.max(prev.puzzles,puzzles)};
   const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-14);
-  for(const d of Object.keys(actLog[username])){ if(new Date(d)<cutoff) delete actLog[username][d]; }
-  saveActLog();
+  for(const d of Object.keys(APP.actLog[username])) if(new Date(d)<cutoff) delete APP.actLog[username][d];
+  fbSaveActivity();
 }
 
-function getStreak(username, type='games'){
-  const log=actLog[username]||{}, thr=type==='games'?crit.minDailyGames:crit.minPuzzleDaily;
+function getStreak(username,type='games'){
+  const log=APP.actLog[username]||{}, thr=type==='games'?APP.crit.minDailyGames:APP.crit.minPuzzleDaily;
   let s=0;
-  for(let i=0;i<14;i++){
-    const entry=log[dateStr(-i)]; const val=entry?(type==='games'?entry.games:entry.puzzles):0;
-    if(val>=thr) s++; else break;
-  }
+  for(let i=0;i<14;i++){ const e=log[dateStr(-i)]; const v=e?(type==='games'?e.games:e.puzzles):0; if(v>=thr)s++; else break; }
   return s;
 }
 
 function get14Days(username){
-  const log=actLog[username]||{}, out=[];
+  const log=APP.actLog[username]||{}, out=[];
   for(let i=13;i>=0;i--){ const k=dateStr(-i); out.push({date:k,...(log[k]||{games:0,puzzles:0})}); }
   return out;
 }
 
-// ── PUAN HESAPLAMA ──
+// ── PUAN SİSTEMİ ─────────────────────────────────────
 function calcScore(username, period='week'){
-  const log = actLog[username]||{};
-  let totalPts = 0;
-  const ws = weekStart();
-
-  for(const [date, entry] of Object.entries(log)){
-    // Dönem filtresi
-    if(period==='week' && daysBetween(todayStr(), date) > 6) continue;
-    const games   = entry.games   || 0;
-    const puzzles = entry.puzzles || 0;
-    // Temel puanlar — bugünün maç sonuçlarını bilmiyoruz (sadece toplam),
-    // kazanma verisini liveData'dan al (bugün için)
-    const d = liveData[username];
-    let wins = 0;
-    if(date === todayStr() && d && !d.error){
-      wins = d.wins || 0;
-    }
-    // Maç puanı: kazanma × ptWin + (oyun-kazanma) × ptPlay
-    totalPts += wins * crit.ptWin + Math.max(0, games - wins) * crit.ptPlay;
-    // Bulmaca puanı
-    totalPts += puzzles * crit.ptPuzzle;
-    // Günlük maç bonusu
-    if(games >= crit.minDailyGames) totalPts += crit.ptDailyBonus;
-    // Günlük bulmaca bonusu
-    if(puzzles >= crit.minPuzzleDaily) totalPts += crit.ptPuzzleBonus;
+  const log=APP.actLog[username]||{};
+  let pts=0;
+  for(const [date,entry] of Object.entries(log)){
+    if(period==='week' && daysBetween(todayStr(),date)>6) continue;
+    const games=entry.games||0, puzzles=entry.puzzles||0;
+    const d=APP.liveData[username];
+    const wins=(date===todayStr()&&d&&!d.error)?(d.wins||0):0;
+    pts += wins*APP.crit.ptWin + Math.max(0,games-wins)*APP.crit.ptPlay;
+    pts += puzzles*APP.crit.ptPuzzle;
+    if(games>=APP.crit.minDailyGames)   pts+=APP.crit.ptDailyBonus;
+    if(puzzles>=APP.crit.minPuzzleDaily) pts+=APP.crit.ptPuzzleBonus;
   }
-  // Seri bonusu
-  const streak = getStreak(username,'games');
-  totalPts += streak * crit.ptStreak;
-  // Kazanma oranı bonusu (bugün için)
-  const d = liveData[username];
-  if(d && !d.error){
-    const tot=(d.wins||0)+(d.losses||0)+(d.draws||0);
-    const wr = tot>0?(d.wins/tot)*100:0;
-    if(wr>=60) totalPts+=5; else if(wr>=50) totalPts+=2;
-  }
-  return Math.round(totalPts);
+  const streak=getStreak(username,'games');
+  pts+=streak*APP.crit.ptStreak;
+  const d=APP.liveData[username];
+  if(d&&!d.error){ const t=(d.wins||0)+(d.losses||0)+(d.draws||0); const wr=t>0?(d.wins/t)*100:0; if(wr>=60)pts+=5;else if(wr>=50)pts+=2; }
+  return Math.round(pts);
 }
 
 function scoreBreakdown(username){
-  const d=liveData[username]; if(!d||d.error) return '';
-  const tot=(d.wins||0)+(d.losses||0)+(d.draws||0);
-  const puz=d.puzzlesSolved||0;
-  const streak=getStreak(username,'games');
+  const d=APP.liveData[username]; if(!d||d.error) return '';
+  const tot=(d.wins||0)+(d.losses||0)+(d.draws||0), puz=d.puzzlesSolved||0, streak=getStreak(username,'games');
   const parts=[];
-  if(d.wins>0) parts.push(`⚔${d.wins}K×${crit.ptWin}`);
-  if(tot-d.wins>0) parts.push(`+${tot-d.wins}O×${crit.ptPlay}`);
-  if(puz>0) parts.push(`🧩${puz}×${crit.ptPuzzle}`);
-  if(streak>0) parts.push(`🔥${streak}g×${crit.ptStreak}`);
+  if(d.wins>0) parts.push(`⚔${d.wins}K`);
+  if(tot-d.wins>0) parts.push(`+${tot-(d.wins||0)}O`);
+  if(puz>0) parts.push(`🧩${puz}`);
+  if(streak>0) parts.push(`🔥${streak}g`);
   return parts.join(' ');
 }
 
-// ── GRUP YÖNETİMİ ──
+// ── GRUP YÖNETİMİ ────────────────────────────────────
 function renderGroupBar(){
   const bar=document.getElementById('groupBar');
-  bar.innerHTML = groups.map(g=>{
-    const n=(JSON.parse(localStorage.getItem('chess_students_'+g.id)||'[]')).length;
-    return `<button class="group-tab ${g.id===activeGid?'active':''}" onclick="switchGroup('${g.id}')">
-      ${escHtml(g.name)}<span class="tab-count">${n}</span></button>`;
-  }).join('') + `<button class="new-group-btn" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
+  bar.innerHTML=APP.groups.map(g=>{
+    const n=(APP.studentLists[g.id]||[]).length;
+    return `<button class="group-tab ${g.id===APP.activeGid?'active':''}" onclick="switchGroup('${g.id}')">${escHtml(g.name)}<span class="tab-count">${n}</span></button>`;
+  }).join('')+`<button class="new-group-btn" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
 }
 
 function switchGroup(id){
-  if(id===activeGid) return;
-  refreshId++;
-  activeGid=id; saveActiveGid();
-  curFilters.clear();
+  if(id===APP.activeGid) return;
+  APP.refreshId++;
+  APP.activeGid=id;
+  APP.curFilters.clear();
   document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.remove('active'));
-  renderGroupBar(); renderHeader();
-  // liveData'yı TEMİZLEME — önceki grup verisi kalsa da yeni grup için skeleton göster
-  // Ama yeni gruptaki öğrenciler için eski liveData key'leri artık listede olmayacak
-  renderGrid();
-  if(loadStudentList().length>0) refreshAll();
+  fbSaveConfig();
+  renderGroupBar(); renderHeader(); renderGrid();
+  if(getStudents().length>0) refreshAll();
 }
 
-function openNewGroupModal(){ document.getElementById('newGroupName').value=''; document.getElementById('modalNewGroup').style.display='flex'; setTimeout(()=>document.getElementById('newGroupName').focus(),50); }
-function createGroup(){
+window.openNewGroupModal=()=>{ document.getElementById('newGroupName').value=''; document.getElementById('modalNewGroup').style.display='flex'; setTimeout(()=>document.getElementById('newGroupName').focus(),50); };
+window.createGroup=()=>{
   const name=document.getElementById('newGroupName').value.trim(); if(!name) return;
-  const g={id:uid(),name}; groups.push(g); saveGroups();
-  closeModal('modalNewGroup'); activeGid=g.id; saveActiveGid();
-  renderGroupBar(); renderHeader(); renderGrid(); showToast(`"${name}" grubu oluşturuldu ✓`);
-}
-function openRenameModal(){
-  const g=groups.find(x=>x.id===activeGid); if(!g) return;
+  const g={id:'g'+Date.now(),name};
+  APP.groups.push(g); APP.activeGid=g.id;
+  APP.studentLists[g.id]=[];
+  fbSaveConfig(); fbSaveStudents(g.id);
+  closeModal('modalNewGroup'); renderGroupBar(); renderHeader(); renderGrid();
+  showToast(`"${name}" grubu oluşturuldu ✓`);
+};
+window.openRenameModal=()=>{
+  const g=APP.groups.find(x=>x.id===APP.activeGid); if(!g) return;
   document.getElementById('renameInput').value=g.name;
   document.getElementById('modalRename').style.display='flex';
   setTimeout(()=>document.getElementById('renameInput').focus(),50);
-}
-function renameGroup(){
+};
+window.renameGroup=()=>{
   const name=document.getElementById('renameInput').value.trim(); if(!name) return;
-  const g=groups.find(x=>x.id===activeGid); if(!g) return;
-  g.name=name; saveGroups(); closeModal('modalRename'); renderGroupBar(); renderHeader(); showToast(`Grup "${name}" olarak yeniden adlandırıldı ✓`);
-}
-function confirmDeleteGroup(){
-  if(groups.length<=1){ showToast('Son grubu silemezsiniz!',true); return; }
-  const g=groups.find(x=>x.id===activeGid);
-  if(!confirm(`"${g?.name}" grubunu ve öğrenci listesini silmek istiyor musunuz?`)) return;
-  localStorage.removeItem('chess_students_'+activeGid);
-  groups=groups.filter(x=>x.id!==activeGid); saveGroups();
-  activeGid=groups[0].id; saveActiveGid(); renderGroupBar(); renderHeader(); renderGrid(); showToast('Grup silindi',true);
-}
-function closeModal(id){ document.getElementById(id).style.display='none'; }
-function renderHeader(){ const g=groups.find(x=>x.id===activeGid); document.getElementById('groupNameDisplay').textContent=g?g.name:'—'; document.title=(g?g.name+' — ':'')+'Lichess Koç Paneli'; }
+  const g=APP.groups.find(x=>x.id===APP.activeGid); if(!g) return;
+  g.name=name; fbSaveConfig(); closeModal('modalRename'); renderGroupBar(); renderHeader();
+  showToast(`Grup "${name}" olarak adlandırıldı ✓`);
+};
+window.confirmDeleteGroup=()=>{
+  if(APP.groups.length<=1){ showToast('Son grubu silemezsiniz!',true); return; }
+  const g=APP.groups.find(x=>x.id===APP.activeGid);
+  if(!confirm(`"${g?.name}" grubunu silmek istiyor musunuz?`)) return;
+  APP.groups=APP.groups.filter(x=>x.id!==APP.activeGid);
+  delete APP.studentLists[APP.activeGid];
+  APP.activeGid=APP.groups[0].id;
+  fbSaveConfig(); renderGroupBar(); renderHeader(); renderGrid();
+  showToast('Grup silindi',true);
+};
+window.closeModal=id=>document.getElementById(id).style.display='none';
+function renderHeader(){ const g=APP.groups.find(x=>x.id===APP.activeGid); document.getElementById('groupNameDisplay').textContent=g?g.name:'—'; document.title=(g?g.name+' — ':'')+'Lichess Koç Paneli'; }
 
-// ── DIŞA / İÇE AKTAR ──
-function exportData(){
-  const data = {
-    version:2, exportedAt: new Date().toISOString(),
-    groups, activeGid,
-    students: {}, activity: actLog, criteria: crit
-  };
-  groups.forEach(g=>{
-    data.students[g.id] = JSON.parse(localStorage.getItem('chess_students_'+g.id)||'[]');
-  });
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`lichess-panel-${dateStr(0)}.json`; a.click();
-  showToast('Veriler dışa aktarıldı ✓');
-}
-
-function importData(event){
-  const file=event.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const data=JSON.parse(e.target.result);
-      if(!data.groups||!data.students) throw new Error('Geçersiz dosya formatı');
-      // Grupları yükle
-      groups=data.groups; saveGroups();
-      // Her grubun öğrenci listesini yükle
-      for(const [gid,list] of Object.entries(data.students)){
-        localStorage.setItem('chess_students_'+gid, JSON.stringify(list));
-      }
-      // Aktivite logunu yükle (mevcut ile birleştir)
-      if(data.activity){
-        for(const [user,days] of Object.entries(data.activity)){
-          if(!actLog[user]) actLog[user]={};
-          for(const [day,vals] of Object.entries(days)){
-            const prev=actLog[user][day]||{games:0,puzzles:0};
-            actLog[user][day]={games:Math.max(prev.games,vals.games||0),puzzles:Math.max(prev.puzzles,vals.puzzles||0)};
-          }
-        }
-        saveActLog();
-      }
-      // Kriterleri yükle
-      if(data.criteria){ crit={...crit,...data.criteria}; saveCrit(); }
-      // Aktif grubu ayarla
-      if(data.activeGid && groups.find(g=>g.id===data.activeGid)) activeGid=data.activeGid;
-      else activeGid=groups[0].id;
-      saveActiveGid();
-      buildCritPanel(); renderGroupBar(); renderHeader(); renderGrid();
-      if(loadStudentList().length>0) refreshAll();
-      showToast('Veriler başarıyla içe aktarıldı ✓');
-    }catch(err){ showToast('İçe aktarma hatası: '+err.message, true); }
-  };
-  reader.readAsText(file);
-  event.target.value=''; // aynı dosyayı tekrar seçebilmek için sıfırla
-}
-
-// ── ÖĞRENCİ EKLE / ÇIKAR ──
-async function addStudent(){
+// ── ÖĞRENCİ EKLE / ÇIKAR ─────────────────────────────
+window.addStudent=async()=>{
   const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
   const user=inp.value.trim().toLowerCase(); errEl.textContent='';
   if(!user) return;
-  const students=loadStudentList();
+  const students=getStudents();
   if(students.includes(user)){ errEl.textContent='⚠ Bu kullanıcı zaten listede.'; return; }
   inp.disabled=true;
   try{
     const res=await fetchWT(`https://lichess.org/api/user/${user}`,{},8000);
     if(!res.ok){ errEl.textContent='✗ Kullanıcı bulunamadı.'; return; }
     const data=await res.json();
-    students.push(user); saveStudentList(students); inp.value='';
+    students.push(user); setStudents(students); inp.value='';
     renderGroupBar(); renderGrid();
-    loadOneStudent(user,0); // 0 = tek öğrenci ekleme, refreshId kontrolü gerekmez
-    showToast(`${data.username} eklendi ✓`);
+    loadOneStudent(user,0); showToast(`${data.username} eklendi ✓`);
   }catch(e){ errEl.textContent=e.name==='AbortError'?'✗ Zaman aşımı.':'✗ Bağlantı hatası.'; }
   finally{ inp.disabled=false; inp.focus(); }
-}
+};
 
 function removeStudent(username){
-  const updated=loadStudentList().filter(s=>s!==username);
-  saveStudentList(updated); delete liveData[username];
+  const updated=getStudents().filter(s=>s!==username);
+  setStudents(updated); delete APP.liveData[username];
   renderGroupBar(); renderGrid(); showToast(`${username} çıkarıldı`,true);
 }
 
-// ── VERİ YÜKLEME ──
-async function refreshAll(){
-  const myId = ++refreshId;
-  const students = loadStudentList();
+// ── VERİ YÜKLEME ─────────────────────────────────────
+window.refreshAll=async()=>{
+  const myId=++APP.refreshId;
+  const students=getStudents();
   if(students.length===0) return;
   const btn=document.getElementById('refreshBtn'); btn.classList.add('spinning');
   setLoadStatus(`Yükleniyor… 0/${students.length}`);
-  // KRITIK: liveData'yı temizlemiyoruz!
-  // Öğrencilerin mevcut verisi skeleton yerine son verilerini gösterir.
-  // Sadece yükleme durumunu belirt.
-  renderGrid(); // Tüm öğrencileri göster (veri var olanlar kartla, olmayanlar skeleton)
+  renderGrid();
   let done=0;
   for(const user of students){
-    if(myId!==refreshId) break;
-    await loadOneStudent(user, myId);
-    done++;
-    if(myId!==refreshId) break;
+    if(myId!==APP.refreshId) break;
+    await loadOneStudent(user,myId);
+    done++; if(myId!==APP.refreshId) break;
     setLoadStatus(`Yükleniyor… ${done}/${students.length}`);
-    // Her öğrenci yüklenince sadece o kartı güncelle (tüm grid'i yeniden çizme!)
-    updateOneCard(user, myId);
+    updateOneCard(user,myId);
   }
-  if(myId===refreshId){
+  if(myId===APP.refreshId){
     btn.classList.remove('spinning'); setLoadStatus('');
     document.getElementById('lastUpdate').textContent='Güncellendi: '+new Date().toLocaleTimeString('tr-TR');
-    renderGrid(); // Son tam render — tüm veriler hazır
-    renderChamps(); renderScoreTable();
+    renderGrid(); renderChamps(); renderScoreTable();
   }
-}
+};
 
-async function loadOneStudent(username, myId){
+async function loadOneStudent(username,myId){
   try{
     const userRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},10000);
     if(!userRes.ok) throw new Error('not_found');
     const user=await userRes.json();
-    if(myId && myId!==refreshId) return;
-
-    // Online durumu
-    let online=false;
-    if(user.online===true) online=true;
-    else if(user.seenAt) online=(Date.now()-user.seenAt)<5*60*1000;
-
-    // Bugünkü oyunlar
+    if(myId&&myId!==APP.refreshId) return;
+    let online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
     const now=new Date(), since=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
     const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false`,{headers:{Accept:'application/x-ndjson'}},15000);
-    if(myId && myId!==refreshId) return;
+    if(myId&&myId!==APP.refreshId) return;
     const gText=await gRes.text();
     const games=gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
     let wins=0,losses=0,draws=0; const recent=[];
     for(const g of games){
       const wu=(g.players?.white?.user?.name||'').toLowerCase();
-      const color=wu===username?'white':'black';
-      const winner=g.winner;
+      const color=wu===username?'white':'black', winner=g.winner;
       let result;
       if(!winner){ if(g.status==='aborted'||g.status==='noStart') continue; draws++; result='draw'; }
       else if(winner===color){ wins++; result='win'; }
@@ -689,55 +669,40 @@ async function loadOneStudent(username, myId){
       const ts=g.lastMoveAt||g.createdAt;
       recent.push({result,opponent:opp,speed:g.speed||'',time:ts?fmtTime(new Date(ts)):''});
     }
-    if(myId && myId!==refreshId) return;
-
-    // Ratingler
+    if(myId&&myId!==APP.refreshId) return;
     const ratings={}, perf=user.perfs||{};
-    for(const k of ['bullet','blitz','rapid','classical']){
-      if(perf[k]&&perf[k].games>0) ratings[k]={int:perf[k].rating,prog:perf[k].prog||0};
-    }
-
-    // Bulmaca
+    for(const k of ['bullet','blitz','rapid','classical']) if(perf[k]&&perf[k].games>0) ratings[k]={int:perf[k].rating,prog:perf[k].prog||0};
     let puzzlesSolved=0, puzzleRating=perf.puzzle?perf.puzzle.rating:null;
     try{
       const aRes=await fetchWT(`https://lichess.org/api/user/${username}/activity`,{},12000);
       if(aRes.ok){
         const aData=await aRes.json();
-        if(myId && myId!==refreshId) return;
+        if(myId&&myId!==APP.refreshId) return;
         if(Array.isArray(aData)){
-          if(!actLog[username]) actLog[username]={};
+          if(!APP.actLog[username]) APP.actLog[username]={};
           for(const entry of aData){
             let eDate=entry.interval?.start||entry.date||null;
             if(!eDate) continue;
             if(typeof eDate==='number'){ const d=new Date(eDate); eDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-            // Bulmaca: bugün veya dün
-            if(eDate===todayStr()||eDate===dateStr(-1)){
-              const cnt=getPuzzleCount(entry);
-              if(cnt>puzzlesSolved) puzzlesSolved=cnt;
-            }
-            // Geçmiş 14 gün actLog'a işle
-            if(daysBetween(todayStr(),eDate)>=0&&daysBetween(todayStr(),eDate)<=14){
-              const prev=actLog[username][eDate]||{games:0,puzzles:0};
+            if(eDate===todayStr()||eDate===dateStr(-1)){ const cnt=getPuzzleCount(entry); if(cnt>puzzlesSolved) puzzlesSolved=cnt; }
+            const diff=daysBetween(todayStr(),eDate);
+            if(diff>=0&&diff<=14){
+              const prev=APP.actLog[username][eDate]||{games:0,puzzles:0};
               let eg=prev.games;
-              if(entry.games&&typeof entry.games==='object'){
-                let gt=0; for(const v of Object.values(entry.games)) if(v&&typeof v==='object') gt+=(v.win||0)+(v.loss||0)+(v.draw||0);
-                if(gt>eg) eg=gt;
-              }
-              const ep=Math.max(prev.puzzles, getPuzzleCount(entry));
-              actLog[username][eDate]={games:eg,puzzles:ep};
+              if(entry.games&&typeof entry.games==='object'){ let gt=0; for(const v of Object.values(entry.games)) if(v&&typeof v==='object') gt+=(v.win||0)+(v.loss||0)+(v.draw||0); if(gt>eg) eg=gt; }
+              const ep=Math.max(prev.puzzles,getPuzzleCount(entry));
+              APP.actLog[username][eDate]={games:eg,puzzles:ep};
             }
           }
-          saveActLog();
         }
       }
     }catch(e){ console.warn(`[${username}] aktivite:`,e.message); }
-
-    if(myId && myId!==refreshId) return;
-    liveData[username]={displayName:user.username,title:user.title||'',online,ratings,wins,losses,draws,puzzlesSolved,puzzleRating,recentGames:recent,loadedAt:Date.now()};
-    logActivity(username, wins+losses+draws, puzzlesSolved);
+    if(myId&&myId!==APP.refreshId) return;
+    APP.liveData[username]={displayName:user.username,title:user.title||'',online,ratings,wins,losses,draws,puzzlesSolved,puzzleRating,recentGames:recent,loadedAt:Date.now()};
+    logActivity(username,wins+losses+draws,puzzlesSolved);
   }catch(err){
     console.warn(`[${username}]:`,err.message);
-    if(!liveData[username]) liveData[username]={error:true,displayName:username};
+    if(!APP.liveData[username]) APP.liveData[username]={error:true,displayName:username};
   }
 }
 
@@ -747,130 +712,109 @@ function getPuzzleCount(entry){
   return 0;
 }
 
-// Tek kartı güncelle (tüm grid'i yeniden çizmeden)
-function updateOneCard(username, myId){
-  if(myId && myId!==refreshId) return;
-  const students=loadStudentList();
-  const sorted=[...students].sort((a,b)=>scoreForSort(b)-scoreForSort(a));
+function updateOneCard(username,myId){
+  if(myId&&myId!==APP.refreshId) return;
+  const students=getStudents();
+  const allLoaded=students.every(u=>APP.liveData[u]);
+  const sorted=allLoaded?[...students].sort((a,b)=>scoreForSort(b)-scoreForSort(a)):[...students];
   const rank=sorted.indexOf(username)+1;
-  const d=liveData[username]; if(!d) return;
+  const d=APP.liveData[username]; if(!d) return;
   const grid=document.getElementById('cardsGrid');
   const existing=grid.querySelector(`[data-user="${CSS.escape(username)}"]`);
-  if(existing){
-    const html=buildCard(username,d,rank);
-    const tmp=document.createElement('div'); tmp.innerHTML=html;
-    if(tmp.firstElementChild) existing.replaceWith(tmp.firstElementChild);
-  }
+  if(existing){ const tmp=document.createElement('div'); tmp.innerHTML=buildCard(username,d,rank); if(tmp.firstElementChild) existing.replaceWith(tmp.firstElementChild); }
 }
 
-// ── ROZET MOTORU ──
+// ── ROZETLER ─────────────────────────────────────────
 function getBadges(username,d){
   if(!d||d.error) return [];
-  const badges=[], total=(d.wins||0)+(d.losses||0)+(d.draws||0), winRate=total>0?Math.round((d.wins/total)*100):0;
-  const puzzles=d.puzzlesSolved||0, gs=getStreak(username,'games'), ps=getStreak(username,'puzzles');
-  if(total>=crit.minDailyGames) badges.push({cls:'b-active',icon:'⚡',label:'Aktif',tip:`Bugün ${total} maç ≥${crit.minDailyGames}`});
+  const badges=[], total=(d.wins||0)+(d.losses||0)+(d.draws||0), wr=total>0?Math.round((d.wins/total)*100):0;
+  const puz=d.puzzlesSolved||0, gs=getStreak(username,'games'), ps=getStreak(username,'puzzles');
+  if(total>=APP.crit.minDailyGames) badges.push({cls:'b-active',icon:'⚡',label:'Aktif',tip:`Bugün ${total} maç`});
   else if(total>0) badges.push({cls:'b-info',icon:'▷',label:`${total} maç`,tip:'Bugün maç yaptı'});
   else badges.push({cls:'b-warn',icon:'💤',label:'Pasif',tip:'Bugün maç yok'});
-  if(total>=3&&winRate>=crit.minWinRate) badges.push({cls:'b-gold',icon:'🏆',label:`%${winRate}`,tip:`≥%${crit.minWinRate} kazanma`});
-  if(gs>=crit.streakDays) badges.push({cls:'b-streak',icon:'🔥',label:`${gs}g Seri`,tip:`${gs} gün üst üste maç`});
-  if(puzzles>=crit.minPuzzleDaily) badges.push({cls:'b-puzzle',icon:'🧩',label:`${puzzles}`,tip:`≥${crit.minPuzzleDaily} bulmaca bugün`});
-  if(ps>=crit.streakPuzzleDays) badges.push({cls:'b-pstreak',icon:'🎯',label:`${ps}g 🧩Seri`,tip:`${ps} gün bulmaca serisi`});
+  if(total>=3&&wr>=APP.crit.minWinRate) badges.push({cls:'b-gold',icon:'🏆',label:`%${wr}`,tip:`%${APP.crit.minWinRate}+ kazanma`});
+  if(gs>=APP.crit.streakDays) badges.push({cls:'b-streak',icon:'🔥',label:`${gs}g Seri`,tip:`${gs} gün üst üste`});
+  if(puz>=APP.crit.minPuzzleDaily) badges.push({cls:'b-puzzle',icon:'🧩',label:`${puz}`,tip:`${APP.crit.minPuzzleDaily}+ bulmaca`});
+  if(ps>=APP.crit.streakPuzzleDays) badges.push({cls:'b-pstreak',icon:'🎯',label:`${ps}g🧩`,tip:`${ps} gün bulmaca serisi`});
   return badges;
 }
 
-// ── SIRALAMA / FİLTRE ──
-function scoreForSort(username){
-  const d=liveData[username]; if(!d||d.error) return -9999;
-  const total=(d.wins||0)+(d.losses||0)+(d.draws||0);
-  const wr=total>0?(d.wins/total)*100:0;
-  if(curSort==='score')   return calcScore(username,'week');
-  if(curSort==='games')   return total;
-  if(curSort==='winrate') return wr;
-  if(curSort==='puzzles') return d.puzzlesSolved||0;
-  if(curSort==='streak')  return getStreak(username,'games');
-  if(curSort==='name')    return -(username.charCodeAt(0));
-  return calcScore(username,'week');
+// ── SIRALAMA / FİLTRE ────────────────────────────────
+function scoreForSort(u){
+  const d=APP.liveData[u]; if(!d||d.error) return -9999;
+  const tot=(d.wins||0)+(d.losses||0)+(d.draws||0), wr=tot>0?(d.wins/tot)*100:0;
+  if(APP.curSort==='score')   return calcScore(u,'week');
+  if(APP.curSort==='games')   return tot;
+  if(APP.curSort==='winrate') return wr;
+  if(APP.curSort==='puzzles') return d.puzzlesSolved||0;
+  if(APP.curSort==='streak')  return getStreak(u,'games');
+  if(APP.curSort==='name')    return -(u.charCodeAt(0));
+  return calcScore(u,'week');
 }
 
-function passes(username){
-  if(curFilters.size===0) return true;
-  const d=liveData[username]; if(!d) return true;
-  if(d.error) return curFilters.has('inactive');
-  const total=(d.wins||0)+(d.losses||0)+(d.draws||0);
-  if(curFilters.has('active')   && total>=crit.minDailyGames) return true;
-  if(curFilters.has('inactive') && total<crit.minDailyGames)  return true;
-  if(curFilters.has('streak')   && getStreak(username,'games')>=crit.streakDays) return true;
-  if(curFilters.has('puzzle')   && (d.puzzlesSolved||0)>=crit.minPuzzleDaily) return true;
+function passes(u){
+  if(APP.curFilters.size===0) return true;
+  const d=APP.liveData[u]; if(!d) return true; if(d.error) return APP.curFilters.has('inactive');
+  const tot=(d.wins||0)+(d.losses||0)+(d.draws||0);
+  if(APP.curFilters.has('active')   && tot>=APP.crit.minDailyGames) return true;
+  if(APP.curFilters.has('inactive') && tot<APP.crit.minDailyGames)  return true;
+  if(APP.curFilters.has('streak')   && getStreak(u,'games')>=APP.crit.streakDays) return true;
+  if(APP.curFilters.has('puzzle')   && (d.puzzlesSolved||0)>=APP.crit.minPuzzleDaily) return true;
   return false;
 }
 
-function setSort(k){ curSort=k; document.querySelectorAll('.ctrl-btn[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===k)); renderGrid(); }
-function togFilter(k){ curFilters.has(k)?curFilters.delete(k):curFilters.add(k); document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.toggle('active',curFilters.has(b.dataset.filter))); renderGrid(); }
-function setScorePeriod(p){ scorePeriod=p; document.querySelectorAll('.score-tab').forEach(b=>b.classList.toggle('active',b.dataset.period===p)); renderScoreTable(); }
+window.setSort=k=>{ APP.curSort=k; document.querySelectorAll('.ctrl-btn[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===k)); renderGrid(); };
+window.togFilter=k=>{ APP.curFilters.has(k)?APP.curFilters.delete(k):APP.curFilters.add(k); document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.toggle('active',APP.curFilters.has(b.dataset.filter))); renderGrid(); };
+window.setScorePeriod=p=>{ APP.scorePeriod=p; document.querySelectorAll('.score-tab').forEach(b=>b.classList.toggle('active',b.dataset.period===p)); renderScoreTable(); };
 
-// ── RENDER ──
+// ── RENDER ───────────────────────────────────────────
 function renderGrid(){
   const grid=document.getElementById('cardsGrid');
-  const students=loadStudentList();
-  if(students.length===0){
-    grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>';
-    return;
-  }
-  // Sabit liste: öğrenci sırası değişmemeli, sadece veri güncellenince sırala
-  // Veri henüz yüklenmediyse öğrenci listesi sırasını koru (skeleton göster)
-  const allLoaded = students.every(u => liveData[u]);
-  const sorted = allLoaded
-    ? [...students].sort((a,b)=>scoreForSort(b)-scoreForSort(a))
-    : [...students]; // Henüz yüklenmemişse orijinal sırayı koru
-  const rankMap = Object.fromEntries(sorted.map((u,i)=>[u,i+1]));
-  const filtered = sorted.filter(passes);
-  if(filtered.length===0){
-    grid.innerHTML='<div class="empty"><div class="ei">🔍</div><h3>Filtre eşleşmedi</h3></div>';
-    return;
-  }
+  const students=getStudents();
+  if(students.length===0){ grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>'; return; }
+  const allLoaded=students.every(u=>APP.liveData[u]);
+  const sorted=allLoaded?[...students].sort((a,b)=>scoreForSort(b)-scoreForSort(a)):[...students];
+  const rankMap=Object.fromEntries(sorted.map((u,i)=>[u,i+1]));
+  const filtered=sorted.filter(passes);
+  if(filtered.length===0){ grid.innerHTML='<div class="empty"><div class="ei">🔍</div><h3>Filtre eşleşmedi</h3></div>'; return; }
   const frag=document.createDocumentFragment();
   for(const u of filtered){
-    const d=liveData[u];
+    const d=APP.liveData[u];
     const html=d?buildCard(u,d,rankMap[u]||0):skeletonCard(u);
     const tmp=document.createElement('div'); tmp.innerHTML=html;
     if(tmp.firstElementChild) frag.appendChild(tmp.firstElementChild);
+    else console.warn('Kart oluşturulamadı:',u);
   }
   grid.innerHTML=''; grid.appendChild(frag);
 }
 
-// ── ŞAMPİYONLAR ──
 function renderChamps(){
-  const students=loadStudentList().filter(u=>liveData[u]&&!liveData[u].error);
+  const students=getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
   if(students.length<2){ document.getElementById('champStrip').innerHTML=''; return; }
-  const get=(fn)=>{
-    const best=students.reduce((b,u)=>fn(u)>fn(b)?u:b);
-    return {user:best, val:fn(best), d:liveData[best]};
-  };
-  const champData=[
-    {cls:'cc-score',  label:'⭐ En Yüksek Puan',   medal:'🏆', ...get(u=>calcScore(u,'week')),   valLabel:u=>calcScore(u,'week')+' puan'},
-    {cls:'cc-games',  label:'⚔ En Çok Maç',        medal:'🎯', ...get(u=>(liveData[u].wins||0)+(liveData[u].losses||0)+(liveData[u].draws||0)), valLabel:u=>`${(liveData[u].wins||0)+(liveData[u].losses||0)+(liveData[u].draws||0)} maç bugün`},
-    {cls:'cc-puzzle', label:'🧩 En Çok Bulmaca',   medal:'🧩', ...get(u=>liveData[u].puzzlesSolved||0), valLabel:u=>`${liveData[u].puzzlesSolved||0} bulmaca`},
-    {cls:'cc-win',    label:'🏆 En Yüksek Kazanma', medal:'📈', ...get(u=>{ const d=liveData[u]; const t=(d.wins||0)+(d.losses||0)+(d.draws||0); return t>=3?(d.wins/t)*100:0; }), valLabel:u=>{ const d=liveData[u]; const t=(d.wins||0)+(d.losses||0)+(d.draws||0); return t>=3?`%${Math.round((d.wins/t)*100)} kazanma`:'az maç'; }},
-    {cls:'cc-streak', label:'🔥 En Uzun Seri',      medal:'🔥', ...get(u=>getStreak(u,'games')),  valLabel:u=>`${getStreak(u,'games')} günlük seri`},
-    {cls:'cc-wscore', label:'📅 Haftalık Puan',     medal:'⭐', ...get(u=>calcScore(u,'week')),   valLabel:u=>calcScore(u,'week')+' puan bu hafta'},
+  const best=fn=>students.reduce((b,u)=>fn(u)>fn(b)?u:b);
+  const champs=[
+    {cls:'cc-score', label:'⭐ En Yüksek Puan',    medal:'🏆', user:best(u=>calcScore(u,'week')),        val:u=>calcScore(u,'week')+' puan'},
+    {cls:'cc-games', label:'⚔ En Çok Maç',         medal:'🎯', user:best(u=>(APP.liveData[u].wins||0)+(APP.liveData[u].losses||0)+(APP.liveData[u].draws||0)), val:u=>`${(APP.liveData[u].wins||0)+(APP.liveData[u].losses||0)+(APP.liveData[u].draws||0)} maç`},
+    {cls:'cc-puzzle',label:'🧩 En Çok Bulmaca',    medal:'🧩', user:best(u=>APP.liveData[u].puzzlesSolved||0), val:u=>`${APP.liveData[u].puzzlesSolved||0} bulmaca`},
+    {cls:'cc-win',   label:'🏆 En Yüksek Kazanma', medal:'📈', user:best(u=>{ const d=APP.liveData[u]; const t=(d.wins||0)+(d.losses||0)+(d.draws||0); return t>=3?(d.wins/t)*100:0; }), val:u=>{ const d=APP.liveData[u]; const t=(d.wins||0)+(d.losses||0)+(d.draws||0); return t>=3?`%${Math.round((d.wins/t)*100)} kazanma`:'az maç'; }},
+    {cls:'cc-streak',label:'🔥 En Uzun Seri',      medal:'🔥', user:best(u=>getStreak(u,'games')),        val:u=>`${getStreak(u,'games')} günlük seri`},
   ];
-  document.getElementById('champStrip').innerHTML=champData.map(c=>`
+  document.getElementById('champStrip').innerHTML=champs.map(c=>`
     <div class="champ-card ${c.cls}">
       <div class="champ-label">${c.label}</div>
-      <div class="champ-name">${escHtml(c.d?.displayName||c.user)}</div>
-      <div class="champ-val"><strong>${c.valLabel(c.user)}</strong></div>
+      <div class="champ-name">${escHtml(APP.liveData[c.user]?.displayName||c.user)}</div>
+      <div class="champ-val"><strong>${c.val(c.user)}</strong></div>
       <div class="champ-medal">${c.medal}</div>
     </div>`).join('');
 }
 
-// ── PUAN TABLOSU ──
 function renderScoreTable(){
-  const students=loadStudentList().filter(u=>liveData[u]&&!liveData[u].error);
+  const students=getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
   if(students.length===0){ document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Veri bekleniyor…</div>'; return; }
-  const scored=[...students].map(u=>({u,pts:calcScore(u,scorePeriod),bd:scoreBreakdown(u)})).sort((a,b)=>b.pts-a.pts);
+  const scored=[...students].map(u=>({u,pts:calcScore(u,APP.scorePeriod),bd:scoreBreakdown(u)})).sort((a,b)=>b.pts-a.pts);
   const maxPts=scored[0]?.pts||1;
   document.getElementById('scoreRows').innerHTML=scored.map(({u,pts,bd},i)=>{
-    const rank=i+1, d=liveData[u];
+    const rank=i+1, d=APP.liveData[u];
     const rCls=rank===1?'sr1':rank===2?'sr2':rank===3?'sr3':'';
     const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
     const pct=Math.round((pts/maxPts)*100);
@@ -880,17 +824,14 @@ function renderScoreTable(){
       <div class="score-name">${escHtml(d.displayName||u)}</div>
       <div class="score-badge">${bdgs}</div>
       <div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%"></div></div></div>
-      <div>
-        <div class="score-pts">${pts}</div>
-        <div class="score-breakdown">${bd}</div>
-      </div>
+      <div><div class="score-pts">${pts}</div><div class="score-breakdown">${bd}</div></div>
     </div>`;
   }).join('');
 }
 
-// ── KART OLUŞTURUCU ──
+// ── KART OLUŞTURUCULAR ───────────────────────────────
 function skeletonCard(u){
-  return `<div class="s-card loading-card" data-user="${escHtml(u)}">
+  return `<div class="s-card" data-user="${escHtml(u)}">
     <div class="card-head"><div class="s-info">
       <div class="avatar skel" style="width:32px;height:32px">&nbsp;</div>
       <div><div class="skel" style="width:80px;height:12px;margin-bottom:4px">&nbsp;</div><div class="skel" style="width:50px;height:9px">&nbsp;</div></div>
@@ -900,18 +841,17 @@ function skeletonCard(u){
   </div>`;
 }
 
-function buildCard(username, d, rank){
+function buildCard(username,d,rank){
   const total=(d.wins||0)+(d.losses||0)+(d.draws||0);
   const winPct=total>0?Math.round((d.wins/total)*100):0;
   const drawPct=total>0?Math.round((d.draws/total)*100):0;
   const lossPct=100-winPct-drawPct;
-  const badges=getBadges(username,d);
-  const score=calcScore(username,'week');
+  const badges=getBadges(username,d), score=calcScore(username,'week');
   const crown=rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'';
   const cardCls=rank===1?'t1':rank===2?'t2':rank===3?'t3':'';
   const rHTML=['bullet','blitz','rapid','classical'].map(k=>{
     const r=d.ratings?.[k]; if(!r) return '';
-    const dif=r.prog||0, cc=dif>0?'up':dif<0?'dn':'eq', ct=dif>0?`▲${dif}`:dif<0?`▼${Math.abs(dif)}`:'—';
+    const dif=r.prog||0,cc=dif>0?'up':dif<0?'dn':'eq',ct=dif>0?`▲${dif}`:dif<0?`▼${Math.abs(dif)}`:'—';
     return `<div class="r-item"><div class="r-type">${k==='bullet'?'BLT':k==='blitz'?'BLZ':k==='rapid'?'RPD':'CLS'}</div><div class="r-val">${r.int}</div><div class="r-chg ${cc}">${ct}</div></div>`;
   }).join('');
   const gHTML=(d.recentGames||[]).slice(0,4).map(g=>{
@@ -920,11 +860,10 @@ function buildCard(username, d, rank){
   }).join('');
   const days14=get14Days(username);
   const pipHtml=days14.map(day=>{
-    const isToday=day.date===todayStr();
-    const hg=day.games>=crit.minDailyGames, hp=day.puzzles>=crit.minPuzzleDaily;
+    const isT=day.date===todayStr(), hg=day.games>=APP.crit.minDailyGames, hp=day.puzzles>=APP.crit.minPuzzleDaily;
     const ag=day.games>0, ap=day.puzzles>0;
     const cls=(hg&&hp)?'pb':hg?'pg':hp?'pp':(ag&&ap)?'pa-both':ag?'pa-game':ap?'pa-puzz':'';
-    return `<div class="pip ${cls}${isToday?' today':''}" title="${day.date}: ${day.games} maç, ${day.puzzles} bulmaca"></div>`;
+    return `<div class="pip ${cls}${isT?' today':''}" title="${day.date}: ${day.games} maç, ${day.puzzles} bulmaca"></div>`;
   }).join('');
   const gs=getStreak(username,'games'), ps=getStreak(username,'puzzles');
   const heatLbl=gs>1?`🔥 ${gs}g seri`:ps>1?`🧩 ${ps}g seri`:'14 gün';
@@ -938,8 +877,7 @@ function buildCard(username, d, rank){
           <div>
             <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(d.displayName||username)}</a>
             <div class="s-sub">${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
-              <div class="day-tag">🎯 ${total} maç</div>
-              <div class="score-tag">⭐ ${score} puan</div>
+              <div class="day-tag">🎯 ${total} maç</div><div class="score-tag">⭐ ${score} puan</div>
             </div>
           </div>
         </div>
@@ -959,10 +897,7 @@ function buildCard(username, d, rank){
         <div class="wld-box lb2"><div class="wld-lbl">Kaybetti</div><div class="wld-val">${d.losses||0}</div></div>
         <div class="wld-box db"><div class="wld-lbl">Berabere</div><div class="wld-val">${d.draws||0}</div></div>
       </div>
-      ${total>0?`<div class="wr-wrap">
-        <div class="wr-labels"><span style="color:var(--win)">%${winPct} G</span><span style="color:var(--draw)">%${drawPct} B</span><span style="color:var(--loss)">%${lossPct} K</span></div>
-        <div class="wr-bar"><div class="bw" style="width:${winPct}%"></div><div class="bd" style="width:${drawPct}%"></div><div class="bl" style="width:${lossPct}%"></div></div>
-      </div>`:''}
+      ${total>0?`<div class="wr-wrap"><div class="wr-labels"><span style="color:var(--win)">%${winPct} G</span><span style="color:var(--draw)">%${drawPct} B</span><span style="color:var(--loss)">%${lossPct} K</span></div><div class="wr-bar"><div class="bw" style="width:${winPct}%"></div><div class="bd" style="width:${drawPct}%"></div><div class="bl" style="width:${lossPct}%"></div></div></div>`:''}
       <div class="puz-row">
         <div class="puz-left"><span style="font-size:14px">🧩</span><div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">Bulmacalar</div><div class="puz-lbl">bugün çözülen</div></div></div>
         <div class="puz-cnt">${d.puzzlesSolved??0}</div>
@@ -978,35 +913,32 @@ function buildCard(username, d, rank){
   </div>`;
 }
 
-// ── KRİTER PANELİ ──
-function toggleCrit(){ const b=document.getElementById('critBody'),a=document.getElementById('critArrow'); b.classList.toggle('open'); a.textContent=b.classList.contains('open')?'▲':'▼'; }
+// ── KRİTER PANELİ ────────────────────────────────────
+window.toggleCrit=()=>{ const b=document.getElementById('critBody'),a=document.getElementById('critArrow'); b.classList.toggle('open'); a.textContent=b.classList.contains('open')?'▲':'▼'; };
 function buildCritPanel(){
   const defs=[
-    {key:'minDailyGames',   b:{cls:'b-active',icon:'⚡',lbl:'Aktif'},       name:'Aktif Oyuncu',      rule:'Günlük min. maç sayısı'},
-    {key:'minWinRate',      b:{cls:'b-gold',  icon:'🏆',lbl:'%Kazanma'},    name:'Yüksek Kazanma',    rule:'Min. kazanma oranı (%)'},
-    {key:'streakDays',      b:{cls:'b-streak',icon:'🔥',lbl:'Seri'},        name:'Maç Serisi (gün)',  rule:'Üst üste kaç gün?'},
-    {key:'minPuzzleDaily',  b:{cls:'b-puzzle',icon:'🧩',lbl:'Bulmaca'},     name:'Günlük Bulmaca',    rule:'Günlük min. bulmaca'},
-    {key:'streakPuzzleDays',b:{cls:'b-pstreak',icon:'🎯',lbl:'Bulmaca Seri'},name:'Bulmaca Serisi',   rule:'Üst üste kaç gün?'},
-    {key:'ptWin',           b:{cls:'b-gold',  icon:'⭐',lbl:'Kazanma pt'}, name:'Kazanma Puanı',     rule:'Her kazanılan maç puanı'},
-    {key:'ptPlay',          b:{cls:'b-info',  icon:'⭐',lbl:'Oynama pt'},  name:'Oynama Puanı',      rule:'Her oynanan maç puanı'},
-    {key:'ptPuzzle',        b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca pt'}, name:'Bulmaca Puanı',     rule:'Her bulmaca puanı'},
-    {key:'ptDailyBonus',    b:{cls:'b-active',icon:'⭐',lbl:'Günlük bonus'},name:'Günlük Maç Bonusu', rule:'Günlük kriteri karşılama'},
-    {key:'ptPuzzleBonus',   b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca bonus'},name:'Bulmaca Bonusu',   rule:'Bulmaca kriteri karşılama'},
-    {key:'ptStreak',        b:{cls:'b-streak',icon:'⭐',lbl:'Seri bonus'},  name:'Seri Günlük Bonus', rule:'Aktif seri başına puan'},
+    {key:'minDailyGames',   b:{cls:'b-active',icon:'⚡',lbl:'Aktif'},        name:'Aktif Oyuncu',       rule:'Günlük min. maç sayısı'},
+    {key:'minWinRate',      b:{cls:'b-gold',  icon:'🏆',lbl:'%Kazanma'},     name:'Yüksek Kazanma',     rule:'Min. kazanma oranı (%)'},
+    {key:'streakDays',      b:{cls:'b-streak',icon:'🔥',lbl:'Seri'},         name:'Maç Serisi (gün)',   rule:'Üst üste kaç gün?'},
+    {key:'minPuzzleDaily',  b:{cls:'b-puzzle',icon:'🧩',lbl:'Bulmaca'},      name:'Günlük Bulmaca',     rule:'Günlük min. bulmaca'},
+    {key:'streakPuzzleDays',b:{cls:'b-pstreak',icon:'🎯',lbl:'Bulmaca Seri'},name:'Bulmaca Serisi',     rule:'Üst üste kaç gün?'},
+    {key:'ptWin',           b:{cls:'b-gold',  icon:'⭐',lbl:'Kazanma pt'},   name:'Kazanma Puanı',      rule:'Her kazanılan maç için'},
+    {key:'ptPlay',          b:{cls:'b-info',  icon:'⭐',lbl:'Oynama pt'},    name:'Oynama Puanı',       rule:'Her oynanan maç için'},
+    {key:'ptPuzzle',        b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca pt'},   name:'Bulmaca Puanı',      rule:'Her bulmaca için'},
+    {key:'ptDailyBonus',    b:{cls:'b-active',icon:'⭐',lbl:'Günlük bonus'}, name:'Günlük Maç Bonusu',  rule:'Günlük kriteri karşılama'},
+    {key:'ptPuzzleBonus',   b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca bonus'},name:'Bulmaca Bonusu',     rule:'Bulmaca kriteri karşılama'},
+    {key:'ptStreak',        b:{cls:'b-streak',icon:'⭐',lbl:'Seri bonus'},   name:'Seri Günlük Bonus',  rule:'Aktif seri başına puan'},
   ];
   document.getElementById('critGrid').innerHTML=defs.map(d=>`
     <div class="crit-item">
       <span class="badge ${d.b.cls}">${d.b.icon} ${d.b.lbl}</span>
       <div class="crit-desc"><div class="crit-name">${d.name}</div><div class="crit-rule">${d.rule}</div></div>
-      <input class="crit-input" type="number" min="0" max="100" step="${d.key.startsWith('pt')&&d.key==='ptPuzzle'?'0.5':'1'}" value="${crit[d.key]}" onchange="updateCrit('${d.key}',this.value)">
+      <input class="crit-input" type="number" min="0" max="100" step="${d.key==='ptPuzzle'?'0.5':'1'}" value="${APP.crit[d.key]}" onchange="updateCrit('${d.key}',this.value)">
     </div>`).join('');
 }
-function updateCrit(key,val){
-  crit[key]=Math.max(0,parseFloat(val)||0); saveCrit();
-  renderGrid(); renderChamps(); renderScoreTable();
-}
+window.updateCrit=(key,val)=>{ APP.crit[key]=Math.max(0,parseFloat(val)||0); fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); };
 
-// ── YARDIMCILAR ──
+// ── YARDIMCILAR ──────────────────────────────────────
 function fetchWT(url,opts={},ms=10000){
   const ctrl=new AbortController(), t=setTimeout(()=>ctrl.abort(),ms);
   return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(t));
@@ -1019,11 +951,22 @@ function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function setLoadStatus(msg){ const el=document.getElementById('loadStatus'); if(msg){el.textContent=msg;el.classList.add('show');}else{el.textContent='';el.classList.remove('show');} }
 function showToast(msg,isErr=false){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(isErr?' err':''); setTimeout(()=>{t.className='toast';},3000); }
 
-// Event delegation — rm butonu
+// Event delegation
 document.addEventListener('click',e=>{ const b=e.target.closest('.rm-btn'); if(b){ const u=b.dataset.rmuser; if(u) removeStudent(u); } });
 
 // Auto-refresh 5 dakikada bir
-setInterval(()=>{ if(loadStudentList().length>0) refreshAll(); },5*60*1000);
+setInterval(()=>{ if(getStudents().length>0) refreshAll(); },5*60*1000);
+
+// ── BAŞLANGIÇ ────────────────────────────────────────
+(async()=>{
+  await fbLoad();          // Firebase'den yükle
+  fbListen();              // Gerçek zamanlı dinleyiciyi başlat
+  buildCritPanel();
+  renderGroupBar();
+  renderHeader();
+  renderGrid();
+  if(getStudents().length>0) refreshAll();
+})();
 </script>
 </body>
 </html>
