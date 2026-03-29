@@ -225,10 +225,67 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .toast.err{border-left-color:var(--loss)}
 .load-status{font-size:11px;color:var(--text-muted);padding:6px 0;text-align:center;display:none}
 .load-status.show{display:block}
+
+/* PIN EKRANI */
+.pin-overlay{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;align-items:center;justify-content:center}
+.pin-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 32px;min-width:300px;text-align:center}
+.pin-icon{font-size:40px;margin-bottom:16px}
+.pin-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--accent2);margin-bottom:6px}
+.pin-sub{font-size:11px;color:var(--text-muted);margin-bottom:24px;line-height:1.6}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s}
+.pin-dot.filled{background:var(--accent)}
+.pin-pad{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;max-width:220px;margin:0 auto}
+.pin-key{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;padding:14px;border-radius:8px;cursor:pointer;transition:all .15s;user-select:none}
+.pin-key:hover{background:var(--border);border-color:var(--accent)}
+.pin-key:active{transform:scale(.94)}
+.pin-key.del{font-size:13px;color:var(--text-muted)}
+.pin-key.empty{visibility:hidden}
+.pin-err{color:var(--loss);font-size:11px;margin-top:12px;min-height:16px}
+.pin-setup-link{font-size:10px;color:var(--text-muted);margin-top:14px;cursor:pointer;text-decoration:underline;opacity:.6}
+.pin-setup-link:hover{opacity:1;color:var(--accent)}
+/* Yönetici mod göstergesi */
+.admin-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.25);color:var(--accent);border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer}
+.admin-badge:hover{background:rgba(200,168,75,.2)}
+/* Yönetici olmayan modda düzenleme butonları gizle */
+body.readonly .admin-only{display:none!important}
+
 @media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:17px}.controls{gap:4px}.champ-strip{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
+
+<!-- PIN EKRANI -->
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-box">
+    <div class="pin-icon">♞</div>
+    <div class="pin-title">Lichess Koç Paneli</div>
+    <div class="pin-sub" id="pinSub">Görüntülemek için devam edin<br>veya yönetici girişi için PIN girin</div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key empty"></button>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+    </div>
+    <div class="pin-err" id="pinErr"></div>
+    <div class="pin-setup-link" id="pinSkip" onclick="pinViewOnly()">Sadece görüntüle (yönetici girişi yapma)</div>
+  </div>
+</div>
+
 <div class="sync-banner">
   <div class="sync-dot" id="syncDot"></div>
   <span id="syncStatus">Firebase bağlanıyor…</span>
@@ -241,17 +298,20 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
       <div><h1>Koç Paneli <span>Lichess · Satranç</span></h1></div>
     </div>
     <div class="header-right">
-      <span class="group-name-display" id="groupNameDisplay" onclick="openRenameModal()" title="Grubu yeniden adlandır">—</span>
+      <span class="group-name-display" id="groupNameDisplay" title="Grup adı">—</span>
+      <span id="adminBadge" style="display:none" class="admin-badge" onclick="openRenameModal()" title="Yeniden adlandır">✏ Düzenle</span>
       <span class="last-update" id="lastUpdate">—</span>
       <button class="icon-btn" id="refreshBtn" onclick="refreshAll()">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
         Yenile
       </button>
-      <button class="icon-btn danger" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
+      <button class="icon-btn danger admin-only" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
+      <button class="icon-btn admin-only" onclick="openChangePinModal()" title="PIN değiştir">🔑 PIN</button>
+      <button class="icon-btn admin-only" style="border-color:rgba(224,90,90,.3);color:var(--loss)" onclick="adminLogout()">⏏ Çıkış</button>
     </div>
   </header>
 
-  <div class="add-row">
+  <div class="add-row admin-only">
     <label>Öğrenci Ekle →</label>
     <input type="text" id="addInput" placeholder="Lichess kullanıcı adı..." onkeydown="if(event.key==='Enter') addStudent()">
     <button class="add-btn" onclick="addStudent()">+ Ekle</button>
@@ -369,7 +429,11 @@ async function fbLoad(){
 
     if(cfg && cfg.groups && cfg.groups.length>0){
       APP.groups    = cfg.groups;
-      APP.activeGid = cfg.activeGid || cfg.groups[0].id;
+      // Her cihaz kendi aktif grubunu tutar — config'deki activeGid'i kullanma
+      // Eğer mevcut activeGid bu config'de yoksa ilk grubu seç
+      if(!cfg.groups.find(g=>g.id===APP.activeGid)){
+        APP.activeGid = cfg.groups[0].id;
+      }
       APP.crit      = { ...APP.crit, ...(cfg.criteria||{}) };
     }
     // Öğrenci listelerini yükle
@@ -391,7 +455,6 @@ async function fbSaveConfig(){
   try{
     await setDoc(doc(db,'panel','config'),{
       groups: APP.groups,
-      activeGid: APP.activeGid,
       criteria: APP.crit,
       updatedAt: Date.now()
     });
@@ -416,8 +479,7 @@ function fbListen(){
   onSnapshot(doc(db,'panel','config'), snap=>{
     if(!snap.exists()) return;
     const d=snap.data();
-    const changed = JSON.stringify(d.groups)!==JSON.stringify(APP.groups)
-                 || d.activeGid!==APP.activeGid;
+    const changed = JSON.stringify(d.groups)!==JSON.stringify(APP.groups);
     if(changed){
       APP.groups    = d.groups;
       APP.crit      = {...APP.crit,...(d.criteria||{})};
@@ -548,22 +610,37 @@ function renderGroupBar(){
   bar.innerHTML=APP.groups.map(g=>{
     const n=(APP.studentLists[g.id]||[]).length;
     return `<button class="group-tab ${g.id===APP.activeGid?'active':''}" onclick="switchGroup('${g.id}')">${escHtml(g.name)}<span class="tab-count">${n}</span></button>`;
-  }).join('')+`<button class="new-group-btn" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
+  }).join('')+`<button class="new-group-btn admin-only" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
 }
 
-function switchGroup(id){
+async function switchGroup(id){
   if(id===APP.activeGid) return;
   APP.refreshId++;
   APP.activeGid=id;
   APP.curFilters.clear();
   document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.remove('active'));
   fbSaveConfig();
-  renderGroupBar(); renderHeader(); renderGrid();
+  renderGroupBar(); renderHeader();
+  // Öğrenci listesi bellekte yoksa Firebase'den çek
+  if(!APP.studentLists[id] || APP.studentLists[id].length === 0){
+    setSyncStatus('syncing','Grup yükleniyor…');
+    try{
+      const snap = await getDoc(doc(db,'panel','students_'+id));
+      APP.studentLists[id] = snap.exists() ? (snap.data().list||[]) : [];
+      setSyncStatus('ok','Firebase bağlı ✓');
+    }catch(e){
+      APP.studentLists[id] = [];
+      setSyncStatus('err','Grup yüklenemedi');
+    }
+  }
+  renderGroupBar();
+  renderGrid();
   if(getStudents().length>0) refreshAll();
 }
 
 window.openNewGroupModal=()=>{ document.getElementById('newGroupName').value=''; document.getElementById('modalNewGroup').style.display='flex'; setTimeout(()=>document.getElementById('newGroupName').focus(),50); };
 window.createGroup=()=>{
+  if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const name=document.getElementById('newGroupName').value.trim(); if(!name) return;
   const g={id:'g'+Date.now(),name};
   APP.groups.push(g); APP.activeGid=g.id;
@@ -579,12 +656,14 @@ window.openRenameModal=()=>{
   setTimeout(()=>document.getElementById('renameInput').focus(),50);
 };
 window.renameGroup=()=>{
+  if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const name=document.getElementById('renameInput').value.trim(); if(!name) return;
   const g=APP.groups.find(x=>x.id===APP.activeGid); if(!g) return;
   g.name=name; fbSaveConfig(); closeModal('modalRename'); renderGroupBar(); renderHeader();
   showToast(`Grup "${name}" olarak adlandırıldı ✓`);
 };
 window.confirmDeleteGroup=()=>{
+  if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   if(APP.groups.length<=1){ showToast('Son grubu silemezsiniz!',true); return; }
   const g=APP.groups.find(x=>x.id===APP.activeGid);
   if(!confirm(`"${g?.name}" grubunu silmek istiyor musunuz?`)) return;
@@ -599,6 +678,7 @@ function renderHeader(){ const g=APP.groups.find(x=>x.id===APP.activeGid); docum
 
 // ── ÖĞRENCİ EKLE / ÇIKAR ─────────────────────────────
 window.addStudent=async()=>{
+  if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
   const user=inp.value.trim().toLowerCase(); errEl.textContent='';
   if(!user) return;
@@ -951,8 +1031,97 @@ function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function setLoadStatus(msg){ const el=document.getElementById('loadStatus'); if(msg){el.textContent=msg;el.classList.add('show');}else{el.textContent='';el.classList.remove('show');} }
 function showToast(msg,isErr=false){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(isErr?' err':''); setTimeout(()=>{t.className='toast';},3000); }
 
-// Event delegation
-document.addEventListener('click',e=>{ const b=e.target.closest('.rm-btn'); if(b){ const u=b.dataset.rmuser; if(u) removeStudent(u); } });
+// Event delegation — rm butonu (sadece admin)
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.rm-btn');
+  if(b){
+    if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+    const u=b.dataset.rmuser;
+    if(u) removeStudent(u);
+  }
+});
+
+
+// ── PIN / YETKİLENDİRME SİSTEMİ ─────────────────────
+// PIN Firebase'de saklanır: /panel/config.adminPin (hash olarak)
+// Varsayılan PIN: 1234 (ilk girişte değiştirilmeli)
+
+const DEFAULT_PIN = '1234';
+let pinBuffer = '';
+let isAdmin = false;
+
+// Basit hash (güçlü kriptografi gerekmez, localStorage değil Firebase)
+function hashPin(pin){ let h=0; for(const c of pin) h=(h*31+c.charCodeAt(0))>>>0; return h.toString(16); }
+
+function pinPress(d){
+  if(pinBuffer.length>=4) return;
+  pinBuffer+=d;
+  updatePinDots();
+  if(pinBuffer.length===4) setTimeout(checkPin,120);
+}
+function pinDel(){
+  pinBuffer=pinBuffer.slice(0,-1);
+  updatePinDots();
+  document.getElementById('pinErr').textContent='';
+}
+function updatePinDots(){
+  for(let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled',i<pinBuffer.length);
+}
+
+async function checkPin(){
+  const stored = APP.crit._adminPinHash || hashPin(DEFAULT_PIN);
+  if(hashPin(pinBuffer)===stored){
+    // Doğru PIN — yönetici modu
+    isAdmin=true;
+    document.getElementById('pinOverlay').style.display='none';
+    document.body.classList.remove('readonly');
+    document.getElementById('adminBadge').style.display='inline-flex';
+    showToast('Yönetici girişi yapıldı ✓');
+    // PIN değiştirme önerisi (ilk kez varsayılan PIN ile girildiyse)
+    if(!APP.crit._adminPinHash){
+      setTimeout(()=>{
+        if(confirm('Varsayılan PIN (1234) kullanılıyor. Değiştirmek ister misiniz?')) openChangePinModal();
+      },500);
+    }
+  } else {
+    document.getElementById('pinErr').textContent='Hatalı PIN, tekrar deneyin';
+    pinBuffer='';
+    updatePinDots();
+    // Titreşim efekti
+    const dots=document.getElementById('pinDots');
+    dots.style.transform='translateX(-6px)';
+    setTimeout(()=>{ dots.style.transform='translateX(6px)'; },80);
+    setTimeout(()=>{ dots.style.transform=''; },160);
+  }
+}
+
+function pinViewOnly(){
+  // Sadece görüntüle — yönetici değil
+  isAdmin=false;
+  document.getElementById('pinOverlay').style.display='none';
+  document.body.classList.add('readonly');
+  document.getElementById('adminBadge').style.display='none';
+}
+
+// Çıkış
+window.adminLogout=()=>{
+  isAdmin=false;
+  document.body.classList.add('readonly');
+  document.getElementById('adminBadge').style.display='none';
+  showToast('Yönetici oturumu kapatıldı');
+};
+
+// PIN değiştirme
+window.openChangePinModal=()=>{
+  if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  const newPin=prompt('Yeni 4 haneli PIN girin:');
+  if(!newPin||newPin.length!==4||!/^\d{4}$/.test(newPin)){ showToast('Geçersiz PIN — 4 rakam olmalı',true); return; }
+  APP.crit._adminPinHash=hashPin(newPin);
+  fbSaveConfig();
+  showToast('PIN değiştirildi ✓');
+};
+
+// rm-btn için admin kontrolü event delegation'a eklenecek
 
 // Auto-refresh 5 dakikada bir
 setInterval(()=>{ if(getStudents().length>0) refreshAll(); },5*60*1000);
@@ -964,6 +1133,10 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },5*60*1000);
   buildCritPanel();
   renderGroupBar();
   renderHeader();
+  // PIN ekranını göster — veri yüklendi ama panel gizli
+  document.getElementById('pinOverlay').style.display='flex';
+  document.body.classList.add('readonly');
+  // Arka planda veriyi yükle
   renderGrid();
   if(getStudents().length>0) refreshAll();
 })();
