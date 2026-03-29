@@ -13,6 +13,7 @@
   --glow:rgba(200,168,75,.15);--gold:#f5c842;--silver:#b0bec5;--bronze:#cd7f32;--fire:#ff7043;
 }
 *{margin:0;padding:0;box-sizing:border-box}
+body.readonly .edit-only{display:none!important}
 body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,168,75,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,168,75,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
 .wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px 80px}
@@ -227,10 +228,64 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .load-status.show{display:block}
 
 @media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:17px}.controls{gap:4px}.champ-strip{grid-template-columns:1fr 1fr}}
+
+/* ── PIN SİSTEMİ ── */
+.pin-overlay{position:fixed;inset:0;background:rgba(13,15,20,.97);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.pin-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 30px;width:300px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.pin-chess{font-size:38px;margin-bottom:14px}
+.pin-title{font-family:'Playfair Display',serif;font-size:19px;color:var(--accent2);margin-bottom:4px}
+.pin-sub{font-size:11px;color:var(--text-muted);margin-bottom:22px;line-height:1.6}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:18px}
+.pin-dot{width:13px;height:13px;border-radius:50%;background:var(--border);transition:background .12s,transform .12s}
+.pin-dot.filled{background:var(--accent);transform:scale(1.15)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 auto 4px}
+.pin-key{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;padding:13px;border-radius:8px;cursor:pointer;transition:all .12s;user-select:none;line-height:1}
+.pin-key:hover{background:var(--border);border-color:var(--accent);color:var(--accent2)}
+.pin-key:active{transform:scale(.92)}
+.pin-key.pin-del{font-size:16px;color:var(--text-muted)}
+.pin-key.pin-empty{visibility:hidden;pointer-events:none}
+.pin-err{min-height:16px;color:var(--loss);font-size:11px;margin-top:10px}
+.pin-view-btn{margin-top:14px;background:transparent;border:none;color:var(--text-muted);font-family:inherit;font-size:10px;cursor:pointer;text-decoration:underline;padding:4px}
+.pin-view-btn:hover{color:var(--accent)}
+.pin-shake{animation:pinShake .3s ease}
+@keyframes pinShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.admin-indicator{display:none;align-items:center;gap:5px;background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);color:var(--accent);border-radius:5px;padding:4px 10px;font-size:10px;letter-spacing:.5px}
+.admin-indicator.show{display:flex}
+
 </style>
 </head>
 <body>
 
+
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-box">
+    <div class="pin-chess">♞</div>
+    <div class="pin-title">Koç Paneli</div>
+    <div class="pin-sub" id="pinSub">Yönetici girişi için PIN girin<br><span style="opacity:.6">veya sadece görüntüleme için atlayın</span></div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="PIN.press('1')">1</button>
+      <button class="pin-key" onclick="PIN.press('2')">2</button>
+      <button class="pin-key" onclick="PIN.press('3')">3</button>
+      <button class="pin-key" onclick="PIN.press('4')">4</button>
+      <button class="pin-key" onclick="PIN.press('5')">5</button>
+      <button class="pin-key" onclick="PIN.press('6')">6</button>
+      <button class="pin-key" onclick="PIN.press('7')">7</button>
+      <button class="pin-key" onclick="PIN.press('8')">8</button>
+      <button class="pin-key" onclick="PIN.press('9')">9</button>
+      <button class="pin-key pin-empty"></button>
+      <button class="pin-key" onclick="PIN.press('0')">0</button>
+      <button class="pin-key pin-del" onclick="PIN.del()">⌫</button>
+    </div>
+    <div class="pin-err" id="pinErr"></div>
+    <button class="pin-view-btn" onclick="PIN.viewOnly()">Sadece görüntüle →</button>
+  </div>
+</div>
 <div class="sync-banner">
   <div class="sync-dot" id="syncDot"></div>
   <span id="syncStatus">Firebase bağlanıyor…</span>
@@ -243,17 +298,20 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
       <div><h1>Koç Paneli <span>Lichess · Satranç</span></h1></div>
     </div>
     <div class="header-right">
-      <span class="group-name-display" id="groupNameDisplay" onclick="openRenameModal()" title="Grubu yeniden adlandır">—</span>
+      <span class="group-name-display" id="groupNameDisplay" id="groupNameBtn" onclick="openRenameModal()" title="Grubu yeniden adlandır">—</span>
+      <span class="admin-indicator" id="adminInd">🔑 Yönetici</span>
       <span class="last-update" id="lastUpdate">—</span>
       <button class="icon-btn" id="refreshBtn" onclick="refreshAll()">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
         Yenile
       </button>
-      <button class="icon-btn danger" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
+      <button class="icon-btn danger" id="btnDeleteGroup" class="edit-only" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
+      <button class="icon-btn" id="btnChangePin" onclick="PIN.change()" title="PIN değiştir" style="display:none">🔑</button>
+      <button class="icon-btn" id="btnLogout" onclick="PIN.logout()" style="display:none;border-color:rgba(224,90,90,.3);color:var(--loss)">⏏ Çıkış</button>
     </div>
   </header>
 
-  <div class="add-row">
+  <div class="add-row edit-only">
     <label>Öğrenci Ekle →</label>
     <input type="text" id="addInput" placeholder="Lichess kullanıcı adı..." onkeydown="if(event.key==='Enter') addStudent()">
     <button class="add-btn" onclick="addStudent()">+ Ekle</button>
@@ -559,7 +617,7 @@ function renderGroupBar(){
   bar.innerHTML=APP.groups.map(g=>{
     const n=(APP.studentLists[g.id]||[]).length;
     return `<button class="group-tab ${g.id===APP.activeGid?'active':''}" onclick="switchGroup('${g.id}')">${escHtml(g.name)}<span class="tab-count">${n}</span></button>`;
-  }).join('')+`<button class="new-group-btn" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
+  }).join('')+`<button class="new-group-btn edit-only" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
 }
 
 window.switchGroup = async function switchGroup(id){
@@ -589,6 +647,7 @@ window.switchGroup = async function switchGroup(id){
 
 window.openNewGroupModal=()=>{ document.getElementById('newGroupName').value=''; document.getElementById('modalNewGroup').style.display='flex'; setTimeout(()=>document.getElementById('newGroupName').focus(),50); };
 window.createGroup=()=>{
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const name=document.getElementById('newGroupName').value.trim(); if(!name) return;
   const g={id:'g'+Date.now(),name};
   APP.groups.push(g); APP.activeGid=g.id;
@@ -604,12 +663,14 @@ window.openRenameModal=()=>{
   setTimeout(()=>document.getElementById('renameInput').focus(),50);
 };
 window.renameGroup=()=>{
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const name=document.getElementById('renameInput').value.trim(); if(!name) return;
   const g=APP.groups.find(x=>x.id===APP.activeGid); if(!g) return;
   g.name=name; fbSaveConfig(); closeModal('modalRename'); renderGroupBar(); renderHeader();
   showToast(`Grup "${name}" olarak adlandırıldı ✓`);
 };
 window.confirmDeleteGroup=()=>{
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   if(APP.groups.length<=1){ showToast('Son grubu silemezsiniz!',true); return; }
   const g=APP.groups.find(x=>x.id===APP.activeGid);
   if(!confirm(`"${g?.name}" grubunu silmek istiyor musunuz?`)) return;
@@ -624,6 +685,7 @@ function renderHeader(){ const g=APP.groups.find(x=>x.id===APP.activeGid); docum
 
 // ── ÖĞRENCİ EKLE / ÇIKAR ─────────────────────────────
 window.addStudent=async()=>{
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
   const user=inp.value.trim().toLowerCase(); errEl.textContent='';
   if(!user) return;
@@ -641,7 +703,17 @@ window.addStudent=async()=>{
   finally{ inp.disabled=false; inp.focus(); }
 };
 
+window.retryStudent=async(username)=>{
+  delete APP.liveData[username];
+  const card=document.getElementById('cardsGrid').querySelector('[data-user="'+CSS.escape(username)+'"]');
+  if(card){ const tmp=document.createElement('div'); tmp.innerHTML=skeletonCard(username); if(tmp.firstElementChild) card.replaceWith(tmp.firstElementChild); }
+  await loadOneStudent(username,0);
+  updateOneCard(username,0);
+  renderChamps(); renderScoreTable();
+};
+
 function removeStudent(username){
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const updated=getStudents().filter(s=>s!==username);
   setStudents(updated); delete APP.liveData[username];
   renderGroupBar(); renderGrid(); showToast(`${username} çıkarıldı`,true);
@@ -727,7 +799,23 @@ async function loadOneStudent(username,myId){
     logActivity(username,wins+losses+draws,puzzlesSolved);
   }catch(err){
     console.warn(`[${username}]:`,err.message);
-    if(!APP.liveData[username]) APP.liveData[username]={error:true,displayName:username};
+    // İlk hata — 3 saniye bekleyip bir kez daha dene
+    if(!APP.liveData[username] || !APP.liveData[username].retried){
+      await new Promise(r=>setTimeout(r,3000));
+      if(myId && myId!==APP.refreshId) return; // grup değiştiyse iptal
+      try{
+        const retryRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},10000);
+        if(retryRes.ok){
+          // Yeniden deneme başarılı — loadOneStudent'ı tekrar çağır ama retry flag'i ile
+          APP.liveData[username]={retried:true,displayName:username};
+          await loadOneStudent(username,myId);
+          return;
+        }
+      }catch(e2){ console.warn(`[${username}] yeniden deneme de başarısız:`,e2.message); }
+      APP.liveData[username]={error:true,displayName:username};
+    } else {
+      APP.liveData[username]={error:true,displayName:username};
+    }
   }
 }
 
@@ -893,7 +981,9 @@ function buildCard(username,d,rank){
             <div class="avatar">${escHtml(username[0].toUpperCase())}</div>
             <div>
               <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(username)}</a>
-              <div class="s-sub" style="color:var(--loss)">⚠ Yüklenemedi — tekrar dene</div>
+              <div class="s-sub" style="color:var(--loss)">⚠ Yüklenemedi
+                <button onclick="retryStudent('${escHtml(username)}')" style="margin-left:6px;background:rgba(224,90,90,.15);border:1px solid rgba(224,90,90,.3);color:var(--loss);border-radius:4px;padding:1px 8px;cursor:pointer;font-family:inherit;font-size:9px">↺ Tekrar Dene</button>
+              </div>
             </div>
           </div>
           <div class="card-actions">
@@ -1019,18 +1109,126 @@ document.addEventListener('click',e=>{
 });
 
 
+
+// ── PIN SİSTEMİ (module scope dışında window.PIN olarak) ──────────────────
+window.PIN = (function(){
+  const DEFAULT = '1234';
+  function hash(p){ let h=5381; for(let i=0;i<p.length;i++) h=((h<<5)+h)+p.charCodeAt(i)>>>0; return h.toString(16); }
+
+  let buf = '', isAdmin = false;
+
+  function updateDots(){
+    for(let i=0;i<4;i++){
+      const el=document.getElementById('pd'+i);
+      if(el) el.classList.toggle('filled', i<buf.length);
+    }
+  }
+
+  function setErr(msg){
+    const el=document.getElementById('pinErr');
+    if(el) el.textContent=msg;
+  }
+
+  function shake(){
+    const dots=document.getElementById('pinDots')||document.querySelector('.pin-dots');
+    if(!dots) return;
+    dots.classList.remove('pin-shake');
+    void dots.offsetWidth;
+    dots.classList.add('pin-shake');
+    setTimeout(()=>dots.classList.remove('pin-shake'),350);
+  }
+
+  function getStoredHash(){
+    // APP.crit._pinHash varsa onu kullan, yoksa default
+    if(window.APP && APP.crit && APP.crit._pinHash) return APP.crit._pinHash;
+    return hash(DEFAULT);
+  }
+
+  function checkPin(){
+    if(buf.length<4) return;
+    const correct = hash(buf) === getStoredHash();
+    if(correct){
+      isAdmin=true;
+      document.getElementById('pinOverlay').style.display='none';
+      document.body.classList.remove('readonly');
+      const ind=document.getElementById('adminInd'); if(ind) ind.classList.add('show');
+      const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='flex';
+      const bl=document.getElementById('btnLogout');   if(bl) bl.style.display='flex';
+      const gn=document.getElementById('groupNameBtn');if(gn) gn.style.cursor='pointer';
+      if(!APP.crit._pinHash){
+        setTimeout(()=>{
+          if(confirm('Varsayılan PIN (1234) aktif. Şimdi değiştirmek ister misiniz?')) change();
+        },400);
+      }
+    } else {
+      setErr('Hatalı PIN');
+      shake();
+      buf=''; updateDots();
+    }
+  }
+
+  function press(d){
+    if(buf.length>=4) return;
+    setErr('');
+    buf+=d; updateDots();
+    if(buf.length===4) setTimeout(checkPin,150);
+  }
+
+  function del(){
+    buf=buf.slice(0,-1); updateDots(); setErr('');
+  }
+
+  function viewOnly(){
+    isAdmin=false;
+    document.getElementById('pinOverlay').style.display='none';
+    document.body.classList.add('readonly');
+    const ind=document.getElementById('adminInd'); if(ind) ind.classList.remove('show');
+  }
+
+  function logout(){
+    isAdmin=false;
+    document.body.classList.add('readonly');
+    const ind=document.getElementById('adminInd'); if(ind) ind.classList.remove('show');
+    const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='none';
+    const bl=document.getElementById('btnLogout');   if(bl) bl.style.display='none';
+    // PIN ekranını tekrar göster
+    buf=''; updateDots(); setErr('');
+    document.getElementById('pinOverlay').style.display='flex';
+    showToast('Oturum kapatıldı');
+  }
+
+  function change(){
+    if(!isAdmin){ showToast('Önce yönetici girişi yapın',true); return; }
+    const p1=prompt('Yeni 4 haneli PIN:');
+    if(!p1||!/^\d{4}$/.test(p1)){ showToast('Geçersiz PIN — 4 rakam olmalı',true); return; }
+    const p2=prompt('PIN tekrar:');
+    if(p1!==p2){ showToast('PIN eşleşmedi',true); return; }
+    APP.crit._pinHash=hash(p1);
+    fbSaveConfig();
+    showToast('PIN güncellendi ✓');
+  }
+
+  function getIsAdmin(){ return isAdmin; }
+
+  return { press, del, viewOnly, logout, change, getIsAdmin };
+})();
+
 // Auto-refresh 5 dakikada bir
 setInterval(()=>{ if(getStudents().length>0) refreshAll(); },5*60*1000);
 
 // ── BAŞLANGIÇ ────────────────────────────────────────
 (async()=>{
-  await fbLoad();          // Firebase'den yükle
-  fbListen();              // Gerçek zamanlı dinleyiciyi başlat
+  await fbLoad();
+  fbListen();
   buildCritPanel();
   renderGroupBar();
   renderHeader();
+  // Başlangıçta readonly — PIN ekranı gösterilecek
+  document.body.classList.add('readonly');
   renderGrid();
   if(getStudents().length>0) refreshAll();
+  // PIN ekranını göster (veriler arka planda zaten yüklendi)
+  document.getElementById('pinOverlay').style.display='flex';
 })();
 </script>
 </body>
