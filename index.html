@@ -378,11 +378,16 @@ async function fbLoad(){
       }
       APP.crit      = { ...APP.crit, ...(cfg.criteria||{}) };
     }
-    // Öğrenci listelerini yükle
-    for(const g of APP.groups){
-      const snap = await getDoc(doc(db,'panel','students_'+g.id));
-      if(snap.exists()) APP.studentLists[g.id] = snap.data().list || [];
-    }
+    // Tüm grupların öğrenci listelerini paralel yükle
+    await Promise.all(APP.groups.map(async g=>{
+      try{
+        const snap = await getDoc(doc(db,'panel','students_'+g.id));
+        APP.studentLists[g.id] = snap.exists() ? (snap.data().list || []) : [];
+      }catch(e){
+        console.warn('Grup yüklenemedi:',g.id,e.message);
+        APP.studentLists[g.id] = APP.studentLists[g.id] || [];
+      }
+    }));
     APP.actLog = act;
     setSyncStatus('ok','Firebase bağlı ✓');
     return true;
@@ -426,11 +431,13 @@ function fbListen(){
       APP.groups    = d.groups;
       APP.crit      = {...APP.crit,...(d.criteria||{})};
       // Aktif grup değiştiyse güncelle
-      for(const g of APP.groups){
-        const snap2 = doc(db,'panel','students_'+g.id);
-        getDoc(snap2).then(s=>{ if(s.exists()) APP.studentLists[g.id]=s.data().list||[]; });
-      }
-      renderGroupBar(); renderHeader(); buildCritPanel();
+      Promise.all(APP.groups.map(async g=>{
+        try{
+          const s=await getDoc(doc(db,'panel','students_'+g.id));
+          if(s.exists()) APP.studentLists[g.id]=s.data().list||[];
+        }catch(e){ console.warn('fbListen grup yüklenemedi:',g.id); }
+      })).then(()=>{ renderGroupBar(); renderGrid(); });
+      renderHeader(); buildCritPanel();
       setSyncStatus('ok','Başka cihazdan güncelleme alındı');
       setTimeout(()=>setSyncStatus('ok','Firebase bağlı ✓'),3000);
     }
@@ -555,7 +562,7 @@ function renderGroupBar(){
   }).join('')+`<button class="new-group-btn" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
 }
 
-async function switchGroup(id){
+window.switchGroup = async function switchGroup(id){
   if(id===APP.activeGid) return;
   APP.refreshId++;
   APP.activeGid=id;
@@ -564,7 +571,7 @@ async function switchGroup(id){
   fbSaveConfig();
   renderGroupBar(); renderHeader();
   // Öğrenci listesi bellekte yoksa Firebase'den çek
-  if(!APP.studentLists[id] || APP.studentLists[id].length === 0){
+  if(APP.studentLists[id] === undefined || APP.studentLists[id] === null){
     setSyncStatus('syncing','Grup yükleniyor…');
     try{
       const snap = await getDoc(doc(db,'panel','students_'+id));
@@ -798,10 +805,27 @@ function renderGrid(){
   const frag=document.createDocumentFragment();
   for(const u of filtered){
     const d=APP.liveData[u];
-    const html=d?buildCard(u,d,rankMap[u]||0):skeletonCard(u);
-    const tmp=document.createElement('div'); tmp.innerHTML=html;
-    if(tmp.firstElementChild) frag.appendChild(tmp.firstElementChild);
-    else console.warn('Kart oluşturulamadı:',u);
+    try{
+      const cardHtml=d?buildCard(u,d,rankMap[u]||0):skeletonCard(u);
+      const tmp=document.createElement('div'); tmp.innerHTML=cardHtml;
+      const el=tmp.firstElementChild;
+      if(el){
+        frag.appendChild(el);
+      } else {
+        // Fallback: basit skeleton ekle
+        const fb=document.createElement('div');
+        fb.className='s-card'; fb.setAttribute('data-user',u);
+        fb.innerHTML='<div class="card-head"><div class="s-info"><div class="avatar">'+u[0].toUpperCase()+'</div><div><div style="font-size:13px;font-weight:600">'+escHtml(u)+'</div></div></div></div><div style="padding:14px 13px"><div class="skel" style="height:44px;border-radius:6px">&nbsp;</div></div><div class="load-ov"><div class="spinner"></div></div>';
+        frag.appendChild(fb);
+      }
+    }catch(e){
+      console.error('[renderGrid] hata ('+u+'):', e.message);
+      // Hata durumunda basit kart ekle
+      const fb=document.createElement('div');
+      fb.className='s-card faded'; fb.setAttribute('data-user',u);
+      fb.innerHTML='<div class="card-head" style="padding:12px 13px"><span style="font-size:12px;color:var(--text-muted)">'+escHtml(u)+' — yüklenemedi</span></div>';
+      frag.appendChild(fb);
+    }
   }
   grid.innerHTML=''; grid.appendChild(frag);
 }
@@ -860,6 +884,25 @@ function skeletonCard(u){
 }
 
 function buildCard(username,d,rank){
+  // Hata durumunda minimal kart göster
+  if(d.error){
+    return `<div class="s-card faded" data-user="${escHtml(username)}">
+      <div class="card-head">
+        <div class="card-top">
+          <div class="s-info">
+            <div class="avatar">${escHtml(username[0].toUpperCase())}</div>
+            <div>
+              <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(username)}</a>
+              <div class="s-sub" style="color:var(--loss)">⚠ Yüklenemedi — tekrar dene</div>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Çıkar">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
   const total=(d.wins||0)+(d.losses||0)+(d.draws||0);
   const winPct=total>0?Math.round((d.wins/total)*100):0;
   const drawPct=total>0?Math.round((d.draws/total)*100):0;
