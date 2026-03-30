@@ -305,7 +305,8 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
         Yenile
       </button>
       <button class="icon-btn danger" id="btnDeleteGroup" class="edit-only" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
-      <button class="icon-btn" id="btnChangePin" onclick="PIN.change()" title="PIN değiştir" style="display:none">🔑</button>
+      <button class="icon-btn" id="btnChangePin" onclick="PIN.change()" title="PIN degistir" style="display:none">🔑 PIN</button>
+      <button class="icon-btn" id="btnAddUser" onclick="PIN.addUser()" title="Yeni hoca ekle" style="display:none">👤+ Hoca</button>
       <button class="icon-btn" id="btnLogout" onclick="PIN.logout()" style="display:none;border-color:rgba(224,90,90,.3);color:var(--loss)">⏏ Çıkış</button>
     </div>
   </header>
@@ -1140,8 +1141,7 @@ window.PIN = (function(){
   }
 
   function getStoredHash(){
-    // APP.crit._pinHash Firebase'den yükleniyor (fbLoad sırasında criteria'ya merge edildi)
-    // Yükleme tamamlandıysa kullan, yoksa default
+    // Geriye dönük uyumluluk — yeni sistemde kullanılmaz
     if(window.APP && APP.crit && APP.crit._pinHash) return APP.crit._pinHash;
     return hash(DEFAULT);
   }
@@ -1172,25 +1172,48 @@ window.PIN = (function(){
 
   async function checkPin(){
     if(buf.length<4) return;
-    const correct = hash(buf) === getStoredHash();
-    if(correct){
+    // Firebase'den taze users listesini çek
+    try{
+      const snap=await getDoc(doc(db,'panel','users'));
+      if(snap.exists()) APP.users=snap.data();
+    }catch(e){ console.warn('Users okuma:',e); }
+    const users=APP.users||{};
+    let matchUid=null, matchUser=null;
+    for(const [uid,u] of Object.entries(users)){
+      if(hash(buf)===u.pinHash){ matchUid=uid; matchUser=u; break; }
+    }
+    // Geriye dönük uyumluluk
+    if(!matchUid && Object.keys(users).length===0 && hash(buf)===getStoredHash()){
+      matchUid='legacy'; matchUser={name:'Yönetici'};
+    }
+    if(matchUid){
+      // Legacy → users dokümanına taşı
+      if(matchUid==='legacy'){
+        try{
+          const uid='u'+Date.now();
+          const nu={}; nu[uid]={name:'Yönetici',pinHash:hash(buf)};
+          await setDoc(doc(db,'panel','users'),nu);
+          APP.users=nu; APP.currentUser=uid; matchUid=uid;
+        }catch(e){ APP.currentUser=null; }
+      } else {
+        APP.currentUser=matchUid;
+      }
+      APP.currentUserName=matchUser.name;
       isAdmin=true;
+      APP.groups=[]; APP.studentLists={};
+      await fbLoad();
       document.getElementById('pinOverlay').style.display='none';
       document.body.classList.remove('readonly');
-      const ind=document.getElementById('adminInd'); if(ind) ind.classList.add('show');
+      const ind=document.getElementById('adminInd');
+      if(ind){ ind.classList.add('show'); ind.textContent='👤 '+escHtml(matchUser.name); }
       const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='flex';
-      const bau=document.getElementById('btnAddUser'); if(bau) bau.style.display='flex';
-      const bl=document.getElementById('btnLogout');   if(bl) bl.style.display='flex';
-      const gn=document.getElementById('groupNameBtn');if(gn) gn.style.cursor='pointer';
-      if(!APP.crit._pinHash){
-        setTimeout(()=>{
-          if(confirm('Varsayılan PIN (1234) aktif. Şimdi değiştirmek ister misiniz?')) change();
-        },400);
-      }
+      const bau=document.getElementById('btnAddUser');  if(bau) bau.style.display='flex';
+      const bl=document.getElementById('btnLogout');    if(bl)  bl.style.display='flex';
+      renderGroupBar(); renderHeader(); buildCritPanel(); renderGrid();
+      if(getStudents().length>0) refreshAll();
+      renderChamps(); renderScoreTable();
     } else {
-      setErr('Hatalı PIN');
-      shake();
-      buf=''; updateDots();
+      setErr('Hatalı PIN'); shake(); buf=''; updateDots();
     }
   }
 
@@ -1231,17 +1254,20 @@ window.PIN = (function(){
     if(!p1||!/^\d{4}$/.test(p1)){ showToast('Geçersiz PIN — 4 rakam olmalı',true); return; }
     const p2=prompt('PIN tekrar:');
     if(p1!==p2){ showToast('PIN eşleşmedi',true); return; }
-    APP.crit._pinHash=hash(p1);
+    const newHash=hash(p1);
+    // PIN'i users dokümanında sakla (criteria'da değil)
     try{
-      await fbSaveConfig();
-      // Doğrulama: Firebase'den tekrar oku
-      const key=APP.currentUser?'config_'+APP.currentUser:'config';
-      const snap=await getDoc(doc(db,'panel',key));
-      if(snap.exists()&&snap.data().criteria?._pinHash===hash(p1)){
-        showToast('PIN güncellendi ve doğrulandı ✓');
-      } else {
-        showToast('PIN güncellendi ✓');
-      }
+      // Mevcut users listesini Firebase'den oku
+      const usersSnap=await getDoc(doc(db,'panel','users'));
+      const allUsers=usersSnap.exists()?usersSnap.data():{};
+      const uid=APP.currentUser||'legacy';
+      if(!allUsers[uid]) allUsers[uid]={name:APP.currentUserName||'Yonetici',pinHash:hash('1234')};
+      allUsers[uid].pinHash=newHash;
+      // Firebase'e yaz ve bekle
+      await setDoc(doc(db,'panel','users'),allUsers);
+      // Bellekte güncelle
+      APP.users=allUsers;
+      showToast('PIN güncellendi ✓');
     }catch(e){
       showToast('PIN kayıt hatası: '+e.message,true);
     }
