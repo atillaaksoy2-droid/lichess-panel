@@ -420,38 +420,54 @@ function setSyncStatus(state, msg){
 //   /panel/activity → { [username]: { [date]: { games, puzzles } } }
 
 async function fbLoad(){
-  setSyncStatus('syncing','Firebase yükleniyor…');
+  setSyncStatus('syncing','Yükleniyor…');
   try{
-    const cfgSnap = await getDoc(doc(db,'panel','config'));
-    const actSnap = await getDoc(doc(db,'panel','activity'));
+    // currentUser varsa ona özel config yükle, yoksa genel 'config' yükle
+    const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
+    let cfgSnap = await getDoc(doc(db,'panel',cfgKey));
+    // Kullanıcıya özel config yoksa (yeni kullanıcı) genel config'e bakma, boş başla
     const cfg = cfgSnap.exists() ? cfgSnap.data() : null;
+
+    const actSnap = await getDoc(doc(db,'panel','activity'));
     const act = actSnap.exists() ? actSnap.data() : {};
 
-    if(cfg && cfg.groups && cfg.groups.length>0){
-      APP.groups    = cfg.groups;
-      // Her cihaz kendi aktif grubunu tutar — config'deki activeGid'i kullanma
-      // Eğer mevcut activeGid bu config'de yoksa ilk grubu seç
-      if(!cfg.groups.find(g=>g.id===APP.activeGid)){
+    if(cfg && cfg.groups && cfg.groups.length > 0){
+      APP.groups = cfg.groups;
+      if(!cfg.groups.find(g => g.id === APP.activeGid)){
         APP.activeGid = cfg.groups[0].id;
       }
-      APP.crit      = { ...APP.crit, ...(cfg.criteria||{}) };
+      // criteria'yı yükle (mevcut değerleri ez)
+      if(cfg.criteria) APP.crit = { ...APP.crit, ...cfg.criteria };
+    } else {
+      // Yeni kullanıcı — varsayılan grup
+      const defaultGid = APP.currentUser ? 'g' + APP.currentUser : 'default';
+      APP.groups = [{ id: defaultGid, name: 'A Grubu' }];
+      APP.activeGid = defaultGid;
     }
-    // Tüm grupların öğrenci listelerini paralel yükle
-    await Promise.all(APP.groups.map(async g=>{
+
+    // Öğrenci listelerini yükle — kullanıcıya özel prefix ile
+    const prefix = APP.currentUser ? APP.currentUser + '_' : '';
+    await Promise.all(APP.groups.map(async g => {
       try{
-        const snap = await getDoc(doc(db,'panel','students_'+g.id));
+        // Önce kullanıcıya özel key dene
+        const key = 'students_' + prefix + g.id;
+        let snap = await getDoc(doc(db,'panel',key));
+        // Yoksa eski formata bak (prefix'siz)
+        if(!snap.exists() && prefix){
+          snap = await getDoc(doc(db,'panel','students_' + g.id));
+        }
         APP.studentLists[g.id] = snap.exists() ? (snap.data().list || []) : [];
-      }catch(e){
-        console.warn('Grup yüklenemedi:',g.id,e.message);
+      } catch(e){
         APP.studentLists[g.id] = APP.studentLists[g.id] || [];
       }
     }));
+
     APP.actLog = act;
     setSyncStatus('ok','Firebase bağlı ✓');
     return true;
-  }catch(e){
+  } catch(e){
     console.error('Firebase yükleme hatası:',e);
-    setSyncStatus('err','Firebase bağlantı hatası — çevrimdışı çalışılıyor');
+    setSyncStatus('err','Bağlantı hatası');
     return false;
   }
 }
@@ -628,13 +644,15 @@ window.switchGroup = async function switchGroup(id){
   APP.activeGid=id;
   APP.curFilters.clear();
   document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.remove('active'));
-  fbSaveConfig();
   renderGroupBar(); renderHeader();
   // Öğrenci listesi bellekte yoksa Firebase'den çek
   if(APP.studentLists[id] === undefined || APP.studentLists[id] === null){
     setSyncStatus('syncing','Grup yükleniyor…');
     try{
-      const snap = await getDoc(doc(db,'panel','students_'+id));
+      const prefix2 = APP.currentUser ? APP.currentUser + '_' : '';
+      const skey = 'students_' + prefix2 + id;
+      let snap = await getDoc(doc(db,'panel',skey));
+      if(!snap.exists() && prefix2) snap = await getDoc(doc(db,'panel','students_'+id));
       APP.studentLists[id] = snap.exists() ? (snap.data().list||[]) : [];
       setSyncStatus('ok','Firebase bağlı ✓');
     }catch(e){
@@ -1089,7 +1107,7 @@ function buildCritPanel(){
       <input class="crit-input" type="number" min="0" max="100" step="${d.key==='ptPuzzle'?'0.5':'1'}" value="${APP.crit[d.key]}" onchange="updateCrit('${d.key}',this.value)">
     </div>`).join('');
 }
-window.updateCrit=(key,val)=>{ APP.crit[key]=Math.max(0,parseFloat(val)||0); fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); };
+window.updateCrit=async(key,val)=>{ APP.crit[key]=Math.max(0,parseFloat(val)||0); await fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); };
 
 // ── YARDIMCILAR ──────────────────────────────────────
 function fetchWT(url,opts={},ms=10000){
