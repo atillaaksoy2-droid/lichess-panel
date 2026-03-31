@@ -431,13 +431,16 @@ async function fbLoad(){
     const actSnap = await getDoc(doc(db,'panel','activity'));
     const act = actSnap.exists() ? actSnap.data() : {};
 
+    // Criteria'yı her zaman yükle — grup olup olmamasından bağımsız
+    if(cfg && cfg.criteria){
+      APP.crit = { ...APP.crit, ...cfg.criteria };
+    }
+
     if(cfg && cfg.groups && cfg.groups.length > 0){
       APP.groups = cfg.groups;
       if(!cfg.groups.find(g => g.id === APP.activeGid)){
         APP.activeGid = cfg.groups[0].id;
       }
-      // criteria'yı yükle (mevcut değerleri ez)
-      if(cfg.criteria) APP.crit = { ...APP.crit, ...cfg.criteria };
     } else {
       // Yeni kullanıcı — varsayılan grup
       const defaultGid = APP.currentUser ? 'g' + APP.currentUser : 'default';
