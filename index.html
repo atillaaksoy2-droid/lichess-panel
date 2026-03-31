@@ -1146,29 +1146,62 @@ window.PIN = (function(){
     return hash(DEFAULT);
   }
 
+
   async function addUser(){
-    if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
-    const name=prompt('Yeni hocanin adi:');
-    if(!name||!name.trim()) return;
-    const pin=prompt('Yeni PIN (4 rakam):');
-    if(!pin||/[^0-9]/.test(pin)||pin.length!==4){ showToast('Gecersiz PIN',true); return; }
-    // Her hocanin PIN'ini ayri bir key ile sakla
-    const usersSnap=await getDoc(doc(db,'panel','users'));
-    const allUsers=usersSnap.exists()?usersSnap.data():{};
-    const uid='u'+Date.now();
-    allUsers[uid]={ name:name.trim(), pinHash:hash(pin) };
+    if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli', true); return; }
+    const name = prompt('Yeni hocanın adı (örn: Ahmet Hoca):');
+    if(!name || !name.trim()) return;
+    const pin = prompt('Yeni 4 haneli PIN:');
+    if(!pin || !/^\d{4}$/.test(pin)){ showToast('Geçersiz PIN — 4 rakam olmalı', true); return; }
+    const pin2 = prompt('PIN tekrar:');
+    if(pin !== pin2){ showToast('PIN eşleşmedi', true); return; }
+
+    const uid = 'u' + Date.now();
+    const newHash = hash(pin);
+
     try{
-      await setDoc(doc(db,'panel','users'), allUsers);
-      APP.users=allUsers;
-      await setDoc(doc(db,'panel','config_'+uid),{
-        groups:[{id:'g'+uid,name:'A Grubu'}],
-        criteria:{...APP.crit,_pinHash:undefined},
-        updatedAt:Date.now()
+      // Mevcut users listesini Firebase'den oku
+      const usersSnap = await getDoc(doc(db, 'panel', 'users'));
+      const allUsers = usersSnap.exists() ? usersSnap.data() : {};
+      allUsers[uid] = { name: name.trim(), pinHash: newHash };
+
+      // users dokümanını güncelle
+      await setDoc(doc(db, 'panel', 'users'), allUsers);
+      APP.users = allUsers;
+
+      // Yeni hoca için boş config oluştur
+      const defaultGid = 'g' + uid;
+      await setDoc(doc(db, 'panel', 'config_' + uid), {
+        groups: [{ id: defaultGid, name: 'A Grubu' }],
+        criteria: {
+          minDailyGames: APP.crit.minDailyGames,
+          minWinRate: APP.crit.minWinRate,
+          streakDays: APP.crit.streakDays,
+          minPuzzleDaily: APP.crit.minPuzzleDaily,
+          streakPuzzleDays: APP.crit.streakPuzzleDays,
+          ptWin: APP.crit.ptWin,
+          ptPlay: APP.crit.ptPlay,
+          ptPuzzle: APP.crit.ptPuzzle,
+          ptDailyBonus: APP.crit.ptDailyBonus,
+          ptPuzzleBonus: APP.crit.ptPuzzleBonus,
+          ptStreak: APP.crit.ptStreak
+        },
+        updatedAt: Date.now()
       });
-      await setDoc(doc(db,'panel','students_'+uid+'_g'+uid),{list:[],updatedAt:Date.now()});
-      showToast(name.trim()+' eklendi');
-    }catch(e){ showToast('Kayit hatasi: '+e.message,true); }
+
+      // Boş öğrenci listesi oluştur
+      await setDoc(doc(db, 'panel', 'students_' + uid + '_' + defaultGid), {
+        list: [],
+        updatedAt: Date.now()
+      });
+
+      showToast(name.trim() + ' eklendi ✓');
+    } catch(e) {
+      console.error('Hoca ekleme hatası:', e);
+      showToast('Hata: ' + e.message, true);
+    }
   }
+
 
   async function checkPin(){
     if(buf.length<4) return;
@@ -1273,31 +1306,7 @@ window.PIN = (function(){
     }
   }
 
-  async function addUser(){
-    if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
-    const name=prompt('Yeni hocanın adı:');
-    if(!name||!name.trim()) return;
-    const pin=prompt('Yeni PIN (4 rakam):');
-    if(!pin||!/^\d{4}$/.test(pin)){ showToast('Geçersiz PIN',true); return; }
-    const uid='u'+Date.now();
-    const newUserPin=hash(pin);
-    // Kullanıcıyı mevcut users listesine ekle ve Firebase'e kaydet
-    const usersSnap=await getDoc(doc(db,'panel','users'));
-    const allUsers=usersSnap.exists()?usersSnap.data():{};
-    allUsers[uid]={ name:name.trim(), pinHash:newUserPin };
-    try{
-      await setDoc(doc(db,'panel','users'), allUsers);
-      APP.users=allUsers;
-      // Yeni kullanıcı için boş config
-      await setDoc(doc(db,'panel','config_'+uid),{
-        groups:[{id:'g'+uid,name:'A Grubu'}],
-        criteria:{...APP.crit,_pinHash:undefined},
-        updatedAt:Date.now()
-      });
-      await setDoc(doc(db,'panel','students_'+uid+'_g'+uid),{list:[],updatedAt:Date.now()});
-      showToast(name.trim()+' eklendi ✓');
-    }catch(e){ showToast('Kayıt hatası: '+e.message,true); }
-  }
+
 
   function getIsAdmin(){ return isAdmin; }
 
