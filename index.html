@@ -547,7 +547,8 @@ const APP = {
     minDailyGames:3, minWinRate:50, streakDays:3,
     minPuzzleDaily:5, streakPuzzleDays:3,
     ptWin:3, ptPlay:1, ptPuzzle:0.5,
-    ptDailyBonus:5, ptPuzzleBonus:3, ptStreak:2
+    ptDailyBonus:5, ptPuzzleBonus:3, ptStreak:2,
+    countBullet:0  // 0=bullet sayma, 1=bullet say
   },
   curSort: 'score',
   curFilters: new Set(),
@@ -773,14 +774,14 @@ async function loadOneStudent(username,myId){
     if(myId&&myId!==APP.refreshId) return;
     let online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
     const now=new Date(), since=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
-    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false&perf=blitz,rapid,classical,correspondence`,{headers:{Accept:'application/x-ndjson'}},15000);
+    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false&perf=${APP.crit.countBullet?'bullet,blitz,rapid,classical,correspondence':'blitz,rapid,classical,correspondence'}`,{headers:{Accept:'application/x-ndjson'}},15000);
     if(myId&&myId!==APP.refreshId) return;
     const gText=await gRes.text();
     const games=gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
     let wins=0,losses=0,draws=0; const recent=[];
     for(const g of games){
-      // Bullet maçları say dışı bırak
-      if(g.speed==='bullet'||g.speed==='ultraBullet') continue;
+      // Bullet toggle'a göre filtrele
+      if(!APP.crit.countBullet && (g.speed==='bullet'||g.speed==='ultraBullet')) continue;
       const wu=(g.players?.white?.user?.name||'').toLowerCase();
       const color=wu===username?'white':'black', winner=g.winner;
       let result;
@@ -830,9 +831,13 @@ async function loadOneStudent(username,myId){
               const prev=APP.actLog[username][eDate]||{games:0,puzzles:0};
               let eg=prev.games;
               // Bullet ve ultraBullet hariç maç sayısını topla
-              if(entry.games&&typeof entry.games==='object'){ let gt=0; const skip=new Set(['bullet','ultraBullet']); for(const [fmt,v] of Object.entries(entry.games)) if(v&&typeof v==='object'&&!skip.has(fmt)) gt+=(v.win||0)+(v.loss||0)+(v.draw||0); if(gt>eg) eg=gt; }
-              const ep=Math.max(prev.puzzles,getPuzzleCount(entry));
-              APP.actLog[username][eDate]={games:eg,puzzles:ep};
+              if(entry.games&&typeof entry.games==='object'){ let gt=0; const skip=APP.crit.countBullet?new Set([]):new Set(['bullet','ultraBullet']); for(const [fmt,v] of Object.entries(entry.games)) if(v&&typeof v==='object'&&!skip.has(fmt)) gt+=(v.win||0)+(v.loss||0)+(v.draw||0); if(gt>eg) eg=gt; }
+              // Her günün bulmaca sayısını o gün için doğrudan yaz
+              // Math.max(prev) kullanma — farklı günlerin değerleri karışmasın
+              // Aynı günü birden fazla API çağrısında görürsek büyüğünü al
+              const epNew = getPuzzleCount(entry);
+              const epFinal = (prev.puzzles > 0 && prev.puzzles > epNew) ? prev.puzzles : epNew;
+              APP.actLog[username][eDate]={games:eg, puzzles:epFinal};
             }
           }
         }
@@ -1124,7 +1129,18 @@ function buildCritPanel(){
     {key:'ptPuzzleBonus',   b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca bonus'},name:'Bulmaca Bonusu',     rule:'Bulmaca kriteri karşılama'},
     {key:'ptStreak',        b:{cls:'b-streak',icon:'⭐',lbl:'Seri bonus'},   name:'Seri Günlük Bonus',  rule:'Aktif seri başına puan'},
   ];
-  document.getElementById('critGrid').innerHTML=defs.map(d=>`
+  // Bullet toggle ayrı render
+  const chk = APP.crit.countBullet ? 'checked' : '';
+  const lbl = APP.crit.countBullet ? 'Dahil' : 'Hariç';
+  const bulletHTML = '<div class="crit-item" style="grid-column:1/-1;background:rgba(224,90,90,.06);border-color:rgba(224,90,90,.2)">'
+    + '<span class="badge b-warn">🔴 Bullet</span>'
+    + '<div class="crit-desc"><div class="crit-name">Bullet Maçları Say</div>'
+    + '<div class="crit-rule">Maç sayısı, puan ve ısı haritasına dahil et</div></div>'
+    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text-muted)">'
+    + '<input type="checkbox" id="bulletToggle" '+chk+' onchange="toggleBullet(this.checked)"'
+    + ' style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"> '+lbl
+    + '</label></div>';
+  document.getElementById('critGrid').innerHTML=bulletHTML+defs.map(d=>`
     <div class="crit-item">
       <span class="badge ${d.b.cls}">${d.b.icon} ${d.b.lbl}</span>
       <div class="crit-desc"><div class="crit-name">${d.name}</div><div class="crit-rule">${d.rule}</div></div>
@@ -1132,6 +1148,16 @@ function buildCritPanel(){
     </div>`).join('');
 }
 window.updateCrit=async(key,val)=>{ APP.crit[key]=Math.max(0,parseFloat(val)||0); await fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); };
+window.toggleBullet=async(checked)=>{
+  APP.crit.countBullet=checked?1:0;
+  // Checkbox label güncelle
+  const lbl=document.getElementById('bulletToggle');
+  if(lbl&&lbl.parentElement) lbl.parentElement.lastChild.textContent=' '+(checked?'Dahil':'Hariç');
+  await fbSaveConfig();
+  showToast('Bullet maçlar '+(checked?'dahil edildi':'hariç tutuldu'));
+  // Veriyi yeniden yükle (bullet durumu değişti)
+  if(getStudents().length>0) refreshAll();
+};
 
 // ── YARDIMCILAR ──────────────────────────────────────
 function fetchWT(url,opts={},ms=10000){
