@@ -773,12 +773,14 @@ async function loadOneStudent(username,myId){
     if(myId&&myId!==APP.refreshId) return;
     let online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
     const now=new Date(), since=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
-    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false`,{headers:{Accept:'application/x-ndjson'}},15000);
+    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false&perf=blitz,rapid,classical,correspondence`,{headers:{Accept:'application/x-ndjson'}},15000);
     if(myId&&myId!==APP.refreshId) return;
     const gText=await gRes.text();
     const games=gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
     let wins=0,losses=0,draws=0; const recent=[];
     for(const g of games){
+      // Bullet maçları say dışı bırak
+      if(g.speed==='bullet'||g.speed==='ultraBullet') continue;
       const wu=(g.players?.white?.user?.name||'').toLowerCase();
       const color=wu===username?'white':'black', winner=g.winner;
       let result;
@@ -804,12 +806,31 @@ async function loadOneStudent(username,myId){
             let eDate=entry.interval?.start||entry.date||null;
             if(!eDate) continue;
             if(typeof eDate==='number'){ const d=new Date(eDate); eDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-            if(eDate===todayStr()||eDate===dateStr(-1)){ const cnt=getPuzzleCount(entry); if(cnt>puzzlesSolved) puzzlesSolved=cnt; }
+            // Sadece bugünün bulmacasını puzzlesSolved'a al
+            // Dün tarihini actLog'a yaz ama gösterge için kullanma
+            // (Lichess UTC'de çalışır, yerel gece yarısına yakın ±1 saat tolerans)
+            if(eDate===todayStr()){
+              const cnt=getPuzzleCount(entry);
+              if(cnt>puzzlesSolved) puzzlesSolved=cnt;
+            } else if(eDate===dateStr(-1)){
+              // Dünkü veri — sadece log'a yaz, puzzlesSolved'ı etkileme
+              // Ama Türkiye saatiyle UTC farkı max 3 saat: gece 00:00-03:00 arası
+              // açılırsa dünkü lichess kaydı aslında bugün olabilir.
+              // Bu durumu yakalamak için: şu an gece 00-03 arası mı?
+              const hour = new Date().getHours();
+              if(hour < 3){
+                // Gece yarısı sonrası: dünkü lichess tarihi gerçekte bugün
+                const cnt=getPuzzleCount(entry);
+                if(cnt>puzzlesSolved) puzzlesSolved=cnt;
+              }
+              // Değilse: dün gerçekten dündür, gösterme
+            }
             const diff=daysBetween(todayStr(),eDate);
             if(diff>=0&&diff<=14){
               const prev=APP.actLog[username][eDate]||{games:0,puzzles:0};
               let eg=prev.games;
-              if(entry.games&&typeof entry.games==='object'){ let gt=0; for(const v of Object.values(entry.games)) if(v&&typeof v==='object') gt+=(v.win||0)+(v.loss||0)+(v.draw||0); if(gt>eg) eg=gt; }
+              // Bullet ve ultraBullet hariç maç sayısını topla
+              if(entry.games&&typeof entry.games==='object'){ let gt=0; const skip=new Set(['bullet','ultraBullet']); for(const [fmt,v] of Object.entries(entry.games)) if(v&&typeof v==='object'&&!skip.has(fmt)) gt+=(v.win||0)+(v.loss||0)+(v.draw||0); if(gt>eg) eg=gt; }
               const ep=Math.max(prev.puzzles,getPuzzleCount(entry));
               APP.actLog[username][eDate]={games:eg,puzzles:ep};
             }
