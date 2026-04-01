@@ -806,38 +806,43 @@ async function loadOneStudent(username,myId){
           for(const entry of aData){
             let eDate=entry.interval?.start||entry.date||null;
             if(!eDate) continue;
-            if(typeof eDate==='number'){ const d=new Date(eDate); eDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-            // Sadece bugünün bulmacasını puzzlesSolved'a al
-            // Dün tarihini actLog'a yaz ama gösterge için kullanma
-            // (Lichess UTC'de çalışır, yerel gece yarısına yakın ±1 saat tolerans)
+            if(typeof eDate==='number'){
+              const d=new Date(eDate);
+              eDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+            }
+
+            // Bugünkü bulmaca sayısını puzzlesSolved'a yaz (sadece bugün)
             if(eDate===todayStr()){
               const cnt=getPuzzleCount(entry);
               if(cnt>puzzlesSolved) puzzlesSolved=cnt;
-            } else if(eDate===dateStr(-1)){
-              // Dünkü veri — sadece log'a yaz, puzzlesSolved'ı etkileme
-              // Ama Türkiye saatiyle UTC farkı max 3 saat: gece 00:00-03:00 arası
-              // açılırsa dünkü lichess kaydı aslında bugün olabilir.
-              // Bu durumu yakalamak için: şu an gece 00-03 arası mı?
-              const hour = new Date().getHours();
-              if(hour < 3){
-                // Gece yarısı sonrası: dünkü lichess tarihi gerçekte bugün
-                const cnt=getPuzzleCount(entry);
-                if(cnt>puzzlesSolved) puzzlesSolved=cnt;
-              }
-              // Değilse: dün gerçekten dündür, gösterme
             }
+
+            // 14 günlük actLog'a yaz
             const diff=daysBetween(todayStr(),eDate);
             if(diff>=0&&diff<=14){
-              const prev=APP.actLog[username][eDate]||{games:0,puzzles:0};
-              let eg=prev.games;
-              // Bullet ve ultraBullet hariç maç sayısını topla
-              if(entry.games&&typeof entry.games==='object'){ let gt=0; const skip=APP.crit.countBullet?new Set([]):new Set(['bullet','ultraBullet']); for(const [fmt,v] of Object.entries(entry.games)) if(v&&typeof v==='object'&&!skip.has(fmt)) gt+=(v.win||0)+(v.loss||0)+(v.draw||0); if(gt>eg) eg=gt; }
-              // Her günün bulmaca sayısını o gün için doğrudan yaz
-              // Math.max(prev) kullanma — farklı günlerin değerleri karışmasın
-              // Aynı günü birden fazla API çağrısında görürsek büyüğünü al
-              const epNew = getPuzzleCount(entry);
-              const epFinal = (prev.puzzles > 0 && prev.puzzles > epNew) ? prev.puzzles : epNew;
-              APP.actLog[username][eDate]={games:eg, puzzles:epFinal};
+              if(!APP.actLog[username]) APP.actLog[username]={};
+
+              // Maç: bu günün API verisinden hesapla, prev ile KARIŞTIRma
+              let eg=0;
+              if(entry.games&&typeof entry.games==='object'){
+                const skip=APP.crit.countBullet?new Set([]):new Set(['bullet','ultraBullet']);
+                for(const [fmt,v] of Object.entries(entry.games)){
+                  if(v&&typeof v==='object'&&!skip.has(fmt))
+                    eg+=(v.win||0)+(v.loss||0)+(v.draw||0);
+                }
+              }
+
+              // Bulmaca: bu günün API verisinden al, prev ile KARIŞTIRma
+              const ep=getPuzzleCount(entry);
+
+              if(eDate===todayStr()){
+                // Bugün: bulmacayı güncelle, oyunu logActivity'ye bırak
+                const prevT=APP.actLog[username][todayStr()]||{games:0,puzzles:0};
+                APP.actLog[username][todayStr()]={games:prevT.games, puzzles:ep};
+              } else {
+                // Geçmiş günler: API verisini direkt yaz (önceki değeri ezebilir)
+                APP.actLog[username][eDate]={games:eg, puzzles:ep};
+              }
             }
           }
         }
