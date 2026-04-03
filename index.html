@@ -802,7 +802,19 @@ async function loadOneStudent(username,myId){
         const aData=await aRes.json();
         if(myId&&myId!==APP.refreshId) return;
         if(Array.isArray(aData)){
+          // ── actLog'u sıfırla ve API verisiyle güncelle ──────────────────
+          // Önce bu kullanıcının son 14 gününü sıfırla
+          // (API'den gelmeyen günler = aktivite yok = 0 olmalı)
           if(!APP.actLog[username]) APP.actLog[username]={};
+          for(let di=0; di<=14; di++){
+            const dk = dateStr(-di);
+            // Bugünü sıfırlama — maç verisi oyun API'sinden geliyor, logActivity yazar
+            if(dk !== todayStr()){
+              APP.actLog[username][dk] = {games:0, puzzles:0};
+            }
+          }
+
+          // API'den gelen günlerin verilerini yaz
           for(const entry of aData){
             let eDate=entry.interval?.start||entry.date||null;
             if(!eDate) continue;
@@ -811,38 +823,35 @@ async function loadOneStudent(username,myId){
               eDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
             }
 
-            // Bugünkü bulmaca sayısını puzzlesSolved'a yaz (sadece bugün)
+            // Bugünkü bulmaca sayısını puzzlesSolved'a yaz
             if(eDate===todayStr()){
               const cnt=getPuzzleCount(entry);
               if(cnt>puzzlesSolved) puzzlesSolved=cnt;
             }
 
-            // 14 günlük actLog'a yaz
             const diff=daysBetween(todayStr(),eDate);
-            if(diff>=0&&diff<=14){
-              if(!APP.actLog[username]) APP.actLog[username]={};
+            if(diff<0 || diff>14) continue; // 14 günden eski atla
 
-              // Maç: bu günün API verisinden hesapla, prev ile KARIŞTIRma
-              let eg=0;
-              if(entry.games&&typeof entry.games==='object'){
-                const skip=APP.crit.countBullet?new Set([]):new Set(['bullet','ultraBullet']);
-                for(const [fmt,v] of Object.entries(entry.games)){
-                  if(v&&typeof v==='object'&&!skip.has(fmt))
-                    eg+=(v.win||0)+(v.loss||0)+(v.draw||0);
-                }
+            // Maç sayısı — bullet toggle'a göre
+            let eg=0;
+            if(entry.games && typeof entry.games==='object'){
+              const skip = APP.crit.countBullet ? new Set([]) : new Set(['bullet','ultraBullet']);
+              for(const [fmt,v] of Object.entries(entry.games)){
+                if(v && typeof v==='object' && !skip.has(fmt))
+                  eg += (v.win||0)+(v.loss||0)+(v.draw||0);
               }
+            }
 
-              // Bulmaca: bu günün API verisinden al, prev ile KARIŞTIRma
-              const ep=getPuzzleCount(entry);
+            // Bulmaca sayısı
+            const ep = getPuzzleCount(entry);
 
-              if(eDate===todayStr()){
-                // Bugün: bulmacayı güncelle, oyunu logActivity'ye bırak
-                const prevT=APP.actLog[username][todayStr()]||{games:0,puzzles:0};
-                APP.actLog[username][todayStr()]={games:prevT.games, puzzles:ep};
-              } else {
-                // Geçmiş günler: API verisini direkt yaz (önceki değeri ezebilir)
-                APP.actLog[username][eDate]={games:eg, puzzles:ep};
-              }
+            if(eDate===todayStr()){
+              // Bugün: sadece bulmacayı güncelle, maçı logActivity yazar
+              const prevT = APP.actLog[username][todayStr()]||{games:0,puzzles:0};
+              APP.actLog[username][todayStr()] = {games:prevT.games, puzzles:ep};
+            } else {
+              // Geçmiş: direkt yaz
+              APP.actLog[username][eDate] = {games:eg, puzzles:ep};
             }
           }
         }
