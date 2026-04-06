@@ -103,7 +103,18 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .score-tab{background:var(--bg);border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:10px;transition:all .2s}
 .score-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.07)}
 .score-rows{display:flex;flex-direction:column;gap:3px}
-.score-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;background:var(--bg);border:1px solid var(--border)}
+.score-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);transition:border-color .15s}
+.score-row:hover{border-color:rgba(200,168,75,.25)}
+.score-info{flex:1;min-width:0}
+.score-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.sc-tag{font-size:9px;padding:1px 6px;border-radius:3px;white-space:nowrap;font-weight:600}
+.sc-tag.sc-game{background:rgba(76,175,125,.12);color:var(--win);border:1px solid rgba(76,175,125,.2)}
+.sc-tag.sc-win{background:rgba(245,200,66,.12);color:var(--gold);border:1px solid rgba(245,200,66,.2)}
+.sc-tag.sc-puz{background:rgba(155,127,232,.12);color:var(--puzzle);border:1px solid rgba(155,127,232,.2)}
+.sc-tag.sc-str{background:rgba(255,112,67,.12);color:var(--fire);border:1px solid rgba(255,112,67,.2)}
+.sc-tag.sc-day{background:rgba(200,168,75,.1);color:var(--accent);border:1px solid rgba(200,168,75,.2)}
+.score-pts-wrap{text-align:right;flex-shrink:0}
+.score-pts-lbl{font-size:9px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase}
 .score-row.sr1{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.03)}
 .score-row.sr2{border-color:rgba(176,190,197,.3)}
 .score-row.sr3{border-color:rgba(205,127,50,.3)}
@@ -579,10 +590,14 @@ function daysBetween(a,b){
 }
 
 // ── AKTİVİTE ─────────────────────────────────────────
-function logActivity(username, games, puzzles){
+function logActivity(username, games, puzzles, wins){
   if(!APP.actLog[username]) APP.actLog[username]={};
-  const key=todayStr(), prev=APP.actLog[username][key]||{games:0,puzzles:0};
-  APP.actLog[username][key]={games:Math.max(prev.games,games),puzzles:Math.max(prev.puzzles,puzzles)};
+  const key=todayStr(), prev=APP.actLog[username][key]||{games:0,puzzles:0,wins:0};
+  APP.actLog[username][key]={
+    games:   Math.max(prev.games,   games),
+    puzzles: Math.max(prev.puzzles, puzzles),
+    wins:    Math.max(prev.wins||0, wins||0)
+  };
   const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-14);
   for(const d of Object.keys(APP.actLog[username])) if(new Date(d)<cutoff) delete APP.actLog[username][d];
   fbSaveActivity();
@@ -602,6 +617,30 @@ function get14Days(username){
 }
 
 // ── PUAN SİSTEMİ ─────────────────────────────────────
+// Dönem bazlı istatistik özeti (actLog'dan)
+function periodStats(username, period){
+  const log = APP.actLog[username]||{};
+  const d   = APP.liveData[username];
+  let totalGames=0, totalPuzzles=0, totalWins=0, activeDays=0;
+  for(const [date,entry] of Object.entries(log)){
+    if(period==='week' && daysBetween(todayStr(),date)>6) continue;
+    if(daysBetween(todayStr(),date)>13) continue;
+    const g = entry.games||0;
+    const p = entry.puzzles||0;
+    totalGames   += g;
+    totalPuzzles += p;
+    if(g>0) activeDays++;
+    // Kazanma: actLog.wins var mı? varsa kullan, bugün için liveData'ya bak
+    if(date===todayStr() && d && !d.error){
+      totalWins += (d.wins||0);
+    } else {
+      totalWins += (entry.wins||0);
+    }
+  }
+  const streak = getStreak(username,'games');
+  return { totalGames, totalPuzzles, totalWins, activeDays, streak };
+}
+
 function calcScore(username, period='week'){
   const log=APP.actLog[username]||{};
   let pts=0;
@@ -847,11 +886,17 @@ async function loadOneStudent(username,myId){
 
             if(eDate===todayStr()){
               // Bugün: sadece bulmacayı güncelle, maçı logActivity yazar
-              const prevT = APP.actLog[username][todayStr()]||{games:0,puzzles:0};
-              APP.actLog[username][todayStr()] = {games:prevT.games, puzzles:ep};
+              const prevT = APP.actLog[username][todayStr()]||{games:0,puzzles:0,wins:0};
+              APP.actLog[username][todayStr()] = {games:prevT.games, puzzles:ep, wins:prevT.wins||0};
             } else {
-              // Geçmiş: direkt yaz
-              APP.actLog[username][eDate] = {games:eg, puzzles:ep};
+              // Geçmiş: direkt yaz — wins de dahil
+              let ew=0;
+              if(entry.games&&typeof entry.games==='object'){
+                const skip=APP.crit.countBullet?new Set([]):new Set(['bullet','ultraBullet']);
+                for(const [fmt,v] of Object.entries(entry.games))
+                  if(v&&typeof v==='object'&&!skip.has(fmt)) ew+=(v.win||0);
+              }
+              APP.actLog[username][eDate] = {games:eg, puzzles:ep, wins:ew};
             }
           }
         }
@@ -859,7 +904,7 @@ async function loadOneStudent(username,myId){
     }catch(e){ console.warn(`[${username}] aktivite:`,e.message); }
     if(myId&&myId!==APP.refreshId) return;
     APP.liveData[username]={displayName:user.username,title:user.title||'',online,ratings,wins,losses,draws,puzzlesSolved,puzzleRating,recentGames:recent,loadedAt:Date.now()};
-    logActivity(username,wins+losses+draws,puzzlesSolved);
+    logActivity(username,wins+losses+draws,puzzlesSolved,wins);
   }catch(err){
     console.warn(`[${username}]:`,err.message);
     // İlk hata — 3 saniye bekleyip bir kez daha dene
@@ -941,7 +986,7 @@ function passes(u){
 
 window.setSort=k=>{ APP.curSort=k; document.querySelectorAll('.ctrl-btn[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===k)); renderGrid(); };
 window.togFilter=k=>{ APP.curFilters.has(k)?APP.curFilters.delete(k):APP.curFilters.add(k); document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.toggle('active',APP.curFilters.has(b.dataset.filter))); renderGrid(); };
-window.setScorePeriod=p=>{ APP.scorePeriod=p; document.querySelectorAll('.score-tab').forEach(b=>b.classList.toggle('active',b.dataset.period===p)); renderScoreTable(); };
+window.setScorePeriod=p=>{ APP.scorePeriod=p; document.querySelectorAll('.score-tab').forEach(b=>b.classList.toggle('active',b.dataset.period===p)); renderScoreTable(); renderChamps(); };
 
 // ── RENDER ───────────────────────────────────────────
 function renderGrid(){
@@ -984,40 +1029,94 @@ function renderGrid(){
 function renderChamps(){
   const students=getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
   if(students.length<2){ document.getElementById('champStrip').innerHTML=''; return; }
-  const best=fn=>students.reduce((b,u)=>fn(u)>fn(b)?u:b);
+  const period = APP.scorePeriod||'week';
+  const periodLabel = period==='week' ? 'Bu Hafta' : '14 Gün';
+
+  // Her öğrenci için dönem istatistiklerini hesapla
+  const stats = Object.fromEntries(students.map(u=>[u, periodStats(u,period)]));
+
+  const best = fn => students.reduce((b,u)=>fn(u)>fn(b)?u:b);
+
   const champs=[
-    {cls:'cc-score', label:'⭐ En Yüksek Puan',    medal:'🏆', user:best(u=>calcScore(u,'week')),        val:u=>calcScore(u,'week')+' puan'},
-    {cls:'cc-games', label:'⚔ En Çok Maç',         medal:'🎯', user:best(u=>(APP.liveData[u].wins||0)+(APP.liveData[u].losses||0)+(APP.liveData[u].draws||0)), val:u=>`${(APP.liveData[u].wins||0)+(APP.liveData[u].losses||0)+(APP.liveData[u].draws||0)} maç`},
-    {cls:'cc-puzzle',label:'🧩 En Çok Bulmaca',    medal:'🧩', user:best(u=>APP.liveData[u].puzzlesSolved||0), val:u=>`${APP.liveData[u].puzzlesSolved||0} bulmaca`},
-    {cls:'cc-win',   label:'🏆 En Yüksek Kazanma', medal:'📈', user:best(u=>{ const d=APP.liveData[u]; const t=(d.wins||0)+(d.losses||0)+(d.draws||0); return t>=3?(d.wins/t)*100:0; }), val:u=>{ const d=APP.liveData[u]; const t=(d.wins||0)+(d.losses||0)+(d.draws||0); return t>=3?`%${Math.round((d.wins/t)*100)} kazanma`:'az maç'; }},
-    {cls:'cc-streak',label:'🔥 En Uzun Seri',      medal:'🔥', user:best(u=>getStreak(u,'games')),        val:u=>`${getStreak(u,'games')} günlük seri`},
+    {
+      cls:'cc-score', label:'⭐ En Yüksek Puan', medal:'🏆',
+      user: best(u=>calcScore(u,period)),
+      val:  u=>calcScore(u,period)+' puan',
+      sub:  u=>periodLabel
+    },
+    {
+      cls:'cc-games', label:'⚔ En Çok Maç', medal:'🎯',
+      user: best(u=>stats[u].totalGames),
+      val:  u=>stats[u].totalGames+' maç',
+      sub:  u=>periodLabel+' toplam'
+    },
+    {
+      cls:'cc-puzzle', label:'🧩 En Çok Bulmaca', medal:'🧩',
+      user: best(u=>stats[u].totalPuzzles),
+      val:  u=>stats[u].totalPuzzles+' bulmaca',
+      sub:  u=>periodLabel+' toplam'
+    },
+    {
+      cls:'cc-win', label:'🏆 En Çok Kazanma', medal:'📈',
+      user: best(u=>stats[u].totalWins),
+      val:  u=>stats[u].totalWins>0 ? stats[u].totalWins+' galibiyet' : 'henüz yok',
+      sub:  u=>periodLabel+' toplam'
+    },
+    {
+      cls:'cc-streak', label:'🔥 En Uzun Seri', medal:'🔥',
+      user: best(u=>stats[u].streak),
+      val:  u=>stats[u].streak>0 ? stats[u].streak+' günlük seri' : 'henüz yok',
+      sub:  u=>'aktif maç serisi'
+    },
   ];
+
   document.getElementById('champStrip').innerHTML=champs.map(c=>`
     <div class="champ-card ${c.cls}">
       <div class="champ-label">${c.label}</div>
       <div class="champ-name">${escHtml(APP.liveData[c.user]?.displayName||c.user)}</div>
       <div class="champ-val"><strong>${c.val(c.user)}</strong></div>
+      <div class="champ-sub" style="font-size:9px;color:var(--text-muted);margin-top:2px">${c.sub(c.user)}</div>
       <div class="champ-medal">${c.medal}</div>
     </div>`).join('');
 }
 
 function renderScoreTable(){
   const students=getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
-  if(students.length===0){ document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Veri bekleniyor…</div>'; return; }
-  const scored=[...students].map(u=>({u,pts:calcScore(u,APP.scorePeriod),bd:scoreBreakdown(u)})).sort((a,b)=>b.pts-a.pts);
-  const maxPts=scored[0]?.pts||1;
-  document.getElementById('scoreRows').innerHTML=scored.map(({u,pts,bd},i)=>{
+  if(students.length===0){
+    document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Veri bekleniyor…</div>';
+    return;
+  }
+  const period = APP.scorePeriod||'week';
+  const scored = [...students]
+    .map(u=>({ u, pts:calcScore(u,period), st:periodStats(u,period) }))
+    .sort((a,b)=>b.pts-a.pts);
+  const maxPts = scored[0]?.pts||1;
+
+  document.getElementById('scoreRows').innerHTML=scored.map(({u,pts,st},i)=>{
     const rank=i+1, d=APP.liveData[u];
-    const rCls=rank===1?'sr1':rank===2?'sr2':rank===3?'sr3':'';
-    const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
-    const pct=Math.round((pts/maxPts)*100);
-    const bdgs=getBadges(u,d).slice(0,3).map(b=>`<span class="badge ${b.cls}">${b.icon} ${b.label}</span>`).join('');
+    const rCls = rank===1?'sr1':rank===2?'sr2':rank===3?'sr3':'';
+    const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    const pct   = Math.round((pts/maxPts)*100);
+
+    // İstatistik etiketleri
+    const tags=[];
+    if(st.totalGames>0)   tags.push(`<span class="sc-tag sc-game">⚔ ${st.totalGames} maç</span>`);
+    if(st.totalWins>0)    tags.push(`<span class="sc-tag sc-win">✓ ${st.totalWins} galibiyet</span>`);
+    if(st.totalPuzzles>0) tags.push(`<span class="sc-tag sc-puz">🧩 ${st.totalPuzzles} bulmaca</span>`);
+    if(st.streak>1)       tags.push(`<span class="sc-tag sc-str">🔥 ${st.streak}g seri</span>`);
+    if(st.activeDays>0)   tags.push(`<span class="sc-tag sc-day">📅 ${st.activeDays} aktif gün</span>`);
+
     return `<div class="score-row ${rCls}">
       <div class="score-rank">${medal}</div>
-      <div class="score-name">${escHtml(d.displayName||u)}</div>
-      <div class="score-badge">${bdgs}</div>
-      <div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%"></div></div></div>
-      <div><div class="score-pts">${pts}</div><div class="score-breakdown">${bd}</div></div>
+      <div class="score-info">
+        <div class="score-name">${escHtml(d.displayName||u)}</div>
+        <div class="score-tags">${tags.join('')}</div>
+        <div class="score-bar-bg" style="margin-top:4px"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="score-pts-wrap">
+        <div class="score-pts">${pts}</div>
+        <div class="score-pts-lbl">puan</div>
+      </div>
     </div>`;
   }).join('');
 }
