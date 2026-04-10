@@ -255,8 +255,8 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .pin-key.pin-del{font-size:16px;color:var(--text-muted)}
 .pin-key.pin-empty{visibility:hidden;pointer-events:none}
 .pin-err{min-height:16px;color:var(--loss);font-size:11px;margin-top:10px}
-.pin-view-btn{margin-top:14px;background:transparent;border:none;color:var(--text-muted);font-family:inherit;font-size:10px;cursor:pointer;text-decoration:underline;padding:4px}
-.pin-view-btn:hover{color:var(--accent)}
+.pin-view-btn{margin-top:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:10px 16px;border-radius:8px;width:100%;transition:all .15s;display:block;text-align:center}
+.pin-view-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.08)}
 .pin-shake{animation:pinShake .3s ease}
 @keyframes pinShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 .admin-indicator{display:none;align-items:center;gap:5px;background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);color:var(--accent);border-radius:5px;padding:4px 10px;font-size:10px;letter-spacing:.5px}
@@ -293,7 +293,11 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
       <button class="pin-key pin-del" onclick="PIN.del()">⌫</button>
     </div>
     <div class="pin-err" id="pinErr"></div>
-    <button class="pin-view-btn" onclick="PIN.viewOnly()">Sadece görüntüle →</button>
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:9px;color:var(--text-muted);text-align:center;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">veya</div>
+      <button class="pin-view-btn" onclick="PIN.viewOnly()">👁 Sadece Görüntüle</button>
+      <div style="font-size:9px;color:var(--text-muted);text-align:center;margin-top:6px">Değişiklik yapmadan tüm verileri görürsün</div>
+    </div>
   </div>
 </div>
 <div class="sync-banner">
@@ -638,6 +642,12 @@ function periodStats(username, period){
     }
   }
   const streak = getStreak(username,'games');
+  // Kazanma fallback: actLog'da wins yoksa liveData'dan bugünü al
+  // (eski kayıtlar wins alanı içermiyor, refreshAll sonrası dolacak)
+  const d2 = APP.liveData[username];
+  if(totalWins===0 && d2 && !d2.error && (d2.wins||0)>0){
+    totalWins = d2.wins||0;
+  }
   return { totalGames, totalPuzzles, totalWins, activeDays, streak };
 }
 
@@ -1444,9 +1454,27 @@ window.PIN = (function(){
 
   function viewOnly(){
     isAdmin=false;
+    APP.currentUser=null; APP.currentUserName=null;
     document.getElementById('pinOverlay').style.display='none';
     document.body.classList.add('readonly');
     const ind=document.getElementById('adminInd'); if(ind) ind.classList.remove('show');
+    // Tüm grupların verilerini yükle (hangi kullanıcıya ait olduğu bilinmiyor,
+    // görüntüleme modunda ilk kullanıcının verilerini göster)
+    (async()=>{
+      // users listesinden ilk kullanıcıyı bul ve onun config'ini yükle
+      const users=APP.users||{};
+      const uids=Object.keys(users);
+      if(uids.length>0){
+        APP.currentUser=uids[0]; // geçici — sadece veri yüklemek için
+        await fbLoad();
+        APP.currentUser=null;    // görüntülemede currentUser null olsun
+      } else {
+        await fbLoad(); // eski format
+      }
+      renderGroupBar(); renderHeader(); buildCritPanel(); renderGrid();
+      if(getStudents().length>0) refreshAll();
+      renderChamps(); renderScoreTable();
+    })();
   }
 
   function logout(){
