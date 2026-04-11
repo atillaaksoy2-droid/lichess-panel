@@ -262,6 +262,72 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .admin-indicator{display:none;align-items:center;gap:5px;background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);color:var(--accent);border-radius:5px;padding:4px 10px;font-size:10px;letter-spacing:.5px}
 .admin-indicator.show{display:flex}
 
+
+/* ── GÖRÜNÜM SEKMELERİ ── */
+.view-tabs{display:flex;gap:6px;align-items:center;margin-bottom:14px}
+.view-tab{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:6px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all .15s}
+.view-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0d0f14;border-color:transparent}
+.view-tab:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+
+/* ── FUTCARD IZGARA ── */
+.futcard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;padding:4px}
+
+/* ── FUTCARD ── */
+.futcard{
+  width:200px;border-radius:14px;overflow:hidden;position:relative;
+  cursor:pointer;transition:transform .2s,box-shadow .2s;
+  background:linear-gradient(160deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  font-family:'IBM Plex Mono',monospace;
+}
+.futcard:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 14px 36px rgba(0,0,0,.6)}
+
+/* Kart renk teması — sıralamaya göre */
+.futcard.fc-gold{background:linear-gradient(160deg,#2d2000 0%,#4a3500 50%,#c8a84b 100%)}
+.futcard.fc-silver{background:linear-gradient(160deg,#1a1f2e 0%,#2a3040 50%,#607080 100%)}
+.futcard.fc-bronze{background:linear-gradient(160deg,#2a1500 0%,#3d2010 50%,#7d4a20 100%)}
+.futcard.fc-normal{background:linear-gradient(160deg,#0d1520 0%,#1a2535 50%,#253550 100%)}
+
+.futcard-inner{padding:16px 14px 12px;position:relative;z-index:1}
+
+/* Puan ve rozet üst kısım */
+.fc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.fc-score{font-size:36px;font-weight:900;font-family:'Playfair Display',serif;line-height:1;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.fc-rank-badge{background:rgba(255,255,255,.15);border-radius:5px;padding:2px 7px;font-size:10px;color:rgba(255,255,255,.8);font-weight:600;backdrop-filter:blur(4px)}
+
+/* Fotoğraf */
+.fc-photo-wrap{width:90px;height:90px;border-radius:10px;overflow:hidden;margin:0 auto 8px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);position:relative;cursor:pointer}
+.fc-photo{width:100%;height:100%;object-fit:cover}
+.fc-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;font-family:'Playfair Display',serif;font-weight:700;color:rgba(255,255,255,.4)}
+.fc-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:20px}
+.fc-photo-wrap:hover .fc-photo-overlay{opacity:1}
+
+/* İsim */
+.fc-name{text-align:center;font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.5px;text-transform:uppercase}
+
+/* İstatistik çubukları */
+.fc-stats{display:flex;flex-direction:column;gap:5px}
+.fc-stat{display:flex;align-items:center;gap:6px}
+.fc-stat-label{font-size:8px;color:rgba(255,255,255,.55);letter-spacing:1px;text-transform:uppercase;width:24px;flex-shrink:0}
+.fc-stat-bar-wrap{flex:1;height:4px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden}
+.fc-stat-bar{height:100%;border-radius:10px;transition:width .4s}
+.fc-stat-val{font-size:10px;font-weight:700;color:#fff;width:28px;text-align:right;flex-shrink:0}
+
+/* Alt kısım */
+.fc-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}
+.fc-format{font-size:9px;color:rgba(255,255,255,.5);letter-spacing:1px}
+.fc-dl-btn{background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);font-size:10px;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;transition:all .15s;backdrop-filter:blur(4px)}
+.fc-dl-btn:hover{background:rgba(255,255,255,.25);color:#fff}
+
+/* Gizli fotoğraf input */
+.fc-photo-input{display:none}
+
+/* Büyük kart modal */
+.fc-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.fc-modal{position:relative}
+.fc-modal-close{position:absolute;top:-36px;right:0;background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;opacity:.7}
+.fc-modal-close:hover{opacity:1}
+
 </style>
 </head>
 <body>
@@ -361,6 +427,14 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     <div class="score-rows" id="scoreRows"><div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Yükleniyor…</div></div>
   </div>
 
+  <!-- GÖRÜNÜM SEKMELERİ -->
+  <div class="view-tabs">
+    <button class="view-tab active" data-view="panel" onclick="switchView('panel')">📊 Panel</button>
+    <button class="view-tab" data-view="futcard" onclick="switchView('futcard')">🃏 Kartlar</button>
+  </div>
+
+  <!-- PANEL GÖRÜNÜMÜ -->
+  <div id="viewPanel">
   <div class="controls">
     <span class="ctrl-label">Sırala:</span>
     <button class="ctrl-btn active" data-sort="score"   onclick="setSort('score')">⭐ Puan</button>
@@ -378,6 +452,26 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
   </div>
   <div class="load-status" id="loadStatus"></div>
   <div class="cards-grid" id="cardsGrid"></div>
+  </div><!-- /viewPanel -->
+
+  <!-- FUTCARD GÖRÜNÜMÜ -->
+  <div id="viewFutcard" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:11px;color:var(--text-muted)">Fotoğraf eklemek için karta tıkla · PNG indirmek için ⬇ butonunu kullan</div>
+      <button class="icon-btn" onclick="downloadAllCards()" title="Tüm kartları indir">⬇ Tümünü İndir</button>
+    </div>
+    <div class="futcard-grid" id="futcardGrid"></div>
+  </div>
+</div>
+
+<!-- Fotoğraf yükleme input (gizli) -->
+<input type="file" id="fcPhotoInput" class="fc-photo-input" accept="image/*">
+<!-- Büyük kart modal -->
+<div class="fc-modal-bg" id="fcModal" style="display:none" onclick="if(event.target===this)document.getElementById('fcModal').style.display='none'">
+  <div class="fc-modal">
+    <button class="fc-modal-close" onclick="document.getElementById('fcModal').style.display='none'">✕</button>
+    <div id="fcModalContent"></div>
+  </div>
 </div>
 
 <!-- MODALLER -->
@@ -643,12 +737,14 @@ function periodStats(username, period){
   }
   const streak = getStreak(username,'games');
   // Kazanma fallback: actLog'da wins yoksa liveData'dan bugünü al
-  // (eski kayıtlar wins alanı içermiyor, refreshAll sonrası dolacak)
   const d2 = APP.liveData[username];
   if(totalWins===0 && d2 && !d2.error && (d2.wins||0)>0){
     totalWins = d2.wins||0;
   }
-  return { totalGames, totalPuzzles, totalWins, activeDays, streak };
+  // Haftalık kazanma oranı (%)
+  const winRate = totalGames>=3 ? Math.round((totalWins/totalGames)*100) : 0;
+  // Seri: actLog'dan hesapla — streak fonksiyonu zaten actLog kullanıyor
+  return { totalGames, totalPuzzles, totalWins, winRate, activeDays, streak };
 }
 
 function calcScore(username, period='week'){
@@ -1067,15 +1163,24 @@ function renderChamps(){
       sub:  u=>periodLabel+' toplam'
     },
     {
-      cls:'cc-win', label:'🏆 En Çok Kazanma', medal:'📈',
-      user: best(u=>stats[u].totalWins),
-      val:  u=>stats[u].totalWins>0 ? stats[u].totalWins+' galibiyet' : 'henüz yok',
-      sub:  u=>periodLabel+' toplam'
+      cls:'cc-win', label:'🏆 En Yüksek Kazanma', medal:'📈',
+      user: best(u=>stats[u].winRate),
+      val:  u=>stats[u].winRate>0
+              ? '%'+stats[u].winRate+' kazanma ('+stats[u].totalGames+' maçta)'
+              : 'henüz yok (min. 3 maç)',
+      sub:  u=>periodLabel+' kazanma oranı'
     },
     {
       cls:'cc-streak', label:'🔥 En Uzun Seri', medal:'🔥',
       user: best(u=>stats[u].streak),
-      val:  u=>stats[u].streak>0 ? stats[u].streak+' günlük seri' : 'henüz yok',
+      val:  u=>{
+        const s=stats[u].streak;
+        if(s>0) return s+' günlük seri';
+        // Seri yoksa en az bugün maç yapmış mı?
+        const ld=APP.liveData[u];
+        const todayGames=(ld&&!ld.error)?((ld.wins||0)+(ld.losses||0)+(ld.draws||0)):0;
+        return todayGames>0 ? '1 günlük seri (bugün)' : 'henüz yok';
+      },
       sub:  u=>'aktif maç serisi'
     },
   ];
@@ -1522,6 +1627,200 @@ window.PIN = (function(){
   function init(){ if(typeof updateSubTitle==='function') updateSubTitle(); }
   return { press, del, viewOnly, logout, change, addUser, getIsAdmin, init };
 })();
+
+
+// ── FUTCARD SİSTEMİ ─────────────────────────────────────────────────────────
+// Fotoğraflar IndexedDB'de saklanır (localStorage büyük resimleri kaldırmaz)
+
+const FC_DB_NAME = 'lichess_photos';
+const FC_DB_VER  = 1;
+let fcDb = null;
+
+function openFcDb(){
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open(FC_DB_NAME, FC_DB_VER);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('photos', {keyPath:'username'});
+    req.onsuccess = e => { fcDb = e.target.result; res(fcDb); };
+    req.onerror   = e => rej(e);
+  });
+}
+
+async function fcGetPhoto(username){
+  if(!fcDb) await openFcDb();
+  return new Promise((res)=>{
+    const tx  = fcDb.transaction('photos','readonly');
+    const req = tx.objectStore('photos').get(username);
+    req.onsuccess = e => res(e.target.result?.dataUrl||null);
+    req.onerror   = ()=> res(null);
+  });
+}
+
+async function fcSetPhoto(username, dataUrl){
+  if(!fcDb) await openFcDb();
+  return new Promise((res,rej)=>{
+    const tx  = fcDb.transaction('photos','readwrite');
+    tx.objectStore('photos').put({username, dataUrl});
+    tx.oncomplete = ()=> res();
+    tx.onerror    = e => rej(e);
+  });
+}
+
+// Görünüm geçişi
+window.switchView = function(view){
+  document.querySelectorAll('.view-tab').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
+  document.getElementById('viewPanel').style.display   = view==='panel'  ?'' :'none';
+  document.getElementById('viewFutcard').style.display = view==='futcard'?'' :'none';
+  if(view==='futcard') renderFutcards();
+};
+
+// Futcard ızgarasını oluştur
+async function renderFutcards(){
+  if(!fcDb) await openFcDb();
+  const students = getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
+  const grid = document.getElementById('futcardGrid');
+  if(students.length===0){
+    grid.innerHTML='<div class="empty"><div class="ei">🃏</div><h3>Henüz öğrenci yok</h3><p>Panel görünümünden öğrenci ekle.</p></div>';
+    return;
+  }
+  const period = APP.scorePeriod||'week';
+  const scored = [...students].map(u=>({u,pts:calcScore(u,period)})).sort((a,b)=>b.pts-a.pts);
+  const maxPts = scored[0]?.pts||1;
+
+  // Fotoğrafları paralel yükle
+  const photos = {};
+  await Promise.all(students.map(async u=>{ photos[u]=await fcGetPhoto(u); }));
+
+  grid.innerHTML = '';
+  scored.forEach(({u,pts},idx)=>{
+    const d  = APP.liveData[u];
+    const st = periodStats(u,period);
+    const rank = idx+1;
+    const fcCls = rank===1?'fc-gold':rank===2?'fc-silver':rank===3?'fc-bronze':'fc-normal';
+    const pct = Math.round((pts/maxPts)*100);
+
+    // Bar değerleri (normalize 0-100)
+    const maxG = Math.max(...students.map(s=>periodStats(s,period).totalGames),1);
+    const maxP = Math.max(...students.map(s=>periodStats(s,period).totalPuzzles),1);
+    const gBar = Math.round((st.totalGames/maxG)*100);
+    const pBar = Math.round((st.totalPuzzles/maxP)*100);
+    const wBar = st.winRate||0;
+    const sBar = Math.min(st.streak*14,100);
+
+    const photoHtml = photos[u]
+      ? `<img class="fc-photo" src="${photos[u]}" alt="">`
+      : `<div class="fc-photo-placeholder">${escHtml(u[0].toUpperCase())}</div>`;
+
+    const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
+
+    const card = document.createElement('div');
+    card.className = `futcard ${fcCls}`;
+    card.setAttribute('data-user', u);
+    card.innerHTML = `
+      <div class="futcard-inner">
+        <div class="fc-top">
+          <div class="fc-score">${pts}</div>
+          <div>
+            <div class="fc-rank-badge">#${rank}</div>
+          </div>
+        </div>
+        <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
+          ${photoHtml}
+          <div class="fc-photo-overlay">📷</div>
+        </div>
+        <div class="fc-name">${escHtml(d.displayName||u)}</div>
+        <div class="fc-stats">
+          <div class="fc-stat">
+            <div class="fc-stat-label">MAÇ</div>
+            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${gBar}%;background:${barColor}"></div></div>
+            <div class="fc-stat-val">${st.totalGames}</div>
+          </div>
+          <div class="fc-stat">
+            <div class="fc-stat-label">GAL</div>
+            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${wBar}%;background:${barColor}"></div></div>
+            <div class="fc-stat-val">%${wBar}</div>
+          </div>
+          <div class="fc-stat">
+            <div class="fc-stat-label">BUL</div>
+            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${pBar}%;background:${barColor}"></div></div>
+            <div class="fc-stat-val">${st.totalPuzzles}</div>
+          </div>
+          <div class="fc-stat">
+            <div class="fc-stat-label">SERİ</div>
+            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${sBar}%;background:${barColor}"></div></div>
+            <div class="fc-stat-val">${st.streak}g</div>
+          </div>
+        </div>
+        <div class="fc-footer">
+          <div class="fc-format">LICHESS · SATRANÇ</div>
+          <button class="fc-dl-btn" onclick="event.stopPropagation();downloadCard('${escHtml(u)}')">⬇ PNG</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+// Fotoğraf tıklama — yönetici modunda yükleme aç
+window.fcPhotoClick = function(username){
+  if(!PIN.getIsAdmin()){ showToast('Fotoğraf yüklemek için yönetici girişi gerekli',true); return; }
+  const input = document.getElementById('fcPhotoInput');
+  input.onchange = async(e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async(ev)=>{
+      await fcSetPhoto(username, ev.target.result);
+      renderFutcards();
+      showToast('Fotoğraf kaydedildi ✓');
+    };
+    reader.readAsDataURL(file);
+    input.value='';
+  };
+  input.click();
+};
+
+// Tek kart PNG indir
+window.downloadCard = async function(username){
+  const card = document.querySelector(`.futcard[data-user="${CSS.escape(username)}"]`);
+  if(!card){ showToast('Kart bulunamadı',true); return; }
+  try{
+    // html2canvas CDN'den yükle (gerekirse)
+    if(!window.html2canvas){
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    }
+    const canvas = await html2canvas(card, {
+      backgroundColor:null, scale:3, useCORS:true,
+      logging:false, allowTaint:true
+    });
+    const link = document.createElement('a');
+    link.download = `futcard-${username}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast(`${username} kartı indirildi ✓`);
+  }catch(e){ showToast('İndirme hatası: '+e.message,true); console.error(e); }
+};
+
+// Tüm kartları indir
+window.downloadAllCards = async function(){
+  const students = getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
+  if(students.length===0) return;
+  if(!window.html2canvas){
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  }
+  showToast('Kartlar hazırlanıyor…');
+  for(const u of students){
+    await downloadCard(u);
+    await new Promise(r=>setTimeout(r,300));
+  }
+};
+
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+// IndexedDB'yi başlat
+openFcDb().catch(e=>console.warn('IndexedDB açılamadı:',e));
 
 // Auto-refresh 5 dakikada bir
 setInterval(()=>{ if(getStudents().length>0) refreshAll(); },5*60*1000);
