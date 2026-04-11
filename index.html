@@ -300,6 +300,8 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .fc-photo{width:100%;height:100%;object-fit:cover}
 .fc-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;font-family:'Playfair Display',serif;font-weight:700;color:rgba(255,255,255,.4)}
 .fc-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:20px}
+.fc-club-logo{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);pointer-events:none}
+.fc-club-logo img{width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.4);object-fit:contain}
 .fc-photo-wrap:hover .fc-photo-overlay{opacity:1}
 
 /* İsim */
@@ -742,7 +744,8 @@ function periodStats(username, period){
     totalWins = d2.wins||0;
   }
   // Haftalık kazanma oranı (%)
-  const winRate = totalGames>=3 ? Math.round((totalWins/totalGames)*100) : 0;
+  // Kazanma oranı: dönem toplamına göre (min 3 maç şartı)
+  const winRate = totalGames>=3 ? Math.round((totalWins/totalGames)*100) : (totalGames>0 ? Math.round((totalWins/totalGames)*100) : 0);
   // Seri: actLog'dan hesapla — streak fonksiyonu zaten actLog kullanıyor
   return { totalGames, totalPuzzles, totalWins, winRate, activeDays, streak };
 }
@@ -919,12 +922,15 @@ async function loadOneStudent(username,myId){
     if(myId&&myId!==APP.refreshId) return;
     let online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
     const now=new Date(), since=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
-    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false&perf=${APP.crit.countBullet?'bullet,blitz,rapid,classical,correspondence':'blitz,rapid,classical,correspondence'}`,{headers:{Accept:'application/x-ndjson'}},15000);
+    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false&perf=${APP.crit.countBullet?'bullet,blitz,rapid,classical':'blitz,rapid,classical'}`,{headers:{Accept:'application/x-ndjson'}},15000);
     if(myId&&myId!==APP.refreshId) return;
     const gText=await gRes.text();
     const games=gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
     let wins=0,losses=0,draws=0; const recent=[];
     for(const g of games){
+      // Varyant ve yazışmalı satranç hariç
+      const NONSTANDARD = new Set(['correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse','ultraBullet']);
+      if(NONSTANDARD.has(g.perf)) continue;
       // Bullet toggle'a göre filtrele
       if(!APP.crit.countBullet && (g.speed==='bullet'||g.speed==='ultraBullet')) continue;
       const wu=(g.players?.white?.user?.name||'').toLowerCase();
@@ -998,7 +1004,10 @@ async function loadOneStudent(username,myId){
               // Geçmiş: direkt yaz — wins de dahil
               let ew=0;
               if(entry.games&&typeof entry.games==='object'){
-                const skip=APP.crit.countBullet?new Set([]):new Set(['bullet','ultraBullet']);
+                const STANDARD = new Set(['bullet','blitz','rapid','classical']);
+                const skip = APP.crit.countBullet
+                  ? new Set(['ultraBullet','correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse'])
+                  : new Set(['bullet','ultraBullet','correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse']);
                 for(const [fmt,v] of Object.entries(entry.games))
                   if(v&&typeof v==='object'&&!skip.has(fmt)) ew+=(v.win||0);
               }
@@ -1164,24 +1173,29 @@ function renderChamps(){
     },
     {
       cls:'cc-win', label:'🏆 En Yüksek Kazanma', medal:'📈',
-      user: best(u=>stats[u].winRate),
-      val:  u=>stats[u].winRate>0
+      user: (()=>{
+        // En az 1 maç yapanlar arasından en yüksek kazanma oranı
+        const active=students.filter(u=>stats[u].totalGames>0);
+        if(active.length===0) return students[0];
+        return active.reduce((b,u)=>stats[u].winRate>stats[b].winRate?u:b);
+      })(),
+      val:  u=>stats[u].totalGames>0
               ? '%'+stats[u].winRate+' kazanma ('+stats[u].totalGames+' maçta)'
-              : 'henüz yok (min. 3 maç)',
+              : 'henüz maç yok',
       sub:  u=>periodLabel+' kazanma oranı'
     },
     {
-      cls:'cc-streak', label:'🔥 En Uzun Seri', medal:'🔥',
-      user: best(u=>stats[u].streak),
-      val:  u=>{
-        const s=stats[u].streak;
-        if(s>0) return s+' günlük seri';
-        // Seri yoksa en az bugün maç yapmış mı?
-        const ld=APP.liveData[u];
-        const todayGames=(ld&&!ld.error)?((ld.wins||0)+(ld.losses||0)+(ld.draws||0)):0;
-        return todayGames>0 ? '1 günlük seri (bugün)' : 'henüz yok';
-      },
-      sub:  u=>'aktif maç serisi'
+      cls:'cc-streak', label:'⚡ En Aktif Oyuncu', medal:'⚡',
+      user: (()=>{
+        // En fazla aktif gün olan oyuncu (activeDays)
+        const active=students.filter(u=>stats[u].activeDays>0);
+        if(active.length===0) return students[0];
+        return active.reduce((b,u)=>stats[u].activeDays>stats[b].activeDays?u:b);
+      })(),
+      val:  u=>stats[u].activeDays>0
+              ? stats[u].activeDays+' aktif gün'
+              : 'henüz maç yok',
+      sub:  u=>periodLabel+' içinde'
     },
   ];
 
@@ -1376,6 +1390,23 @@ function buildCritPanel(){
     </div>`).join('');
 }
 window.updateCrit=async(key,val)=>{ APP.crit[key]=Math.max(0,parseFloat(val)||0); await fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); };
+window.setClubLogo=()=>{
+  const input=document.createElement('input');
+  input.type='file'; input.accept='image/*';
+  input.onchange=e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      APP.clubLogoUrl=ev.target.result;
+      localStorage.setItem('chess_club_logo',ev.target.result);
+      showToast('Kulüp logosu kaydedildi ✓');
+      if(document.getElementById('viewFutcard').style.display!=='none') renderFutcards();
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+};
+
 window.toggleBullet=async(checked)=>{
   APP.crit.countBullet=checked?1:0;
   // Checkbox label güncelle
@@ -1589,6 +1620,7 @@ window.PIN = (function(){
     const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='none';
     const bl=document.getElementById('btnLogout');   if(bl) bl.style.display='none';
     const bau=document.getElementById('btnAddUser'); if(bau) bau.style.display='none';
+    const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='none';
     // PIN ekranını tekrar göster
     buf=''; updateDots(); setErr('');
     document.getElementById('pinOverlay').style.display='flex';
@@ -1704,7 +1736,8 @@ async function renderFutcards(){
     const gBar = Math.round((st.totalGames/maxG)*100);
     const pBar = Math.round((st.totalPuzzles/maxP)*100);
     const wBar = st.winRate||0;
-    const sBar = Math.min(st.streak*14,100);
+    const maxAct = Math.max(...students.map(s=>periodStats(s,period).activeDays),1);
+    const aBar = Math.round((st.activeDays/maxAct)*100);
 
     const photoHtml = photos[u]
       ? `<img class="fc-photo" src="${photos[u]}" alt="">`
@@ -1726,6 +1759,7 @@ async function renderFutcards(){
         <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
           ${photoHtml}
           <div class="fc-photo-overlay">📷</div>
+          <div class="fc-club-logo" id="clubLogo_${escHtml(u)}">${APP.clubLogoHtml||''}</div>
         </div>
         <div class="fc-name">${escHtml(d.displayName||u)}</div>
         <div class="fc-stats">
@@ -1745,13 +1779,18 @@ async function renderFutcards(){
             <div class="fc-stat-val">${st.totalPuzzles}</div>
           </div>
           <div class="fc-stat">
-            <div class="fc-stat-label">SERİ</div>
-            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${sBar}%;background:${barColor}"></div></div>
-            <div class="fc-stat-val">${st.streak}g</div>
+            <div class="fc-stat-label">AKTİF</div>
+            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${aBar}%;background:${barColor}"></div></div>
+            <div class="fc-stat-val">${st.activeDays}g</div>
           </div>
         </div>
         <div class="fc-footer">
-          <div class="fc-format">LICHESS · SATRANÇ</div>
+          <div class="fc-format">
+            <img src="https://lichess1.org/assets/logo/lichess-favicon-32.png"
+                 style="width:16px;height:16px;vertical-align:middle;border-radius:3px;opacity:.7"
+                 onerror="this.style.display='none'"
+                 alt="lichess">
+          </div>
           <button class="fc-dl-btn" onclick="event.stopPropagation();downloadCard('${escHtml(u)}')">⬇ PNG</button>
         </div>
       </div>`;
