@@ -270,25 +270,25 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .view-tab:hover:not(.active){border-color:var(--accent);color:var(--accent)}
 
 /* ── FUTCARD IZGARA ── */
-.futcard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;padding:4px}
+.chesscard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;padding:4px}
 
 /* ── FUTCARD ── */
-.futcard{
+.chesscard{
   width:200px;border-radius:14px;overflow:hidden;position:relative;
   cursor:pointer;transition:transform .2s,box-shadow .2s;
   background:linear-gradient(160deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
   box-shadow:0 8px 24px rgba(0,0,0,.5);
   font-family:'IBM Plex Mono',monospace;
 }
-.futcard:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 14px 36px rgba(0,0,0,.6)}
+.chesscard:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 14px 36px rgba(0,0,0,.6)}
 
 /* Kart renk teması — sıralamaya göre */
-.futcard.fc-gold{background:linear-gradient(160deg,#2d2000 0%,#4a3500 50%,#c8a84b 100%)}
-.futcard.fc-silver{background:linear-gradient(160deg,#1a1f2e 0%,#2a3040 50%,#607080 100%)}
-.futcard.fc-bronze{background:linear-gradient(160deg,#2a1500 0%,#3d2010 50%,#7d4a20 100%)}
-.futcard.fc-normal{background:linear-gradient(160deg,#0d1520 0%,#1a2535 50%,#253550 100%)}
+.chesscard.fc-gold{background:linear-gradient(160deg,#2d2000 0%,#4a3500 50%,#c8a84b 100%)}
+.chesscard.fc-silver{background:linear-gradient(160deg,#1a1f2e 0%,#2a3040 50%,#607080 100%)}
+.chesscard.fc-bronze{background:linear-gradient(160deg,#2a1500 0%,#3d2010 50%,#7d4a20 100%)}
+.chesscard.fc-normal{background:linear-gradient(160deg,#0d1520 0%,#1a2535 50%,#253550 100%)}
 
-.futcard-inner{padding:16px 14px 12px;position:relative;z-index:1}
+.chesscard-inner{padding:16px 14px 12px;position:relative;z-index:1}
 
 /* Puan ve rozet üst kısım */
 .fc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
@@ -434,7 +434,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
   <!-- GÖRÜNÜM SEKMELERİ -->
   <div class="view-tabs">
     <button class="view-tab active" data-view="panel" onclick="switchView('panel')">📊 Panel</button>
-    <button class="view-tab" data-view="futcard" onclick="switchView('futcard')">🃏 Kartlar</button>
+    <button class="view-tab" data-view="chesscard" onclick="switchView('chesscard')">🃏 Kartlar</button>
   </div>
 
   <!-- PANEL GÖRÜNÜMÜ -->
@@ -459,12 +459,12 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
   </div><!-- /viewPanel -->
 
   <!-- FUTCARD GÖRÜNÜMÜ -->
-  <div id="viewFutcard" style="display:none">
+  <div id="viewChesscard" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-size:11px;color:var(--text-muted)">Fotoğraf eklemek için karta tıkla · PNG indirmek için ⬇ butonunu kullan</div>
       <button class="icon-btn" onclick="downloadAllCards()" title="Tüm kartları indir">⬇ Tümünü İndir</button>
     </div>
-    <div class="futcard-grid" id="futcardGrid"></div>
+    <div class="chesscard-grid" id="chesscardGrid"></div>
   </div>
 </div>
 
@@ -724,31 +724,38 @@ function periodStats(username, period){
   const log = APP.actLog[username]||{};
   const d   = APP.liveData[username];
   let totalGames=0, totalPuzzles=0, totalWins=0, activeDays=0;
+
   for(const [date,entry] of Object.entries(log)){
     if(period==='week' && daysBetween(todayStr(),date)>6) continue;
     if(daysBetween(todayStr(),date)>13) continue;
-    const g = entry.games||0;
-    const p = entry.puzzles||0;
+    let g  = entry.games||0;
+    let p  = entry.puzzles||0;
+    let ew = entry.wins||0;
+    // Bugün: liveData daha güncel olabilir
+    if(date===todayStr() && d && !d.error){
+      const todayTotal=(d.wins||0)+(d.losses||0)+(d.draws||0);
+      if(todayTotal>g) g=todayTotal;
+      ew=d.wins||0;
+    }
     totalGames   += g;
     totalPuzzles += p;
+    totalWins    += ew;
     if(g>0) activeDays++;
-    // Kazanma: actLog.wins var mı? varsa kullan, bugün için liveData'ya bak
-    if(date===todayStr() && d && !d.error){
-      totalWins += (d.wins||0);
-    } else {
-      totalWins += (entry.wins||0);
+  }
+
+  // Bugün actLog'da hiç kayıt yoksa (ilk yükleme) liveData'dan ekle
+  if(!log[todayStr()] && d && !d.error){
+    const todayTotal=(d.wins||0)+(d.losses||0)+(d.draws||0);
+    if(todayTotal>0){
+      totalGames+=todayTotal;
+      totalWins+=(d.wins||0);
+      activeDays++;
     }
+    if((d.puzzlesSolved||0)>0) totalPuzzles+=(d.puzzlesSolved||0);
   }
+
   const streak = getStreak(username,'games');
-  // Kazanma fallback: actLog'da wins yoksa liveData'dan bugünü al
-  const d2 = APP.liveData[username];
-  if(totalWins===0 && d2 && !d2.error && (d2.wins||0)>0){
-    totalWins = d2.wins||0;
-  }
-  // Haftalık kazanma oranı (%)
-  // Kazanma oranı: dönem toplamına göre (min 3 maç şartı)
-  const winRate = totalGames>=3 ? Math.round((totalWins/totalGames)*100) : (totalGames>0 ? Math.round((totalWins/totalGames)*100) : 0);
-  // Seri: actLog'dan hesapla — streak fonksiyonu zaten actLog kullanıyor
+  const winRate = totalGames>0 ? Math.round((totalWins/totalGames)*100) : 0;
   return { totalGames, totalPuzzles, totalWins, winRate, activeDays, streak };
 }
 
@@ -908,6 +915,8 @@ window.refreshAll=async()=>{
     done++; if(myId!==APP.refreshId) break;
     setLoadStatus(`Yükleniyor… ${done}/${students.length}`);
     updateOneCard(user,myId);
+    // Lichess rate limit: öğrenciler arası 1.5sn bekle
+    if(done<students.length) await new Promise(r=>setTimeout(r,1500));
   }
   if(myId===APP.refreshId){
     btn.classList.remove('spinning'); setLoadStatus('');
@@ -918,13 +927,13 @@ window.refreshAll=async()=>{
 
 async function loadOneStudent(username,myId){
   try{
-    const userRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},10000);
+    const userRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},12000);
     if(!userRes.ok) throw new Error('not_found');
     const user=await userRes.json();
     if(myId&&myId!==APP.refreshId) return;
     let online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
     const now=new Date(), since=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
-    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=100&moves=false&opening=false&clocks=false&perf=${APP.crit.countBullet?'bullet,blitz,rapid,classical':'blitz,rapid,classical'}`,{headers:{Accept:'application/x-ndjson'}},15000);
+    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=50&moves=false&opening=false&clocks=false&perf=${APP.crit.countBullet?'bullet,blitz,rapid,classical':'blitz,rapid,classical'}`,{headers:{Accept:'application/x-ndjson'}},20000);
     if(myId&&myId!==APP.refreshId) return;
     const gText=await gRes.text();
     const games=gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
@@ -950,7 +959,7 @@ async function loadOneStudent(username,myId){
     for(const k of ['bullet','blitz','rapid','classical']) if(perf[k]&&perf[k].games>0) ratings[k]={int:perf[k].rating,prog:perf[k].prog||0};
     let puzzlesSolved=0, puzzleRating=perf.puzzle?perf.puzzle.rating:null;
     try{
-      const aRes=await fetchWT(`https://lichess.org/api/user/${username}/activity`,{},12000);
+      const aRes=await fetchWT(`https://lichess.org/api/user/${username}/activity`,{},15000);
       if(aRes.ok){
         const aData=await aRes.json();
         if(myId&&myId!==APP.refreshId) return;
@@ -1026,7 +1035,7 @@ async function loadOneStudent(username,myId){
     console.warn(`[${username}]:`,err.message);
     // İlk hata — 3 saniye bekleyip bir kez daha dene
     if(!APP.liveData[username] || !APP.liveData[username].retried){
-      await new Promise(r=>setTimeout(r,3000));
+      await new Promise(r=>setTimeout(r,8000)); // Rate limit için bekleme
       if(myId && myId!==APP.refreshId) return; // grup değiştiyse iptal
       try{
         const retryRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},10000);
@@ -1290,7 +1299,8 @@ function buildCard(username,d,rank){
   const winPct=total>0?Math.round((d.wins/total)*100):0;
   const drawPct=total>0?Math.round((d.draws/total)*100):0;
   const lossPct=100-winPct-drawPct;
-  const badges=getBadges(username,d), score=calcScore(username,'week');
+  const badges=getBadges(username,d), score=calcScore(username,APP.scorePeriod||'week');
+  const pSt=periodStats(username,APP.scorePeriod||'week');
   const crown=rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'';
   const cardCls=rank===1?'t1':rank===2?'t2':rank===3?'t3':'';
   const rHTML=['bullet','blitz','rapid','classical'].map(k=>{
@@ -1321,7 +1331,7 @@ function buildCard(username,d,rank){
           <div>
             <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(d.displayName||username)}</a>
             <div class="s-sub">${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
-              <div class="day-tag">🎯 ${total} maç</div><div class="score-tag">⭐ ${score} puan</div>
+              <div class="day-tag">🎯 ${APP.scorePeriod==='week'?'Haftalık':'14 Günlük'}: ${pSt.totalGames} maç</div><div class="score-tag">⭐ ${score} puan</div>
             </div>
           </div>
         </div>
@@ -1335,20 +1345,23 @@ function buildCard(username,d,rank){
     </div>
     ${rHTML?`<div class="ratings-row">${rHTML}</div>`:''}
     <div class="stats">
-      <div class="s-title">Bugünkü Maçlar</div>
+      <div class="s-title">${APP.scorePeriod==='week'?'Bu Haftalık':'14 Günlük'} Maçlar</div>
       <div class="wld-row">
-        <div class="wld-box wb"><div class="wld-lbl">Kazandı</div><div class="wld-val">${d.wins||0}</div></div>
-        <div class="wld-box lb2"><div class="wld-lbl">Kaybetti</div><div class="wld-val">${d.losses||0}</div></div>
-        <div class="wld-box db"><div class="wld-lbl">Berabere</div><div class="wld-val">${d.draws||0}</div></div>
+        <div class="wld-box wb"><div class="wld-lbl">Kazanma</div><div class="wld-val">${pSt.totalWins||0}</div></div>
+        <div class="wld-box lb2"><div class="wld-lbl">Toplam</div><div class="wld-val">${pSt.totalGames||0}</div></div>
+        <div class="wld-box db"><div class="wld-lbl">%Galibiyet</div><div class="wld-val">${pSt.winRate||0}</div></div>
       </div>
-      ${total>0?`<div class="wr-wrap"><div class="wr-labels"><span style="color:var(--win)">%${winPct} G</span><span style="color:var(--draw)">%${drawPct} B</span><span style="color:var(--loss)">%${lossPct} K</span></div><div class="wr-bar"><div class="bw" style="width:${winPct}%"></div><div class="bd" style="width:${drawPct}%"></div><div class="bl" style="width:${lossPct}%"></div></div></div>`:''}
+      ${pSt.totalGames>0?`<div class="wr-wrap"><div class="wr-labels"><span style="color:var(--win)">%${pSt.winRate} Kazanma</span><span style="color:var(--text-muted)">${pSt.totalGames} maç</span></div><div class="wr-bar"><div class="bw" style="width:${pSt.winRate}%"></div><div class="bl" style="width:${100-pSt.winRate}%"></div></div></div>`:''}
       <div class="puz-row">
         <div class="puz-left"><span style="font-size:14px">🧩</span><div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">Bulmacalar</div><div class="puz-lbl">bugün çözülen</div></div></div>
         <div class="puz-cnt">${d.puzzlesSolved??0}</div>
         <div class="puz-rat"><div>Puan</div><span>${d.puzzleRating??'—'}</span></div>
       </div>
       <div class="train-score-row">
-        <div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">⭐ Antrenman Puanı</div><div class="puz-lbl">bu hafta</div></div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--puzzle)">⭐ Antrenman Puanı</div>
+          <div class="puz-lbl">${APP.scorePeriod==='week'?'Bu Hafta':'14 Gün'}: ${pSt.totalGames} maç · ${pSt.totalPuzzles} bulmaca</div>
+        </div>
         <div class="train-pts">${score}</div>
         <div class="train-breakdown">${bd||'—'}</div>
       </div>
@@ -1402,7 +1415,7 @@ window.setClubLogo=()=>{
       APP.clubLogoUrl=ev.target.result;
       localStorage.setItem('chess_club_logo',ev.target.result);
       showToast('Kulüp logosu kaydedildi ✓');
-      if(document.getElementById('viewFutcard').style.display!=='none') renderFutcards();
+      if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
     };
     reader.readAsDataURL(file);
   };
@@ -1704,15 +1717,15 @@ async function fcSetPhoto(username, dataUrl){
 window.switchView = function(view){
   document.querySelectorAll('.view-tab').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   document.getElementById('viewPanel').style.display   = view==='panel'  ?'' :'none';
-  document.getElementById('viewFutcard').style.display = view==='futcard'?'' :'none';
-  if(view==='futcard') renderFutcards();
+  document.getElementById('viewChesscard').style.display = view==='chesscard'?'' :'none';
+  if(view==='chesscard') renderChesscards();
 };
 
 // Futcard ızgarasını oluştur
-async function renderFutcards(){
+async function renderChesscards(){
   if(!fcDb) await openFcDb();
   const students = getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
-  const grid = document.getElementById('futcardGrid');
+  const grid = document.getElementById('chesscardGrid');
   if(students.length===0){
     grid.innerHTML='<div class="empty"><div class="ei">🃏</div><h3>Henüz öğrenci yok</h3><p>Panel görünümünden öğrenci ekle.</p></div>';
     return;
@@ -1749,10 +1762,10 @@ async function renderFutcards(){
     const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
 
     const card = document.createElement('div');
-    card.className = `futcard ${fcCls}`;
+    card.className = `chesscard ${fcCls}`;
     card.setAttribute('data-user', u);
     card.innerHTML = `
-      <div class="futcard-inner">
+      <div class="chesscard-inner">
         <div class="fc-top">
           <div class="fc-score">${pts}</div>
           <div>
@@ -1760,12 +1773,12 @@ async function renderFutcards(){
           </div>
         </div>
         <div class="fc-photo-row">
-          <div class="fc-logo-side">${APP.clubLogoHtml||''}</div>
+          <div class="fc-logo-side">${APP.clubLogoUrl ? '<img src="'+APP.clubLogoUrl+'" alt="">' : ''}</div>
           <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
             ${photoHtml}
             <div class="fc-photo-overlay">📷</div>
           </div>
-          <div class="fc-logo-side">${APP.clubLogoHtml||''}</div>
+          <div class="fc-logo-side">${APP.clubLogoUrl ? '<img src="'+APP.clubLogoUrl+'" alt="">' : ''}</div>
         </div>
         <div class="fc-name">${escHtml(d.displayName||u)}</div>
         <div class="fc-stats">
@@ -1813,7 +1826,7 @@ window.fcPhotoClick = function(username){
     const reader = new FileReader();
     reader.onload = async(ev)=>{
       await fcSetPhoto(username, ev.target.result);
-      renderFutcards();
+      renderChesscards();
       showToast('Fotoğraf kaydedildi ✓');
     };
     reader.readAsDataURL(file);
@@ -1824,7 +1837,7 @@ window.fcPhotoClick = function(username){
 
 // Tek kart PNG indir
 window.downloadCard = async function(username){
-  const card = document.querySelector(`.futcard[data-user="${CSS.escape(username)}"]`);
+  const card = document.querySelector(`.chesscard[data-user="${CSS.escape(username)}"]`);
   if(!card){ showToast('Kart bulunamadı',true); return; }
   try{
     // html2canvas CDN'den yükle (gerekirse)
@@ -1840,7 +1853,7 @@ window.downloadCard = async function(username){
     });
     screenOnly.forEach(el=>el.style.visibility='');
     const link = document.createElement('a');
-    link.download = `futcard-${username}.png`;
+    link.download = `chesscard-${username}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
     showToast(`${username} kartı indirildi ✓`);
@@ -1872,7 +1885,8 @@ function loadScript(src){
 openFcDb().catch(e=>console.warn('IndexedDB açılamadı:',e));
 
 // Auto-refresh 5 dakikada bir
-setInterval(()=>{ if(getStudents().length>0) refreshAll(); },5*60*1000);
+// Auto-refresh 10 dakikada bir (lichess rate limit için)
+setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 
 // ── BAŞLANGIÇ ────────────────────────────────────────
 (async()=>{
