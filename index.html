@@ -724,38 +724,31 @@ function periodStats(username, period){
   const log = APP.actLog[username]||{};
   const d   = APP.liveData[username];
   let totalGames=0, totalPuzzles=0, totalWins=0, activeDays=0;
-
   for(const [date,entry] of Object.entries(log)){
     if(period==='week' && daysBetween(todayStr(),date)>6) continue;
     if(daysBetween(todayStr(),date)>13) continue;
-    let g  = entry.games||0;
-    let p  = entry.puzzles||0;
-    let ew = entry.wins||0;
-    // Bugün: liveData daha güncel olabilir
-    if(date===todayStr() && d && !d.error){
-      const todayTotal=(d.wins||0)+(d.losses||0)+(d.draws||0);
-      if(todayTotal>g) g=todayTotal;
-      ew=d.wins||0;
-    }
+    const g = entry.games||0;
+    const p = entry.puzzles||0;
     totalGames   += g;
     totalPuzzles += p;
-    totalWins    += ew;
     if(g>0) activeDays++;
-  }
-
-  // Bugün actLog'da hiç kayıt yoksa (ilk yükleme) liveData'dan ekle
-  if(!log[todayStr()] && d && !d.error){
-    const todayTotal=(d.wins||0)+(d.losses||0)+(d.draws||0);
-    if(todayTotal>0){
-      totalGames+=todayTotal;
-      totalWins+=(d.wins||0);
-      activeDays++;
+    // Kazanma: actLog.wins var mı? varsa kullan, bugün için liveData'ya bak
+    if(date===todayStr() && d && !d.error){
+      totalWins += (d.wins||0);
+    } else {
+      totalWins += (entry.wins||0);
     }
-    if((d.puzzlesSolved||0)>0) totalPuzzles+=(d.puzzlesSolved||0);
   }
-
   const streak = getStreak(username,'games');
-  const winRate = totalGames>0 ? Math.round((totalWins/totalGames)*100) : 0;
+  // Kazanma fallback: actLog'da wins yoksa liveData'dan bugünü al
+  const d2 = APP.liveData[username];
+  if(totalWins===0 && d2 && !d2.error && (d2.wins||0)>0){
+    totalWins = d2.wins||0;
+  }
+  // Haftalık kazanma oranı (%)
+  // Kazanma oranı: dönem toplamına göre (min 3 maç şartı)
+  const winRate = totalGames>=3 ? Math.round((totalWins/totalGames)*100) : (totalGames>0 ? Math.round((totalWins/totalGames)*100) : 0);
+  // Seri: actLog'dan hesapla — streak fonksiyonu zaten actLog kullanıyor
   return { totalGames, totalPuzzles, totalWins, winRate, activeDays, streak };
 }
 
@@ -1297,8 +1290,7 @@ function buildCard(username,d,rank){
   const winPct=total>0?Math.round((d.wins/total)*100):0;
   const drawPct=total>0?Math.round((d.draws/total)*100):0;
   const lossPct=100-winPct-drawPct;
-  const badges=getBadges(username,d), score=calcScore(username,APP.scorePeriod||'week');
-  const pSt=periodStats(username,APP.scorePeriod||'week');
+  const badges=getBadges(username,d), score=calcScore(username,'week');
   const crown=rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'';
   const cardCls=rank===1?'t1':rank===2?'t2':rank===3?'t3':'';
   const rHTML=['bullet','blitz','rapid','classical'].map(k=>{
@@ -1329,7 +1321,7 @@ function buildCard(username,d,rank){
           <div>
             <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(d.displayName||username)}</a>
             <div class="s-sub">${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
-              <div class="day-tag">🎯 Bugün: ${total} maç</div><div class="score-tag">⭐ ${score} puan</div>
+              <div class="day-tag">🎯 ${total} maç</div><div class="score-tag">⭐ ${score} puan</div>
             </div>
           </div>
         </div>
@@ -1356,10 +1348,7 @@ function buildCard(username,d,rank){
         <div class="puz-rat"><div>Puan</div><span>${d.puzzleRating??'—'}</span></div>
       </div>
       <div class="train-score-row">
-        <div>
-          <div style="font-size:11px;font-weight:600;color:var(--puzzle)">⭐ Antrenman Puanı</div>
-          <div class="puz-lbl">${APP.scorePeriod==='week'?'Bu Hafta':'14 Gün'}: ${pSt.totalGames} maç · ${pSt.totalPuzzles} bulmaca</div>
-        </div>
+        <div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">⭐ Antrenman Puanı</div><div class="puz-lbl">bu hafta</div></div>
         <div class="train-pts">${score}</div>
         <div class="train-breakdown">${bd||'—'}</div>
       </div>
@@ -1771,12 +1760,12 @@ async function renderFutcards(){
           </div>
         </div>
         <div class="fc-photo-row">
-          <div class="fc-logo-side">${APP.clubLogoUrl ? '<img src="'+APP.clubLogoUrl+'" alt="">' : ''}</div>
+          <div class="fc-logo-side">${APP.clubLogoHtml||''}</div>
           <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
             ${photoHtml}
             <div class="fc-photo-overlay">📷</div>
           </div>
-          <div class="fc-logo-side">${APP.clubLogoUrl ? '<img src="'+APP.clubLogoUrl+'" alt="">' : ''}</div>
+          <div class="fc-logo-side">${APP.clubLogoHtml||''}</div>
         </div>
         <div class="fc-name">${escHtml(d.displayName||u)}</div>
         <div class="fc-stats">
