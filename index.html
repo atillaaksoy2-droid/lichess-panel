@@ -720,64 +720,31 @@ function get14Days(username){
 function periodStats(username, period){
   const log = APP.actLog[username]||{};
   const d   = APP.liveData[username];
-  let totalGames=0, totalPuzzles=0, totalWins=0, activeDays=0;
+  let totalGames=0, totalPuzzles=0, activeDays=0;
 
   for(const [date,entry] of Object.entries(log)){
     if(period==='week' && daysBetween(todayStr(),date)>6) continue;
     if(daysBetween(todayStr(),date)>13) continue;
-
     let g = entry.games||0;
     const p = entry.puzzles||0;
-    let ew = entry.wins||0;
-
     if(date===todayStr() && d && !d.error){
-      // Bugün: liveData kesin kaynak
       const todayTotal=(d.wins||0)+(d.losses||0)+(d.draws||0);
       if(todayTotal>g) g=todayTotal;
-      ew = d.wins||0;
     }
-
     totalGames   += g;
     totalPuzzles += p;
-    totalWins    += ew;
     if(g>0) activeDays++;
   }
 
-  // Bugün actLog'da kayıt yoksa liveData'dan ekle
+  // Bugün actLog'da yoksa liveData'dan ekle
   if(!log[todayStr()] && d && !d.error){
     const todayTotal=(d.wins||0)+(d.losses||0)+(d.draws||0);
-    if(todayTotal>0){
-      totalGames += todayTotal;
-      totalWins  += (d.wins||0);
-      activeDays++;
-    }
+    if(todayTotal>0){ totalGames+=todayTotal; activeDays++; }
     if((d.puzzlesSolved||0)>0) totalPuzzles+=(d.puzzlesSolved||0);
   }
 
-  // Kazanma oranı hesabı:
-  // totalWins ve totalGames ikisi de dönem toplamı ise oranı doğrudan hesapla
-  // Ama actLog'daki geçmiş günlerin çoğunda wins=0 (kayıt yok)
-  // Bu durumda bugünkü wins oranını haftalık totalGames'e uygula
-  let winRate = 0;
-  if(totalGames > 0){
-    if(totalWins > 0){
-      // wins verisi var — doğrudan hesapla
-      winRate = Math.round((totalWins / totalGames) * 100);
-    } else if(d && !d.error){
-      // wins verisi yok ama bugünkü oran hesaplanabilir
-      const todayTot = (d.wins||0)+(d.losses||0)+(d.draws||0);
-      if(todayTot > 0){
-        // Bugünkü oranı haftalık totalGames'e uygula
-        const todayRate = (d.wins||0) / todayTot;
-        winRate = Math.round(todayRate * 100);
-        // Haftalık totalWins tahmini (gösterim için)
-        totalWins = Math.round(todayRate * totalGames);
-      }
-    }
-  }
-
   const streak = getStreak(username,'games');
-  return { totalGames, totalPuzzles, totalWins, winRate, activeDays, streak };
+  return { totalGames, totalPuzzles, activeDays, streak };
 }
 
 function calcScore(username, period='week'){
@@ -804,8 +771,7 @@ function scoreBreakdown(username){
   const d=APP.liveData[username]; if(!d||d.error) return '';
   const tot=(d.wins||0)+(d.losses||0)+(d.draws||0), puz=d.puzzlesSolved||0, streak=getStreak(username,'games');
   const parts=[];
-  if(d.wins>0) parts.push(`⚔${d.wins}K`);
-  if(tot-d.wins>0) parts.push(`+${tot-(d.wins||0)}O`);
+  if(tot>0) parts.push(`⚔${tot}`);
   if(puz>0) parts.push(`🧩${puz}`);
   if(streak>0) parts.push(`🔥${streak}g`);
   return parts.join(' ');
@@ -1204,17 +1170,17 @@ function renderChamps(){
       sub:  u=>periodLabel+' toplam'
     },
     {
-      cls:'cc-win', label:'🏆 En Yüksek Kazanma', medal:'📈',
+      cls:'cc-win', label:'📚 En Çok Antrenman', medal:'📚',
       user: (()=>{
-        // En az 1 maç yapanlar arasından en yüksek kazanma oranı
-        const active=students.filter(u=>stats[u].totalGames>0);
+        // Maç + bulmaca toplamı en yüksek
+        const active=students.filter(u=>stats[u].totalGames>0||stats[u].totalPuzzles>0);
         if(active.length===0) return students[0];
-        return active.reduce((b,u)=>stats[u].winRate>stats[b].winRate?u:b);
+        return active.reduce((b,u)=>(stats[u].totalGames+stats[u].totalPuzzles)>(stats[b].totalGames+stats[b].totalPuzzles)?u:b);
       })(),
-      val:  u=>stats[u].totalGames>0
-              ? '%'+stats[u].winRate+' kazanma ('+stats[u].totalGames+' maçta)'
-              : 'henüz maç yok',
-      sub:  u=>periodLabel+' kazanma oranı'
+      val:  u=>(stats[u].totalGames+stats[u].totalPuzzles)>0
+              ? (stats[u].totalGames+stats[u].totalPuzzles)+' toplam aktivite'
+              : 'henüz aktivite yok',
+      sub:  u=>periodLabel+' maç+bulmaca toplamı'
     },
     {
       cls:'cc-streak', label:'⚡ En Aktif Oyuncu', medal:'⚡',
@@ -1262,7 +1228,7 @@ function renderScoreTable(){
     // İstatistik etiketleri
     const tags=[];
     if(st.totalGames>0)   tags.push(`<span class="sc-tag sc-game">⚔ ${st.totalGames} maç</span>`);
-    if(st.totalWins>0)    tags.push(`<span class="sc-tag sc-win">✓ ${st.totalWins} galibiyet</span>`);
+
     if(st.totalPuzzles>0) tags.push(`<span class="sc-tag sc-puz">🧩 ${st.totalPuzzles} bulmaca</span>`);
     if(st.streak>1)       tags.push(`<span class="sc-tag sc-str">🔥 ${st.streak}g seri</span>`);
     if(st.activeDays>0)   tags.push(`<span class="sc-tag sc-day">📅 ${st.activeDays} aktif gün</span>`);
@@ -1368,11 +1334,11 @@ function buildCard(username,d,rank){
     <div class="stats">
       <div class="s-title">${APP.scorePeriod==='week'?'Bu Haftalık':'14 Günlük'} Maçlar</div>
       <div class="wld-row">
-        <div class="wld-box wb"><div class="wld-lbl">Kazanma</div><div class="wld-val">${pSt.totalWins||0}</div></div>
-        <div class="wld-box lb2"><div class="wld-lbl">Toplam</div><div class="wld-val">${pSt.totalGames||0}</div></div>
-        <div class="wld-box db"><div class="wld-lbl">%Galibiyet</div><div class="wld-val">${pSt.winRate||0}</div></div>
+        <div class="wld-box wb"><div class="wld-lbl">Maç</div><div class="wld-val">${pSt.totalGames||0}</div></div>
+        <div class="wld-box lb2"><div class="wld-lbl">Bulmaca</div><div class="wld-val">${pSt.totalPuzzles||0}</div></div>
+        <div class="wld-box db"><div class="wld-lbl">Aktif Gün</div><div class="wld-val">${pSt.activeDays||0}</div></div>
       </div>
-      ${pSt.totalGames>0?`<div class="wr-wrap"><div class="wr-labels"><span style="color:var(--win)">%${pSt.winRate} Kazanma</span><span style="color:var(--text-muted)">${pSt.totalGames} maç</span></div><div class="wr-bar"><div class="bw" style="width:${pSt.winRate}%"></div><div class="bl" style="width:${100-pSt.winRate}%"></div></div></div>`:''}
+      
       <div class="puz-row">
         <div class="puz-left"><span style="font-size:14px">🧩</span><div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">Bulmacalar</div><div class="puz-lbl">bugün çözülen</div></div></div>
         <div class="puz-cnt">${d.puzzlesSolved??0}</div>
@@ -1769,7 +1735,6 @@ async function renderChesscards(){
     const maxP = Math.max(...students.map(s=>periodStats(s,period).totalPuzzles),1);
     const gBar = Math.round((st.totalGames/maxG)*100);
     const pBar = Math.round((st.totalPuzzles/maxP)*100);
-    const wBar = st.winRate||0;
     const maxAct = Math.max(...students.map(s=>periodStats(s,period).activeDays),1);
     const aBar = Math.round((st.activeDays/maxAct)*100);
 
@@ -1805,11 +1770,7 @@ async function renderChesscards(){
             <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${gBar}%;background:${barColor}"></div></div>
             <div class="fc-stat-val">${st.totalGames}</div>
           </div>
-          <div class="fc-stat">
-            <div class="fc-stat-label">GAL%</div>
-            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${wBar}%;background:${barColor}"></div></div>
-            <div class="fc-stat-val">%${wBar}</div>
-          </div>
+
           <div class="fc-stat">
             <div class="fc-stat-label">BUL</div>
             <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${pBar}%;background:${barColor}"></div></div>
