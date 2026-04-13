@@ -318,7 +318,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .fc-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}
 .fc-lichess-logo{display:flex;align-items:center}
 .fc-lichess-logo img{width:16px;height:16px;filter:brightness(0) invert(1);opacity:.6}
-.fc-screen-only .fc-dl-btn{background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);font-size:10px;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;transition:all .15s;backdrop-filter:blur(4px)}
+.fc-screen-only .fc-dl-btn{background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);font-size:10px;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;transition:all .15s;backdrop-filter:blur(4px);min-width:52px;min-height:22px}
 .fc-screen-only .fc-dl-btn:hover{background:rgba(255,255,255,.25);color:#fff}
 .fc-photo-input{display:none}
 
@@ -728,21 +728,13 @@ function periodStats(username, period){
 
     let g = entry.games||0;
     const p = entry.puzzles||0;
-    let ew = 0;
+    let ew = entry.wins||0;
 
     if(date===todayStr() && d && !d.error){
-      // Bugün: liveData en güncel kaynak
+      // Bugün: liveData kesin kaynak
       const todayTotal=(d.wins||0)+(d.losses||0)+(d.draws||0);
       if(todayTotal>g) g=todayTotal;
       ew = d.wins||0;
-    } else {
-      // Geçmiş günler: actLog.wins varsa kullan
-      if(entry.wins>0){
-        ew = entry.wins;
-      }
-      // wins yoksa: actLog'da kayıtlı wins alanı 0 veya eksik
-      // Bu durumda oranı hesaplayamayız, wins=0 bırak
-      // (winRate hesabı yapılamaz ama totalGames doğru)
     }
 
     totalGames   += g;
@@ -762,17 +754,25 @@ function periodStats(username, period){
     if((d.puzzlesSolved||0)>0) totalPuzzles+=(d.puzzlesSolved||0);
   }
 
-  // Kazanma oranı: haftalık toplamdan
-  // Eğer geçmiş günler için wins yoksa (eski actLog),
-  // bugünkü liveData oranını kullan
+  // Kazanma oranı hesabı:
+  // totalWins ve totalGames ikisi de dönem toplamı ise oranı doğrudan hesapla
+  // Ama actLog'daki geçmiş günlerin çoğunda wins=0 (kayıt yok)
+  // Bu durumda bugünkü wins oranını haftalık totalGames'e uygula
   let winRate = 0;
-  if(totalGames>0){
-    if(totalWins>0){
-      winRate = Math.round((totalWins/totalGames)*100);
+  if(totalGames > 0){
+    if(totalWins > 0){
+      // wins verisi var — doğrudan hesapla
+      winRate = Math.round((totalWins / totalGames) * 100);
     } else if(d && !d.error){
-      // wins verisi eksik — bugünkü oranı göster (fallback)
-      const todayTot=(d.wins||0)+(d.losses||0)+(d.draws||0);
-      if(todayTot>0) winRate=Math.round(((d.wins||0)/todayTot)*100);
+      // wins verisi yok ama bugünkü oran hesaplanabilir
+      const todayTot = (d.wins||0)+(d.losses||0)+(d.draws||0);
+      if(todayTot > 0){
+        // Bugünkü oranı haftalık totalGames'e uygula
+        const todayRate = (d.wins||0) / todayTot;
+        winRate = Math.round(todayRate * 100);
+        // Haftalık totalWins tahmini (gösterim için)
+        totalWins = Math.round(todayRate * totalGames);
+      }
     }
   }
 
@@ -1863,14 +1863,33 @@ window.downloadCard = async function(username){
     if(!window.html2canvas){
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     }
-    // İndirirken screen-only gizle, print versiyonu göster
+    // Kart boyutunu kaydet
+    const cardRect = card.getBoundingClientRect();
+    const cardW = card.offsetWidth;
+    const cardH = card.offsetHeight;
+
+    // PNG butonu gizle ama boyutu koru (visibility:hidden — yer tutar)
     const screenOnly = card.querySelectorAll('.fc-screen-only');
-    screenOnly.forEach(el=>el.style.display='none');
+    screenOnly.forEach(el=>{ el.style.visibility='hidden'; });
+
+    // Kart boyutunu explicit olarak sabitle
+    card.style.width  = cardW + 'px';
+    card.style.height = cardH + 'px';
+
     const canvas = await html2canvas(card, {
-      backgroundColor:null, scale:3, useCORS:true,
-      logging:false, allowTaint:true
+      backgroundColor:null,
+      scale:3,
+      useCORS:true,
+      logging:false,
+      allowTaint:true,
+      width:  cardW,
+      height: cardH,
     });
-    screenOnly.forEach(el=>el.style.display='');
+
+    // Geri al
+    card.style.width  = '';
+    card.style.height = '';
+    screenOnly.forEach(el=>{ el.style.visibility=''; });
     const link = document.createElement('a');
     link.download = `chesscard-${username}.png`;
     link.href = canvas.toDataURL('image/png');
