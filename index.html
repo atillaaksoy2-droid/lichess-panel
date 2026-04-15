@@ -297,8 +297,8 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .fc-photo-row{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 auto 8px}
 .fc-logo-side{width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fc-logo-side img{width:26px;height:26px;border-radius:50%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
-.fc-photo-wrap{width:100px;height:110px;overflow:hidden;border-radius:8px;background:rgba(0,0,0,.2);position:relative;cursor:pointer}
-.fc-photo{width:100%;height:100%;object-fit:cover;object-position:top}
+.fc-photo-wrap{width:100px;height:110px;overflow:hidden;border-radius:8px;background:rgba(0,0,0,.2);position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.fc-photo{width:100%;height:100%;background-size:cover;background-position:top;background-repeat:no-repeat}
 .fc-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:42px;font-family:'Playfair Display',serif;font-weight:700;color:rgba(255,255,255,.3)}
 .fc-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:20px}
 .fc-photo-wrap:hover .fc-photo-overlay{opacity:1}
@@ -395,7 +395,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 
   <div class="add-row edit-only">
     <label>Öğrenci Ekle →</label>
-    <input type="text" id="addInput" placeholder="Lichess kullanıcı adı..." onkeydown="if(event.key==='Enter') addStudent()">
+    <input type="text" id="addInput" placeholder="lichess_adi (Gerçek İsim)..." onkeydown="if(event.key==='Enter') addStudent()">
     <button class="add-btn" onclick="addStudent()">+ Ekle</button>
     <div class="err" id="addErr"></div>
   </div>
@@ -666,9 +666,25 @@ const APP = {
   refreshId: 0
 };
 
-function getStudents(){ return APP.studentLists[APP.activeGid] || []; }
+function getStudents(){ 
+  const list = APP.studentLists[APP.activeGid] || [];
+  return list.map(s => typeof s === 'string' ? s : s.u);
+}
+function getStudentDisplayName(u){
+  const list = APP.studentLists[APP.activeGid] || [];
+  const s = list.find(x => (typeof x === 'string' ? x : x.u) === u);
+  if(s && typeof s === 'object' && s.n) return s.n;
+  const d = APP.liveData[u];
+  return d ? (d.displayName || u) : u;
+}
 function setStudents(arr){
-  APP.studentLists[APP.activeGid] = arr;
+  // Mevcut isimleri koru
+  const currentList = APP.studentLists[APP.activeGid] || [];
+  const newList = arr.map(u => {
+    const existing = currentList.find(x => (typeof x === 'string' ? x : x.u) === u);
+    return existing || u;
+  });
+  APP.studentLists[APP.activeGid] = newList;
   fbSaveStudents(APP.activeGid);
 }
 
@@ -855,8 +871,19 @@ function renderHeader(){ const g=APP.groups.find(x=>x.id===APP.activeGid); docum
 window.addStudent=async()=>{
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
-  const user=inp.value.trim().toLowerCase(); errEl.textContent='';
-  if(!user) return;
+  const val=inp.value.trim(); errEl.textContent='';
+  if(!val) return;
+  
+  // Format: "user (Real Name)" veya sadece "user"
+  let user = val, realName = null;
+  const match = val.match(/^(.+?)\s*\((.+?)\)$/);
+  if(match){
+    user = match[1].trim().toLowerCase();
+    realName = match[2].trim();
+  } else {
+    user = val.toLowerCase();
+  }
+  
   const students=getStudents();
   if(students.includes(user)){ errEl.textContent='⚠ Bu kullanıcı zaten listede.'; return; }
   inp.disabled=true;
@@ -864,9 +891,16 @@ window.addStudent=async()=>{
     const res=await fetchWT(`https://lichess.org/api/user/${user}`,{},8000);
     if(!res.ok){ errEl.textContent='✗ Kullanıcı bulunamadı.'; return; }
     const data=await res.json();
-    students.push(user); setStudents(students); inp.value='';
+    
+    // Listeye ekle (obje olarak)
+    const list = APP.studentLists[APP.activeGid] || [];
+    list.push(realName ? {u: user, n: realName} : user);
+    APP.studentLists[APP.activeGid] = list;
+    fbSaveStudents(APP.activeGid);
+    
+    inp.value='';
     renderGroupBar(); renderGrid();
-    loadOneStudent(user,0); showToast(`${data.username} eklendi ✓`);
+    loadOneStudent(user,0); showToast(`${realName || data.username} eklendi ✓`);
   }catch(e){ errEl.textContent=e.name==='AbortError'?'✗ Zaman aşımı.':'✗ Bağlantı hatası.'; }
   finally{ inp.disabled=false; inp.focus(); }
 };
@@ -882,8 +916,11 @@ window.retryStudent=async(username)=>{
 
 function removeStudent(username){
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
-  const updated=getStudents().filter(s=>s!==username);
-  setStudents(updated); delete APP.liveData[username];
+  const currentList = APP.studentLists[APP.activeGid] || [];
+  const updated = currentList.filter(x => (typeof x === 'string' ? x : x.u) !== username);
+  APP.studentLists[APP.activeGid] = updated;
+  fbSaveStudents(APP.activeGid);
+  delete APP.liveData[username];
   renderGroupBar(); renderGrid(); showToast(`${username} çıkarıldı`,true);
 }
 
@@ -1200,7 +1237,7 @@ function renderChamps(){
   document.getElementById('champStrip').innerHTML=champs.map(c=>`
     <div class="champ-card ${c.cls}">
       <div class="champ-label">${c.label}</div>
-      <div class="champ-name">${escHtml(APP.liveData[c.user]?.displayName||c.user)}</div>
+      <div class="champ-name">${escHtml(getStudentDisplayName(c.user))}</div>
       <div class="champ-val"><strong>${c.val(c.user)}</strong></div>
       <div class="champ-sub" style="font-size:9px;color:var(--text-muted);margin-top:2px">${c.sub(c.user)}</div>
       <div class="champ-medal">${c.medal}</div>
@@ -1236,7 +1273,7 @@ function renderScoreTable(){
     return `<div class="score-row ${rCls}">
       <div class="score-rank">${medal}</div>
       <div class="score-info">
-        <div class="score-name">${escHtml(d.displayName||u)}</div>
+        <div class="score-name">${escHtml(getStudentDisplayName(u))}</div>
         <div class="score-tags">${tags.join('')}</div>
         <div class="score-bar-bg" style="margin-top:4px"><div class="score-bar-fill" style="width:${pct}%"></div></div>
       </div>
@@ -1269,10 +1306,10 @@ function buildCard(username,d,rank){
           <div class="s-info">
             <div class="avatar">${escHtml(username[0].toUpperCase())}</div>
             <div>
-              <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(username)}</a>
-              <div class="s-sub" style="color:var(--loss)">⚠ Yüklenemedi
-                <button onclick="retryStudent('${escHtml(username)}')" style="margin-left:6px;background:rgba(224,90,90,.15);border:1px solid rgba(224,90,90,.3);color:var(--loss);border-radius:4px;padding:1px 8px;cursor:pointer;font-family:inherit;font-size:9px">↺ Tekrar Dene</button>
-              </div>
+              <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(getStudentDisplayName(username))}</a>
+            <div class="s-sub" style="color:var(--loss)">⚠ Yüklenemedi
+              <button onclick="retryStudent('${escHtml(username)}')" style="margin-left:6px;background:rgba(224,90,90,.15);border:1px solid rgba(224,90,90,.3);color:var(--loss);border-radius:4px;padding:1px 8px;cursor:pointer;font-family:inherit;font-size:9px">↺ Tekrar Dene</button>
+            </div>
             </div>
           </div>
           <div class="card-actions">
@@ -1316,7 +1353,7 @@ function buildCard(username,d,rank){
         <div class="s-info">
           <div class="avatar">${escHtml(username[0].toUpperCase())}${crown?`<span class="rank-crown">${crown}</span>`:''}</div>
           <div>
-            <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(d.displayName||username)}</a>
+            <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(getStudentDisplayName(username))}</a>
             <div class="s-sub">${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
               <div class="day-tag">🎯 ${APP.scorePeriod==='week'?'Haftalık':'14 Günlük'}: ${pSt.totalGames} maç</div><div class="score-tag">⭐ ${score} puan</div>
             </div>
@@ -1739,7 +1776,7 @@ async function renderChesscards(){
     const aBar = Math.round((st.activeDays/maxAct)*100);
 
     const photoHtml = photos[u]
-      ? `<img class="fc-photo" src="${photos[u]}" alt="">`
+      ? `<div class="fc-photo" style="background-image:url('${photos[u]}')"></div>`
       : `<div class="fc-photo-placeholder">${escHtml(u[0].toUpperCase())}</div>`;
 
     const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
@@ -1763,7 +1800,7 @@ async function renderChesscards(){
           </div>
           <div class="fc-logo-side">${logoHtml}</div>
         </div>
-        <div class="fc-name">${escHtml(d.displayName||u)}</div>
+        <div class="fc-name">${escHtml(getStudentDisplayName(u))}</div>
         <div class="fc-stats">
           <div class="fc-stat">
             <div class="fc-stat-label">MAÇ</div>
@@ -1839,10 +1876,11 @@ window.downloadCard = async function(username){
 
     const canvas = await html2canvas(card, {
       backgroundColor:null,
-      scale:3,
+      scale:4, // Daha yüksek kalite için 4x
       useCORS:true,
       logging:false,
-      allowTaint:true,
+      allowTaint:false, // Taint yerine CORS tercih et
+      imageTimeout: 0, // Resimlerin yüklenmesini bekle
       width:  cardW,
       height: cardH,
     });
