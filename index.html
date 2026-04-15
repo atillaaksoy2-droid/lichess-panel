@@ -505,6 +505,8 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadString, getDownloadURL }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
 const firebaseConfig = {
@@ -517,6 +519,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+const storage = getStorage(app);
 
 // ── SYNC DURUM GÖSTERGESI ────────────────────────────
 function setSyncStatus(state, msg){
@@ -1715,23 +1718,50 @@ function openFcDb(){
 }
 
 async function fcGetPhoto(username){
+  // Önce yerel önbelleğe (IndexedDB) bak
   if(!fcDb) await openFcDb();
-  return new Promise((res)=>{
+  let localData = await new Promise((res)=>{
     const tx  = fcDb.transaction('photos','readonly');
     const req = tx.objectStore('photos').get(username);
     req.onsuccess = e => res(e.target.result?.dataUrl||null);
     req.onerror   = ()=> res(null);
   });
+  
+  if(localData) return localData;
+
+  // Yerelde yoksa Firebase Storage'dan çek
+  try {
+    const photoRef = ref(storage, `photos/${username}`);
+    const url = await getDownloadURL(photoRef);
+    // Bulunan resmi yerel önbelleğe kaydet
+    if(url) await fcSetPhoto(username, url, false); 
+    return url;
+  } catch(e) {
+    // Resim yoksa veya hata oluşursa null dön
+    return null;
+  }
 }
 
-async function fcSetPhoto(username, dataUrl){
+async function fcSetPhoto(username, dataUrl, uploadToCloud = true){
   if(!fcDb) await openFcDb();
-  return new Promise((res,rej)=>{
+  // Yerel önbelleğe kaydet
+  await new Promise((res,rej)=>{
     const tx  = fcDb.transaction('photos','readwrite');
     tx.objectStore('photos').put({username, dataUrl});
     tx.oncomplete = ()=> res();
     tx.onerror    = e => rej(e);
   });
+
+  // Buluta yükle (yeni bir fotoğraf yüklendiğinde)
+  if(uploadToCloud && dataUrl.startsWith('data:image')) {
+    try {
+      const photoRef = ref(storage, `photos/${username}`);
+      await uploadString(photoRef, dataUrl, 'data_url');
+      console.log(`[${username}] fotoğrafı buluta yüklendi.`);
+    } catch(e) {
+      console.error('Bulut yükleme hatası:', e);
+    }
+  }
 }
 
 // Görünüm geçişi
