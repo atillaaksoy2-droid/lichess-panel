@@ -177,10 +177,10 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .pip.today{outline:2px solid rgba(255,255,255,.28);outline-offset:1px}
 .heat-lbl{font-size:9px;color:var(--text-muted);margin-left:5px}
 .ratings-row{display:flex;border-bottom:1px solid var(--border)}
-.r-item{flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border)}
-.r-item:last-child{border-right:none}
+.r-item{flex:1;padding:6px 2px;text-align:center;border-right:1px solid var(--border)}
+.r-item.ukd-item{background:rgba(200,168,75,.05);border-left:1px solid var(--border)}
 .r-type{font-size:8px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:1px}
-.r-val{font-size:13px;font-weight:600;color:var(--text)}
+.r-val{font-size:12px;font-weight:600;color:var(--text)}
 .r-chg{font-size:9px;margin-top:1px}
 .r-chg.up{color:var(--win)}.r-chg.dn{color:var(--loss)}.r-chg.eq{color:var(--text-muted)}
 .stats{padding:10px 13px}
@@ -391,13 +391,14 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
       <button class="icon-btn" id="btnChangePin" onclick="PIN.change()" title="PIN degistir" style="display:none">🔑 PIN</button>
       <button class="icon-btn" id="btnAddUser" onclick="PIN.addUser()" title="Yeni hoca ekle" style="display:none">👤+ Hoca</button>
       <button class="icon-btn" id="btnClubLogo" onclick="setClubLogo()" title="Kulüp logosu" style="display:none">🏅 Logo</button>
+      <button class="icon-btn" id="btnBulkUkd" onclick="openBulkUkdModal()" title="UKD Toplu Güncelle" style="display:none">📊 UKD Güncelle</button>
       <button class="icon-btn" id="btnLogout" onclick="PIN.logout()" style="display:none;border-color:rgba(224,90,90,.3);color:var(--loss)">⏏ Çıkış</button>
     </div>
   </header>
 
   <div class="add-row edit-only">
     <label>Öğrenci Ekle →</label>
-    <input type="text" id="addInput" placeholder="lichess_adi (Gerçek İsim)..." onkeydown="if(event.key==='Enter') addStudent()">
+    <input type="text" id="addInput" placeholder="lichess_adi (İsim) (UKD) (Lisans)..." onkeydown="if(event.key==='Enter') addStudent()">
     <button class="add-btn" onclick="addStudent()">+ Ekle</button>
     <div class="err" id="addErr"></div>
   </div>
@@ -497,6 +498,17 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal('modalRename')">İptal</button>
       <button class="modal-ok" onclick="renameGroup()">Kaydet</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="modalBulkUkd" style="display:none" onclick="if(event.target===this)closeModal('modalBulkUkd')">
+  <div class="modal" style="max-width: 500px;">
+    <h3>UKD Toplu Güncelleme</h3>
+    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">TSF listesindeki isim ve puanları buraya yapıştırın. Sistem isimleri eşleştirip puanları güncelleyecektir.</p>
+    <textarea id="bulkUkdInput" style="width:100%; height: 200px; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:8px 11px; border-radius:7px; font-family:inherit; font-size:12px; outline:none; margin-bottom:11px;" placeholder="Örn: Ahmet Yılmaz 1450..."></textarea>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('modalBulkUkd')">İptal</button>
+      <button class="modal-ok" onclick="processBulkUkd()">Güncelle</button>
     </div>
   </div>
 </div>
@@ -681,6 +693,16 @@ function getStudentDisplayName(u){
   if(s && typeof s === 'object' && s.n) return s.n;
   const d = APP.liveData[u];
   return d ? (d.displayName || u) : u;
+}
+function getStudentUkd(u){
+  const list = APP.studentLists[APP.activeGid] || [];
+  const s = list.find(x => (typeof x === 'string' ? x : x.u) === u);
+  return (s && typeof s === 'object') ? (s.ukd || '—') : '—';
+}
+function getStudentLic(u){
+  const list = APP.studentLists[APP.activeGid] || [];
+  const s = list.find(x => (typeof x === 'string' ? x : x.u) === u);
+  return (s && typeof s === 'object') ? (s.lic || '') : '';
 }
 function setStudents(arr){
   // Mevcut isimleri koru
@@ -879,12 +901,16 @@ window.addStudent=async()=>{
   const val=inp.value.trim(); errEl.textContent='';
   if(!val) return;
   
-  // Format: "user (Real Name)" veya sadece "user"
-  let user = val, realName = null;
-  const match = val.match(/^(.+?)\s*\((.+?)\)$/);
-  if(match){
-    user = match[1].trim().toLowerCase();
-    realName = match[2].trim();
+  // Format: "user (Real Name) (UKD) (Lic)" veya sadece "user"
+  let user = val, realName = null, ukd = null, lic = null;
+  
+  // Parantez içindeki verileri yakala: user (İsim) (UKD) (Lisans)
+  const matches = [...val.matchAll(/\((.+?)\)/g)];
+  if(matches.length > 0){
+    user = val.split('(')[0].trim().toLowerCase();
+    realName = matches[0] ? matches[0][1].trim() : null;
+    ukd = matches[1] ? matches[1][1].trim() : null;
+    lic = matches[2] ? matches[2][1].trim() : null;
   } else {
     user = val.toLowerCase();
   }
@@ -899,7 +925,12 @@ window.addStudent=async()=>{
     
     // Listeye ekle (obje olarak)
     const list = APP.studentLists[APP.activeGid] || [];
-    list.push(realName ? {u: user, n: realName} : user);
+    const studentObj = { u: user };
+    if(realName) studentObj.n = realName;
+    if(ukd) studentObj.ukd = ukd;
+    if(lic) studentObj.lic = lic;
+    
+    list.push(studentObj);
     APP.studentLists[APP.activeGid] = list;
     fbSaveStudents(APP.activeGid);
     
@@ -1337,6 +1368,8 @@ function buildCard(username,d,rank){
     const dif=r.prog||0,cc=dif>0?'up':dif<0?'dn':'eq',ct=dif>0?`▲${dif}`:dif<0?`▼${Math.abs(dif)}`:'—';
     return `<div class="r-item"><div class="r-type">${k==='bullet'?'BLT':k==='blitz'?'BLZ':k==='rapid'?'RPD':'CLS'}</div><div class="r-val">${r.int}</div><div class="r-chg ${cc}">${ct}</div></div>`;
   }).join('');
+  const ukd = getStudentUkd(username);
+  const ukdHTML = `<div class="r-item ukd-item" title="Ulusal Kuvvet Derecesi"><div class="r-type">UKD</div><div class="r-val">${ukd}</div><div class="r-chg eq">—</div></div>`;
   const gHTML=(d.recentGames||[]).slice(0,4).map(g=>{
     const r=g.result==='win'?'W':g.result==='loss'?'L':'D';
     return `<div class="g-row"><div class="g-res ${r}">${r}</div><div class="g-opp" title="${escHtml(g.opponent||'?')}">${escHtml(g.opponent||'?')}</div><div class="g-spd">${g.speed||''}</div><div class="g-t">${g.time||''}</div></div>`;
@@ -1372,7 +1405,7 @@ function buildCard(username,d,rank){
       <div class="card-badges">${bdgHtml}</div>
       <div class="heat-row">${pipHtml}<span class="heat-lbl">${heatLbl}</span></div>
     </div>
-    ${rHTML?`<div class="ratings-row">${rHTML}</div>`:''}
+    <div class="ratings-row">${rHTML}${ukdHTML}</div>
     <div class="stats">
       <div class="s-title">${APP.scorePeriod==='week'?'Bu Haftalık':'14 Günlük'} Maçlar</div>
       <div class="wld-row">
@@ -1596,7 +1629,7 @@ window.PIN = (function(){
         try{
           const uid='u'+Date.now();
           const nu={}; nu[uid]={name:'Yönetici',pinHash:hash(buf)};
-          await setDoc(doc(db,'panel','users'),nu);
+          await setDoc(doc(db, 'panel', 'users'), nu);
           APP.users=nu; APP.currentUser=uid; matchUid=uid;
         }catch(e){ APP.currentUser=null; }
       } else {
@@ -1613,6 +1646,7 @@ window.PIN = (function(){
       const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='flex';
       const bau=document.getElementById('btnAddUser');  if(bau) bau.style.display='flex';
       const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='flex';
+      const buk=document.getElementById('btnBulkUkd');  if(buk) buk.style.display='flex';
       const bl=document.getElementById('btnLogout');    if(bl)  bl.style.display='flex';
       renderGroupBar(); renderHeader(); buildCritPanel(); renderGrid();
       if(getStudents().length>0) refreshAll();
@@ -1663,6 +1697,7 @@ window.PIN = (function(){
     const bl=document.getElementById('btnLogout');   if(bl) bl.style.display='none';
     const bau=document.getElementById('btnAddUser'); if(bau) bau.style.display='none';
     const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='none';
+    const buk=document.getElementById('btnBulkUkd'); if(buk) buk.style.display='none';
     // PIN ekranını tekrar göster
     buf=''; updateDots(); setErr('');
     document.getElementById('pinOverlay').style.display='flex';
@@ -1812,6 +1847,7 @@ async function renderChesscards(){
       : `<div class="fc-photo-placeholder">${escHtml(u[0].toUpperCase())}</div>`;
 
     const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
+    const ukd = getStudentUkd(u);
 
     const card = document.createElement('div');
     card.className = `chesscard ${fcCls}`;
@@ -1822,7 +1858,7 @@ async function renderChesscards(){
       <div class="chesscard-inner">
         <div class="fc-top">
           <div class="fc-score">${pts}</div>
-          <div class="fc-rank-badge">#${rank}</div>
+          <div class="fc-rank-badge">#${rank} <span style="margin-left:5px;opacity:0.8">UKD: ${ukd}</span></div>
         </div>
         <div class="fc-photo-row">
           <div class="fc-logo-side">${logoHtml}</div>
@@ -1960,6 +1996,57 @@ function loadScript(src){
     document.head.appendChild(s);
   });
 }
+
+window.openBulkUkdModal = () => {
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  document.getElementById('bulkUkdInput').value = '';
+  document.getElementById('modalBulkUkd').style.display = 'flex';
+  setTimeout(() => document.getElementById('bulkUkdInput').focus(), 50);
+};
+
+window.processBulkUkd = async () => {
+  const input = document.getElementById('bulkUkdInput').value;
+  if(!input.trim()) return;
+  
+  const currentList = APP.studentLists[APP.activeGid] || [];
+  let updateCount = 0;
+  
+  // TSF listeleri genellikle "Ad Soyad UKD" veya tablo formatında olur.
+  // İsimleri eşleştirmek için öğrencilerin gerçek isimlerini (student.n) kullanacağız.
+  const lines = input.split('\n');
+  
+  const newList = currentList.map(student => {
+    // Sadece obje tipindeki (isim içeren) öğrencileri güncelle
+    if(typeof student !== 'object' || !student.n) return student;
+    
+    const realName = student.n.toUpperCase().trim();
+    if(!realName) return student;
+    
+    for(const line of lines) {
+      const upperLine = line.toUpperCase();
+      // Satırda öğrencinin ismi geçiyor mu?
+      if(upperLine.includes(realName)) {
+        // İsim geçtiği satırda 4 haneli bir sayı (UKD puanı) ara
+        // Genellikle 1000-2800 arası olur.
+        const scoreMatch = line.match(/\b(1\d{3}|2\d{3})\b/); 
+        if(scoreMatch) {
+          student.ukd = scoreMatch[0];
+          updateCount++;
+          break;
+        }
+      }
+    }
+    return student;
+  });
+  
+  APP.studentLists[APP.activeGid] = newList;
+  await fbSaveStudents(APP.activeGid);
+  
+  closeModal('modalBulkUkd');
+  renderGrid();
+  renderChesscards();
+  showToast(`${updateCount} öğrencinin UKD puanı güncellendi ✓`);
+};
 
 // IndexedDB'yi başlat
 openFcDb().catch(e=>console.warn('IndexedDB açılamadı:',e));
