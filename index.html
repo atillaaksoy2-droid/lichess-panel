@@ -2011,22 +2011,24 @@ window.processBulkUkd = async () => {
   const currentList = APP.studentLists[APP.activeGid] || [];
   let updateCount = 0;
   
-  // TSF listeleri genellikle "Ad Soyad UKD" veya tablo formatında olur.
-  // İsimleri eşleştirmek için öğrencilerin gerçek isimlerini (student.n) kullanacağız.
+  // TSF listeleri genellikle "Ad Soyad UKD" veya tablo formatında (tab/boşluk ayrılmış) olur.
   const lines = input.split('\n');
   
   const newList = currentList.map(student => {
-    // Sadece obje tipindeki (isim içeren) öğrencileri güncelle
     if(typeof student !== 'object' || !student.n) return student;
     
-    const realName = student.n.toUpperCase().trim();
-    if(!realName) return student;
+    // Öğrencinin adını parçalara ayır (örn: "Ahmet Yılmaz" -> ["AHMET", "YILMAZ"])
+    const nameParts = student.n.toUpperCase().split(/\s+/).filter(p => p.length > 1);
+    if(nameParts.length === 0) return student;
     
     for(const line of lines) {
       const upperLine = line.toUpperCase();
-      // Satırda öğrencinin ismi geçiyor mu?
-      if(upperLine.includes(realName)) {
-        // İsim geçtiği satırda 4 haneli bir sayı (UKD puanı) ara
+      
+      // Satırda ismin TÜM parçaları geçiyor mu? (Ad ve Soyad ayrı sütunlarda olsa bile bulur)
+      const allPartsMatch = nameParts.every(part => upperLine.includes(part));
+      
+      if(allPartsMatch) {
+        // İsimlerin geçtiği satırda 4 haneli bir sayı (UKD puanı) ara
         // Genellikle 1000-2800 arası olur.
         const scoreMatch = line.match(/\b(1\d{3}|2\d{3})\b/); 
         if(scoreMatch) {
