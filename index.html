@@ -277,6 +277,8 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
   cursor:pointer;transition:transform .2s,box-shadow .2s;
   box-shadow:0 8px 24px rgba(0,0,0,.5);
   font-family:'IBM Plex Mono',monospace;
+  image-rendering: -webkit-optimize-contrast;
+  backface-visibility: hidden;
 }
 .chesscard:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 14px 36px rgba(0,0,0,.6)}
 
@@ -1851,7 +1853,7 @@ async function renderChesscards(){
         </div>
         <div class="fc-footer">
           <div class="fc-lichess-logo">
-            <img src="https://lichess1.org/assets/logo/lichess-favicon-32.png"
+            <img src="https://lichess1.org/assets/logo/lichess-favicon-256.png"
                  onerror="this.style.display='none'" alt="lichess">
           </div>
           <div class="fc-screen-only">
@@ -1891,33 +1893,44 @@ window.downloadCard = async function(username){
     if(!window.html2canvas){
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     }
-    // Kart boyutunu kaydet
-    const cardRect = card.getBoundingClientRect();
+    // Kart boyutunu ve stilini kaydet
+    const originalStyle = card.style.cssText;
     const cardW = card.offsetWidth;
     const cardH = card.offsetHeight;
 
-    // PNG butonu gizle ama boyutu koru (visibility:hidden — yer tutar)
+    // PNG butonu gizle
     const screenOnly = card.querySelectorAll('.fc-screen-only');
     screenOnly.forEach(el=>{ el.style.visibility='hidden'; });
 
-    // Kart boyutunu explicit olarak sabitle
+    // En yüksek kalite için kartı "temizle" (transformları kapat)
+    card.style.transform = 'none';
+    card.style.transition = 'none';
     card.style.width  = cardW + 'px';
     card.style.height = cardH + 'px';
 
     const canvas = await html2canvas(card, {
-      backgroundColor:null,
-      scale:4, // Daha yüksek kalite için 4x
-      useCORS:true,
-      logging:false,
-      allowTaint:false, // Taint yerine CORS tercih et
-      imageTimeout: 0, // Resimlerin yüklenmesini bekle
-      width:  cardW,
+      backgroundColor: null,
+      scale: 5, // Daha da yüksek kalite için 5x
+      useCORS: true,
+      logging: false,
+      allowTaint: false,
+      imageTimeout: 0,
+      width: cardW,
       height: cardH,
+      windowWidth: document.documentElement.clientWidth,
+      windowHeight: document.documentElement.clientHeight,
+      onclone: (clonedDoc) => {
+        // Klonlanmış döküman üzerinde ek iyileştirmeler (opsiyonel)
+        const clonedCard = clonedDoc.querySelector(`.chesscard[data-user="${CSS.escape(username)}"]`);
+        if(clonedCard) {
+          clonedCard.style.transform = 'none';
+          clonedCard.style.boxShadow = 'none'; // Gölgeler bazen bulanıklığa sebep olur
+        }
+      }
     });
 
-    // Geri al
-    card.style.width  = '';
-    card.style.height = '';
+    // Orijinal stilleri geri yükle
+    card.style.cssText = originalStyle;
     screenOnly.forEach(el=>{ el.style.visibility=''; });
     const link = document.createElement('a');
     link.download = `chesscard-${username}.png`;
