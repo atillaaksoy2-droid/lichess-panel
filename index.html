@@ -2014,35 +2014,36 @@ window.processBulkUkd = async () => {
   const lines = input.split('\n');
   
   const newList = currentList.map(student => {
-    // Öğrenciyi her zaman obje formatına getir (eski string kayıtları için)
     let sObj = typeof student === 'object' ? { ...student } : { u: student };
     
-    // Eşleştirme için isim belirle: Önce gerçek isim (n), yoksa Lichess görünen adı
     let nameToMatch = sObj.n;
     if(!nameToMatch && APP.liveData[sObj.u] && !APP.liveData[sObj.u].error) {
       nameToMatch = APP.liveData[sObj.u].displayName;
     }
     
-    // Eğer hala isim yoksa eşleştirme yapamayız
     if(!nameToMatch) return sObj;
     
-    // İsmi parçalara ayır (en az 2 karakterli parçaları al)
-    const nameParts = nameToMatch.toUpperCase().split(/[\s,.-]+/).filter(p => p.length >= 2);
+    // Türkçe karakter uyumlu büyük harfe çevirme ve parçalama
+    const nameParts = nameToMatch.toLocaleUpperCase('tr-TR').split(/[\s,.-]+/).filter(p => p.length >= 2);
     if(nameParts.length === 0) return sObj;
     
     for(const line of lines) {
-      const upperLine = line.toUpperCase();
+      // Satırı da Türkçe karakter uyumlu büyük harfe çevir
+      const upperLine = line.toLocaleUpperCase('tr-TR');
       
       // Satırda ismin TÜM parçaları geçiyor mu?
       const allPartsMatch = nameParts.every(part => upperLine.includes(part));
       
       if(allPartsMatch) {
-        // İsimlerin geçtiği satırda UKD puanı ara (3 veya 4 haneli sayı)
-        // Genellikle TSF listesinde UKD 1000-2800 arasıdır, bazen daha düşüktür.
-        // Satırın sonundaki veya ismin yanındaki sayıyı bulmaya çalışırız.
-        const scoreMatch = line.match(/\b(1\d{3}|2\d{3}|[1-9]\d{2})\b/); 
-        if(scoreMatch) {
-          sObj.ukd = scoreMatch[0];
+        // İsimlerin geçtiği satırda UKD puanı ara. 
+        // Genellikle satırın sonundaki 3-4 haneli sayıyı (100-2999) bulmaya çalışırız.
+        // Satırdaki tüm sayıları bul ve en sondakini veya en mantıklı olanı seç.
+        const matches = line.match(/\b(1\d{3}|2\d{3}|[1-9]\d{2})\b/g);
+        if(matches && matches.length > 0) {
+          // Satırda birden fazla sayı varsa (örn: yaş, doğum yılı, lisans no vb.)
+          // UKD genellikle ismin hemen sağında veya satır sonundadır.
+          // Burada en son eşleşen sayıyı UKD olarak kabul etmek genellikle daha doğrudur.
+          sObj.ukd = matches[matches.length - 1];
           updateCount++;
           break;
         }
