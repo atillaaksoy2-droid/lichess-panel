@@ -2013,6 +2013,18 @@ window.processBulkUkd = async () => {
   
   const lines = input.split('\n');
   
+  // Ekstra güçlü normalizasyon (Tüm Türkçe karakterleri İngilizce karşılığına çevirir)
+  const ultraNorm = (s) => {
+    if(!s) return '';
+    return s.toString().toUpperCase()
+      .replace(/İ/g, 'I').replace(/Ş/g, 'S').replace(/Ç/g, 'C')
+      .replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ö/g, 'O')
+      .replace(/I/g, 'I').replace(/ı/g, 'I')
+      .replace(/[^A-Z0-9\s]/g, ' ') // Harf ve rakam dışındakileri boşluk yap
+      .replace(/\s+/g, ' ') // Fazla boşlukları temizle
+      .trim();
+  };
+
   const newList = currentList.map(student => {
     let sObj = typeof student === 'object' ? { ...student } : { u: student };
     
@@ -2023,29 +2035,27 @@ window.processBulkUkd = async () => {
     
     if(!nameToMatch) return sObj;
     
-    // Türkçe karakter uyumlu büyük harfe çevirme ve parçalama
-    const nameParts = nameToMatch.toLocaleUpperCase('tr-TR').split(/[\s,.-]+/).filter(p => p.length >= 2);
-    if(nameParts.length === 0) return sObj;
+    // İsmi parçalara ayır ve ultra-normalize et
+    const normParts = ultraNorm(nameToMatch).split(' ').filter(p => p.length >= 2);
+    if(normParts.length === 0) return sObj;
     
     for(const line of lines) {
-      // Satırı da Türkçe karakter uyumlu büyük harfe çevir
-      const upperLine = line.toLocaleUpperCase('tr-TR');
+      const normLine = ultraNorm(line);
       
       // Satırda ismin TÜM parçaları geçiyor mu?
-      const allPartsMatch = nameParts.every(part => upperLine.includes(part));
+      const allPartsMatch = normParts.every(part => normLine.includes(part));
       
       if(allPartsMatch) {
-        // İsimlerin geçtiği satırda UKD puanı ara. 
-        // Genellikle satırın sonundaki 3-4 haneli sayıyı (100-2999) bulmaya çalışırız.
-        // Satırdaki tüm sayıları bul ve en sondakini veya en mantıklı olanı seç.
-        const matches = line.match(/\b(1\d{3}|2\d{3}|[1-9]\d{2})\b/g);
+        // Satırdaki tüm sayıları bul (UKD aralığı: 100-2999)
+        const matches = line.match(/\b(\d{3,4})\b/g);
         if(matches && matches.length > 0) {
-          // Satırda birden fazla sayı varsa (örn: yaş, doğum yılı, lisans no vb.)
-          // UKD genellikle ismin hemen sağında veya satır sonundadır.
-          // Burada en son eşleşen sayıyı UKD olarak kabul etmek genellikle daha doğrudur.
-          sObj.ukd = matches[matches.length - 1];
-          updateCount++;
-          break;
+          // Satırdaki en büyük sayıyı UKD kabul et (sıra no, yaş gibi değerlerden daha büyüktür)
+          const possibleScores = matches.map(Number).filter(n => n >= 100 && n <= 2999);
+          if(possibleScores.length > 0) {
+            sObj.ukd = Math.max(...possibleScores).toString();
+            updateCount++;
+            break;
+          }
         }
       }
     }
