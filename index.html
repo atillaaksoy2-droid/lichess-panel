@@ -624,6 +624,14 @@ function setSyncStatus(state, msg){
 async function fbLoad(){
   setSyncStatus('syncing','Yükleniyor…');
   try{
+    // APP.users yüklenmemişse son bir kez daha dene
+    if(!APP.users){
+      try {
+        const uSnap = await getDoc(doc(db,'panel','users'));
+        if(uSnap.exists()) APP.users = uSnap.data();
+      } catch(e) { console.warn('fbLoad users fetch error:', e); }
+    }
+
     // Eğer bir kullanıcı seçilmemişse (izleme modu), ilk kullanıcıyı varsayılan yap
     if(!APP.currentUser && APP.users) {
       const uids = Object.keys(APP.users);
@@ -633,13 +641,13 @@ async function fbLoad(){
     // currentUser varsa ona özel config yükle, yoksa genel 'config' yükle
     const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
     let cfgSnap = await getDoc(doc(db,'panel',cfgKey));
-    // Kullanıcıya özel config yoksa (yeni kullanıcı) genel config'e bakma, boş başla
+    
+    // Fallback: Kullanıcıya özel config yoksa ama kullanıcı varsa, varsayılan değerlerle devam et
     const cfg = cfgSnap.exists() ? cfgSnap.data() : null;
 
     const actSnap = await getDoc(doc(db,'panel','activity'));
     const act = actSnap.exists() ? actSnap.data() : {};
 
-    // Criteria'yı her zaman yükle — grup olup olmamasından bağımsız
     if(cfg && cfg.criteria){
       APP.crit = { ...APP.crit, ...cfg.criteria };
     }
@@ -650,25 +658,30 @@ async function fbLoad(){
         APP.activeGid = cfg.groups[0].id;
       }
     } else {
-      // Yeni kullanıcı — varsayılan grup
+      // Varsayılan grup ayarları
       const defaultGid = APP.currentUser ? 'g' + APP.currentUser : 'default';
       APP.groups = [{ id: defaultGid, name: 'A Grubu' }];
       APP.activeGid = defaultGid;
     }
 
-    // Öğrenci listelerini yükle — kullanıcıya özel prefix ile
+    // Öğrenci listelerini yükle
     const prefix = APP.currentUser ? APP.currentUser + '_' : '';
     await Promise.all(APP.groups.map(async g => {
       try{
-        // Önce kullanıcıya özel key dene
         const key = 'students_' + prefix + g.id;
         let snap = await getDoc(doc(db,'panel',key));
-        // Yoksa eski formata bak (prefix'siz)
+        
+        // Eğer prefix varsa ama bulunamadıysa prefix'siz hali (eski veri) dene
         if(!snap.exists() && prefix){
           snap = await getDoc(doc(db,'panel','students_' + g.id));
         }
-        APP.studentLists[g.id] = snap.exists() ? (snap.data().list || []) : [];
+        
+        // HALA bulunamadıysa ve view-only moddaysak (prefix yoksa), 
+        // herhangi bir hocanın bu g.id'ye sahip listesi var mı diye bakamayız (güvenlik/yapı gereği)
+        // Ancak APP.studentLists'i her durumda bir dizi olarak başlatmalıyız
+        APP.studentLists[g.id] = snap.exists() ? (snap.data().list || []) : (APP.studentLists[g.id] || []);
       } catch(e){
+        console.warn(`Grup ${g.id} yüklenemedi:`, e);
         APP.studentLists[g.id] = APP.studentLists[g.id] || [];
       }
     }));
@@ -725,7 +738,7 @@ function fbListen(){
           const s = await getDoc(doc(db,'panel','students_'+prefix+g.id));
           if(s.exists()) APP.studentLists[g.id]=s.data().list||[];
         }catch(e){ console.warn('fbListen grup yüklenemedi:',g.id); }
-      }).then(()=>{ 
+      })).then(()=>{ 
         renderGroupBar(); 
         renderGrid(); 
         if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
