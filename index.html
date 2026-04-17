@@ -27,13 +27,16 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* GRUP SEKMELERI */
-.group-bar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--border);padding-top:16px;overflow:visible}
+.group-bar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:15px;border-bottom:1px solid var(--border);padding-top:20px;overflow:visible}
+.group-level-section{display:flex;align-items:flex-end;gap:0;position:relative}
+.group-level-label{position:absolute;top:-16px;left:6px;font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);font-weight:700;opacity:0.8}
+.group-level-tabs{display:flex;align-items:flex-end;gap:0}
 .group-tab{display:flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
 .group-tab:hover{color:var(--text);border-color:var(--border);background:var(--surface)}
 .group-tab.active{color:var(--accent2);border-color:var(--border);background:var(--surface);border-bottom-color:var(--surface)}
 .tab-count{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 6px;color:var(--text-muted)}
 .group-tab.active .tab-count{background:rgba(200,168,75,.12);border-color:rgba(200,168,75,.25);color:var(--accent)}
-.new-group-btn{display:flex;align-items:center;gap:5px;padding:8px 14px;border:1px dashed var(--border);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
+.new-group-btn{display:flex;align-items:center;gap:5px;padding:8px 14px;border:1px dashed var(--border);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px;margin-bottom:0}
 .new-group-btn:hover{color:var(--accent);border-color:var(--accent)}
 
 /* HEADER */
@@ -389,6 +392,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
       <button class="icon-btn" id="btnClubLogo" onclick="setClubLogo()" title="Kulüp logosu" style="display:none">🏅 Logo</button>
       <button class="icon-btn" id="btnBulkUkd" onclick="openBulkUkdModal()" title="UKD Toplu Güncelle" style="display:none">📊 UKD Güncelle</button>
       <button class="icon-btn" id="btnStudentList" onclick="openStudentListModal()" title="Tüm Sporcu Listesini Al" style="display:none">📋 Liste Al</button>
+      <button class="icon-btn" id="btnAutoBest" onclick="autoCreateBestGroup()" title="Haftanın en iyileri grubunu otomatik oluştur" style="display:none">🏆 En İyiler</button>
       <button class="icon-btn" id="btnLogout" onclick="PIN.logout()" style="display:none;border-color:rgba(224,90,90,.3);color:var(--loss)">⏏ Çıkış</button>
     </div>
   </header>
@@ -481,6 +485,15 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     <h3>Yeni Grup Oluştur</h3>
     <label>Grup Adı</label>
     <input type="text" id="newGroupName" placeholder="Örn: A Grubu, İleri Seviye..." maxlength="30" onkeydown="if(event.key==='Enter')createGroup()">
+    <div style="margin-top:10px;">
+      <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Grup Seviyesi:</label>
+      <select id="newGroupLevel" style="width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:6px; outline:none;">
+        <option value="Genel" selected>Genel</option>
+        <option value="Başlangıç">Başlangıç</option>
+        <option value="Orta">Orta</option>
+        <option value="İleri">İleri</option>
+      </select>
+    </div>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal('modalNewGroup')">İptal</button>
       <button class="modal-ok" onclick="createGroup()">Oluştur</button>
@@ -489,9 +502,18 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 </div>
 <div class="modal-bg" id="modalRename" style="display:none" onclick="if(event.target===this)closeModal('modalRename')">
   <div class="modal">
-    <h3>Grubu Yeniden Adlandır</h3>
-    <label>Yeni Ad</label>
+    <h3>Grubu Düzenle</h3>
+    <label>Grup Adı</label>
     <input type="text" id="renameInput" placeholder="Grup adı..." maxlength="30" onkeydown="if(event.key==='Enter')renameGroup()">
+    <div style="margin-top:10px;">
+      <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">Grup Seviyesi:</label>
+      <select id="renameLevel" style="width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:6px; outline:none;">
+        <option value="Genel">Genel</option>
+        <option value="Başlangıç">Başlangıç</option>
+        <option value="Orta">Orta</option>
+        <option value="İleri">İleri</option>
+      </select>
+    </div>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal('modalRename')">İptal</button>
       <button class="modal-ok" onclick="renameGroup()">Kaydet</button>
@@ -856,10 +878,31 @@ function scoreBreakdown(username){
 // ── GRUP YÖNETİMİ ────────────────────────────────────
 function renderGroupBar(){
   const bar=document.getElementById('groupBar');
-  bar.innerHTML=APP.groups.map(g=>{
-    const n=(APP.studentLists[g.id]||[]).length;
-    return `<button class="group-tab ${g.id===APP.activeGid?'active':''}" onclick="switchGroup('${g.id}')">${escHtml(g.name)}<span class="tab-count">${n}</span></button>`;
-  }).join('')+`<button class="new-group-btn edit-only" onclick="openNewGroupModal()">＋ Yeni Grup</button>`;
+  // Seviyelere göre grupla
+  const levels = ['İleri', 'Orta', 'Başlangıç', 'Genel'];
+  const grouped = {};
+  APP.groups.forEach(g => {
+    const l = g.level || 'Genel';
+    if(!grouped[l]) grouped[l] = [];
+    grouped[l].push(g);
+  });
+
+  let html = '';
+  levels.forEach(lvl => {
+    const groupsInLvl = grouped[lvl];
+    if(groupsInLvl && groupsInLvl.length > 0) {
+      html += `<div class="group-level-section">
+        <div class="group-level-label">${lvl}</div>
+        <div class="group-level-tabs">`;
+      html += groupsInLvl.map(g => {
+        const n=(APP.studentLists[g.id]||[]).length;
+        return `<button class="group-tab ${g.id===APP.activeGid?'active':''}" onclick="switchGroup('${g.id}')">${escHtml(g.name)}<span class="tab-count">${n}</span></button>`;
+      }).join('');
+      html += `</div></div>`;
+    }
+  });
+
+  bar.innerHTML = html + `<button class="new-group-btn edit-only" onclick="openNewGroupModal()" style="margin-top:10px; width:100%">＋ Yeni Grup</button>`;
 }
 
 window.switchGroup = async function switchGroup(id){
@@ -893,25 +936,28 @@ window.openNewGroupModal=()=>{ document.getElementById('newGroupName').value='';
 window.createGroup=()=>{
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const name=document.getElementById('newGroupName').value.trim(); if(!name) return;
-  const g={id:'g'+Date.now(),name};
+  const level=document.getElementById('newGroupLevel').value;
+  const g={id:'g'+Date.now(),name,level};
   APP.groups.push(g); APP.activeGid=g.id;
   APP.studentLists[g.id]=[];
   fbSaveConfig(); fbSaveStudents(g.id);
   closeModal('modalNewGroup'); renderGroupBar(); renderHeader(); renderGrid();
-  showToast(`"${name}" grubu oluşturuldu ✓`);
+  showToast(`"${name}" (${level}) grubu oluşturuldu ✓`);
 };
 window.openRenameModal=()=>{
   const g=APP.groups.find(x=>x.id===APP.activeGid); if(!g) return;
   document.getElementById('renameInput').value=g.name;
+  document.getElementById('renameLevel').value=g.level || 'Genel';
   document.getElementById('modalRename').style.display='flex';
   setTimeout(()=>document.getElementById('renameInput').focus(),50);
 };
 window.renameGroup=()=>{
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const name=document.getElementById('renameInput').value.trim(); if(!name) return;
+  const level=document.getElementById('renameLevel').value;
   const g=APP.groups.find(x=>x.id===APP.activeGid); if(!g) return;
-  g.name=name; fbSaveConfig(); closeModal('modalRename'); renderGroupBar(); renderHeader();
-  showToast(`Grup "${name}" olarak adlandırıldı ✓`);
+  g.name=name; g.level=level; fbSaveConfig(); closeModal('modalRename'); renderGroupBar(); renderHeader();
+  showToast(`Grup güncellendi ✓`);
 };
 window.confirmDeleteGroup=()=>{
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
@@ -925,7 +971,13 @@ window.confirmDeleteGroup=()=>{
   showToast('Grup silindi',true);
 };
 window.closeModal=id=>document.getElementById(id).style.display='none';
-function renderHeader(){ const g=APP.groups.find(x=>x.id===APP.activeGid); document.getElementById('groupNameDisplay').textContent=g?g.name:'—'; document.title=(g?g.name+' — ':'')+'Lichess Koç Paneli'; }
+function renderHeader(){
+  const g=APP.groups.find(x=>x.id===APP.activeGid);
+  const name = g ? g.name : '—';
+  const level = (g && g.level && g.level !== 'Genel') ? ` <span style="font-size:10px; color:var(--accent); vertical-align:middle; margin-left:5px; border:1px solid var(--accent); padding:1px 6px; border-radius:4px;">${g.level}</span>` : '';
+  document.getElementById('groupNameDisplay').innerHTML = name + level;
+  document.title=(g?g.name+' — ':'')+'Lichess Koç Paneli';
+}
 
 // ── ÖĞRENCİ EKLE / ÇIKAR ─────────────────────────────
 window.addStudent=async()=>{
@@ -1694,6 +1746,7 @@ window.PIN = (function(){
       const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='flex';
       const buk=document.getElementById('btnBulkUkd');  if(buk) buk.style.display='flex';
       const bsl=document.getElementById('btnStudentList'); if(bsl) bsl.style.display='flex';
+      const bab=document.getElementById('btnAutoBest'); if(bab) bab.style.display='flex';
       const bl=document.getElementById('btnLogout');    if(bl)  bl.style.display='flex';
       renderGroupBar(); renderHeader(); buildCritPanel(); renderGrid();
       if(getStudents().length>0) refreshAll();
@@ -1747,6 +1800,7 @@ window.PIN = (function(){
     const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='none';
     const buk=document.getElementById('btnBulkUkd'); if(buk) buk.style.display='none';
     const bsl=document.getElementById('btnStudentList'); if(bsl) bsl.style.display='none';
+    const bab=document.getElementById('btnAutoBest'); if(bab) bab.style.display='none';
     showToast('Oturum kapatıldı');
   }
 
@@ -1809,50 +1863,63 @@ function openFcDb(){
 }
 
 async function fcGetPhoto(username){
-  // Önce yerel önbelleğe (IndexedDB) bak
   if(!fcDb) await openFcDb();
-  let localData = await new Promise((res)=>{
+  
+  // Buluttaki sürüm numarasını (pv) bul
+  const list = APP.studentLists[APP.activeGid] || [];
+  const student = list.find(x => (typeof x === 'string' ? x : x.u) === username);
+  const dbPv = (student && typeof student === 'object') ? (student.pv || 0) : 0;
+
+  // Yerel önbelleğe bak
+  let localRecord = await new Promise((res)=>{
     const tx  = fcDb.transaction('photos','readonly');
     const req = tx.objectStore('photos').get(username);
-    req.onsuccess = e => res(e.target.result?.dataUrl||null);
+    req.onsuccess = e => res(e.target.result || null);
     req.onerror   = ()=> res(null);
   });
   
-  if(localData) return localData;
+  // Eğer yerel kopya varsa VE sürümü buluttakiyle aynıysa (veya daha yeniyse) kullan
+  if(localRecord && localRecord.dataUrl && (localRecord.pv || 0) >= dbPv) {
+    return localRecord.dataUrl;
+  }
 
-  // Yerelde yoksa Firebase Storage'dan çek
+  // Yerelde yoksa veya eskiyse Firebase Storage'dan çek
   try {
     const photoRef = ref(storage, `photos/${username}`);
     const url = await getDownloadURL(photoRef);
-    // Bulunan resmi yerel önbelleğe kaydet
-    if(url) await fcSetPhoto(username, url, false); 
+    // İndirilen resmi yerel önbelleğe yeni sürüm numarasıyla kaydet
+    if(url) await fcSetPhoto(username, url, false, dbPv); 
     return url;
   } catch(e) {
-    // Resim yoksa veya hata oluşursa null dön
     return null;
   }
 }
 
-async function fcSetPhoto(username, dataUrl, uploadToCloud = true){
+async function fcSetPhoto(username, dataUrl, uploadToCloud = true, pv = null){
   if(!fcDb) await openFcDb();
+  
+  // Eğer pv belirtilmemişse ve buluta yükleniyorsa yeni bir tane oluştur
+  if(pv === null && uploadToCloud) pv = Date.now();
+
   // Yerel önbelleğe kaydet
   await new Promise((res,rej)=>{
     const tx  = fcDb.transaction('photos','readwrite');
-    tx.objectStore('photos').put({username, dataUrl});
+    tx.objectStore('photos').put({username, dataUrl, pv: pv || 0});
     tx.oncomplete = ()=> res();
     tx.onerror    = e => rej(e);
   });
 
-  // Buluta yükle (yeni bir fotoğraf yüklendiğinde)
+  // Buluta yükle
   if(uploadToCloud && dataUrl.startsWith('data:image')) {
     try {
       const photoRef = ref(storage, `photos/${username}`);
       await uploadString(photoRef, dataUrl, 'data_url');
-      console.log(`[${username}] fotoğrafı buluta yüklendi.`);
+      console.log(`[${username}] fotoğrafı buluta yüklendi (v:${pv}).`);
     } catch(e) {
       console.error('Bulut yükleme hatası:', e);
     }
   }
+  return pv;
 }
 
 // Görünüm geçişi
@@ -1902,6 +1969,9 @@ async function renderChesscards(){
 
     const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
     const ukd = getStudentUkd(u);
+    const g=APP.groups.find(x=>x.id===APP.activeGid);
+    const lvlDisplay = (g && g.level && g.level !== 'Genel') ? `<div style="font-size:8px; color:var(--accent); margin-top:2px; font-weight:700;">${g.level.toUpperCase()}</div>` : '';
+    
     let ukdDisplay = `UKD: ${ukd.val}`;
     if(ukd.prev && ukd.val !== '—') {
       const diff = parseInt(ukd.val) - parseInt(ukd.prev);
@@ -1918,7 +1988,11 @@ async function renderChesscards(){
       <div class="chesscard-inner">
         <div class="fc-top">
           <div class="fc-score">${pts}</div>
-          <div class="fc-rank-badge">#${rank} <span style="margin-left:5px;opacity:0.8">${ukdDisplay}</span></div>
+          <div class="fc-rank-badge">
+            #${rank}
+            ${lvlDisplay}
+          </div>
+          <div style="position:absolute; right:12px; top:12px; font-size:9px; opacity:0.8; text-align:right;">${ukdDisplay}</div>
         </div>
         <div class="fc-photo-row">
           <div class="fc-logo-side">${logoHtml}</div>
@@ -1970,7 +2044,22 @@ window.fcPhotoClick = function(username){
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
     reader.onload = async(ev)=>{
-      await fcSetPhoto(username, ev.target.result);
+      // 1. Fotoğrafı yükle ve yeni sürüm numarasını (pv) al
+      const newPv = await fcSetPhoto(username, ev.target.result);
+      
+      // 2. Veritabanındaki öğrenci listesini güncelle (yeni sürüm numarasını kaydet)
+      const list = APP.studentLists[APP.activeGid] || [];
+      const studentIdx = list.findIndex(x => (typeof x === 'string' ? x : x.u) === username);
+      
+      if(studentIdx !== -1) {
+        if(typeof list[studentIdx] === 'string') {
+          list[studentIdx] = { u: username, pv: newPv };
+        } else {
+          list[studentIdx].pv = newPv;
+        }
+        await fbSaveStudents(APP.activeGid);
+      }
+
       renderChesscards();
       showToast('Fotoğraf kaydedildi ✓');
     };
@@ -2189,6 +2278,73 @@ window.copyStudentList = () => {
   }).catch(() => {
     showToast('Kopyalama başarısız', true);
   });
+};
+
+window.autoCreateBestGroup = async () => {
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  
+  const countStr = prompt("Haftanın en iyileri grubuna kaç sporcu eklensin?", "10");
+  const count = parseInt(countStr);
+  if(isNaN(count) || count <= 0) return;
+
+  setSyncStatus('syncing', 'Hesaplanıyor…');
+  
+  // 1. Tüm sporcuları topla ve puanlarını hesapla
+  let allStudents = [];
+  const period = 'week';
+  
+  // Grupları gezerek tüm benzersiz sporcuları al
+  const processedUsers = new Set();
+  APP.groups.forEach(g => {
+    const list = APP.studentLists[g.id] || [];
+    list.forEach(s => {
+      const u = typeof s === 'string' ? s : s.u;
+      if(!processedUsers.has(u)) {
+        const pts = calcScore(u, period);
+        // Sadece verisi olan sporcuları ekle
+        if(APP.liveData[u] && !APP.liveData[u].error) {
+          allStudents.push({ u: s, pts });
+          processedUsers.add(u);
+        }
+      }
+    });
+  });
+
+  if(allStudents.length === 0) {
+    showToast('Hesaplanacak sporcu bulunamadı', true);
+    setSyncStatus('ok', 'Firebase bağlı ✓');
+    return;
+  }
+
+  // 2. Puana göre sırala ve ilk X kişiyi al
+  allStudents.sort((a,b) => b.pts - a.pts);
+  const bestStudents = allStudents.slice(0, count).map(s => s.u);
+
+  // 3. "Haftanın En İyileri" grubunu bul veya oluştur
+  const groupName = "Haftanın En İyileri";
+  let targetGroup = APP.groups.find(g => g.name === groupName);
+  
+  if(!targetGroup) {
+    const newGid = 'best_' + Date.now();
+    targetGroup = { id: newGid, name: groupName };
+    APP.groups.push(targetGroup);
+  }
+
+  // 4. Öğrenci listesini güncelle ve kaydet
+  APP.studentLists[targetGroup.id] = bestStudents;
+  APP.activeGid = targetGroup.id;
+
+  await fbSaveConfig();
+  await fbSaveStudents(targetGroup.id);
+
+  renderGroupBar();
+  renderHeader();
+  renderGrid();
+  renderChamps();
+  renderScoreTable();
+  
+  setSyncStatus('ok', 'Firebase bağlı ✓');
+  showToast(`${bestStudents.length} sporcu ile "${groupName}" grubu güncellendi ✓`);
 };
 
 // IndexedDB'yi başlat
