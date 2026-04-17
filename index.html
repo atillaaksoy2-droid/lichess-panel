@@ -323,6 +323,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .fc-logo-side{width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fc-logo-side img{width:26px;height:26px;border-radius:50%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
 .fc-photo-wrap{width:100px;height:110px;overflow:hidden;border-radius:8px;background:rgba(0,0,0,.2);position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.fc-photo-container{width:100%;height:100%}
 .fc-photo{width:100%;height:100%;background-size:cover;background-position:top;background-repeat:no-repeat}
 .fc-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:42px;font-family:'Playfair Display',serif;font-weight:700;color:rgba(255,255,255,.3)}
 .fc-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:20px}
@@ -1972,20 +1973,28 @@ async function fcGetPhoto(username){
     const photoRef = ref(storage, `photos/${username}`);
     const url = await getDownloadURL(photoRef);
     
-    // URL'yi doğrudan döndürmek yerine resmi çekip base64'e çevirerek saklayalım
-    // Bu sayede tarayıcı önbelleği sorunlarını aşarız ve offline çalışabiliriz
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const dataUrl = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(blob);
-    });
+    // Arka planda resmi çekip base64'e çevirmeye çalışalım (CORS izin verirse)
+    // İzin vermezse bile en azından doğrudan URL'yi döndürelim
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const blob = await response.blob();
+        const dataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+        // İndirilen resmi yerel önbelleğe yeni sürüm numarasıyla kaydet
+        if(dataUrl) await fcSetPhoto(username, dataUrl, false, dbPv); 
+        return dataUrl;
+      }
+    } catch (fetchErr) {
+      console.warn(`[${username}] Fotoğraf fetch (CORS) hatası, doğrudan URL kullanılacak:`, fetchErr);
+    }
 
-    // İndirilen resmi yerel önbelleğe yeni sürüm numarasıyla kaydet
-    if(dataUrl) await fcSetPhoto(username, dataUrl, false, dbPv); 
-    return dataUrl;
+    return url; // Fetch başarısız olsa bile URL'yi döndür
   } catch(e) {
+    console.warn(`[${username}] Fotoğraf bulutta bulunamadı:`, e.message);
     return null;
   }
 }
@@ -2131,11 +2140,11 @@ async function renderChesscards(){
         <div class="fc-photo-row">
           <div class="fc-logo-side">${logoHtml}</div>
           <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
-            <div class="fc-photo-container" id="fc-photo-${u.replace(/[^a-z0-9]/gi,'-')}">
+            <div class="fc-photo-container" id="fc-photo-${idx}">
               <div class="fc-photo-placeholder">${escHtml(u[0].toUpperCase())}</div>
             </div>
             <div class="fc-photo-overlay">📷</div>
-            <div class="fc-delete-container" id="fc-delete-${u.replace(/[^a-z0-9]/gi,'-')}"></div>
+            <div class="fc-delete-container" id="fc-delete-${idx}"></div>
           </div>
           <div class="fc-logo-side">${logoHtml}</div>
         </div>
@@ -2171,10 +2180,10 @@ async function renderChesscards(){
     grid.appendChild(card);
     
     // Fotoğrafı arka planda yükle
-    (async () => {
+    (async (currentIdx) => {
       const photoDataUrl = await fcGetPhoto(u);
-      const container = document.getElementById(`fc-photo-${u.replace(/[^a-z0-9]/gi,'-')}`);
-      const deleteContainer = document.getElementById(`fc-delete-${u.replace(/[^a-z0-9]/gi,'-')}`);
+      const container = document.getElementById(`fc-photo-${currentIdx}`);
+      const deleteContainer = document.getElementById(`fc-delete-${currentIdx}`);
       
       if (container) {
         if (photoDataUrl) {
@@ -2184,7 +2193,7 @@ async function renderChesscards(){
           }
         }
       }
-    })();
+    })(idx);
   });
 }
 
@@ -2235,9 +2244,9 @@ window.downloadCard = async function(username){
     const cardW = card.offsetWidth;
     const cardH = card.offsetHeight;
 
-    // PNG butonu gizle
-    const screenOnly = card.querySelectorAll('.fc-screen-only');
-    screenOnly.forEach(el=>{ el.style.visibility='hidden'; });
+    // PNG butonu ve silme butonlarını gizle
+    const hideEls = card.querySelectorAll('.fc-screen-only, .fc-delete-btn');
+    hideEls.forEach(el=>{ el.style.visibility='hidden'; });
 
     // En yüksek kalite için kartı "temizle" (transformları kapat)
     card.style.transform = 'none';
@@ -2268,7 +2277,7 @@ window.downloadCard = async function(username){
 
     // Orijinal stilleri geri yükle
     card.style.cssText = originalStyle;
-    screenOnly.forEach(el=>{ el.style.visibility=''; });
+    hideEls.forEach(el=>{ el.style.visibility=''; });
     const link = document.createElement('a');
     link.download = `chesscard-${username}.png`;
     link.href = canvas.toDataURL('image/png');
