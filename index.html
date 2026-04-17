@@ -335,11 +335,11 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 <body>
 
 
-<div class="pin-overlay" id="pinOverlay">
+<div class="pin-overlay" id="pinOverlay" style="display:none">
   <div class="pin-box">
     <div class="pin-chess">♞</div>
-    <div class="pin-title">Koç Paneli</div>
-    <div class="pin-sub" id="pinSub">Yönetici girişi için PIN girin<br><span style="opacity:.6">veya sadece görüntüleme için atlayın</span></div>
+    <div class="pin-title">Yönetici Girişi</div>
+    <div class="pin-sub" id="pinSub">Düzenleme yapmak için PIN girin</div>
     <div class="pin-dots">
       <div class="pin-dot" id="pd0"></div>
       <div class="pin-dot" id="pd1"></div>
@@ -356,16 +356,11 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
       <button class="pin-key" onclick="PIN.press('7')">7</button>
       <button class="pin-key" onclick="PIN.press('8')">8</button>
       <button class="pin-key" onclick="PIN.press('9')">9</button>
-      <button class="pin-key pin-empty"></button>
+      <button class="pin-key pin-del" onclick="closeLogin()">✕</button>
       <button class="pin-key" onclick="PIN.press('0')">0</button>
       <button class="pin-key pin-del" onclick="PIN.del()">⌫</button>
     </div>
     <div class="pin-err" id="pinErr"></div>
-    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
-      <div style="font-size:9px;color:var(--text-muted);text-align:center;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">veya</div>
-      <button class="pin-view-btn" onclick="PIN.viewOnly()">👁 Sadece Görüntüle</button>
-      <div style="font-size:9px;color:var(--text-muted);text-align:center;margin-top:6px">Değişiklik yapmadan tüm verileri görürsün</div>
-    </div>
   </div>
 </div>
 <div class="sync-banner">
@@ -387,6 +382,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
         Yenile
       </button>
+      <button class="icon-btn" id="btnAdminLogin" onclick="PIN.showLogin()" title="Yönetici girişi yap">🔑 Giriş</button>
       <button class="icon-btn danger" id="btnDeleteGroup" class="edit-only" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
       <button class="icon-btn" id="btnChangePin" onclick="PIN.change()" title="PIN degistir" style="display:none">🔑 PIN</button>
       <button class="icon-btn" id="btnAddUser" onclick="PIN.addUser()" title="Yeni hoca ekle" style="display:none">👤+ Hoca</button>
@@ -697,7 +693,10 @@ function getStudentDisplayName(u){
 function getStudentUkd(u){
   const list = APP.studentLists[APP.activeGid] || [];
   const s = list.find(x => (typeof x === 'string' ? x : x.u) === u);
-  return (s && typeof s === 'object') ? (s.ukd || '—') : '—';
+  if (s && typeof s === 'object') {
+    return { val: s.ukd || '—', prev: s.pUkd || null };
+  }
+  return { val: '—', prev: null };
 }
 function getStudentLic(u){
   const list = APP.studentLists[APP.activeGid] || [];
@@ -1369,7 +1368,13 @@ function buildCard(username,d,rank){
     return `<div class="r-item"><div class="r-type">${k==='bullet'?'BLT':k==='blitz'?'BLZ':k==='rapid'?'RPD':'CLS'}</div><div class="r-val">${r.int}</div><div class="r-chg ${cc}">${ct}</div></div>`;
   }).join('');
   const ukd = getStudentUkd(username);
-  const ukdHTML = `<div class="r-item ukd-item" title="Ulusal Kuvvet Derecesi"><div class="r-type">UKD</div><div class="r-val">${ukd}</div><div class="r-chg eq">—</div></div>`;
+   let ukdDiffHTML = '<div class="r-chg eq">—</div>';
+   if(ukd.prev && ukd.val !== '—') {
+     const diff = parseInt(ukd.val) - parseInt(ukd.prev);
+     if(diff > 0) ukdDiffHTML = `<div class="r-chg up">▲${diff}</div>`;
+     else if(diff < 0) ukdDiffHTML = `<div class="r-chg dn">▼${Math.abs(diff)}</div>`;
+   }
+   const ukdHTML = `<div class="r-item ukd-item" title="Ulusal Kuvvet Derecesi (Önceki: ${ukd.prev || '—'})"><div class="r-type">UKD</div><div class="r-val">${ukd.val}</div>${ukdDiffHTML}</div>`;
   const gHTML=(d.recentGames||[]).slice(0,4).map(g=>{
     const r=g.result==='win'?'W':g.result==='loss'?'L':'D';
     return `<div class="g-row"><div class="g-res ${r}">${r}</div><div class="g-opp" title="${escHtml(g.opponent||'?')}">${escHtml(g.opponent||'?')}</div><div class="g-spd">${g.speed||''}</div><div class="g-t">${g.time||''}</div></div>`;
@@ -1643,6 +1648,7 @@ window.PIN = (function(){
       document.body.classList.remove('readonly');
       const ind=document.getElementById('adminInd');
       if(ind){ ind.classList.add('show'); ind.textContent='👤 '+escHtml(matchUser.name); }
+      const al=document.getElementById('btnAdminLogin'); if(al) al.style.display='none';
       const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='flex';
       const bau=document.getElementById('btnAddUser');  if(bau) bau.style.display='flex';
       const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='flex';
@@ -1693,14 +1699,12 @@ window.PIN = (function(){
     isAdmin=false;
     document.body.classList.add('readonly');
     const ind=document.getElementById('adminInd'); if(ind) ind.classList.remove('show');
+    const al=document.getElementById('btnAdminLogin'); if(al) al.style.display='flex';
     const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='none';
     const bl=document.getElementById('btnLogout');   if(bl) bl.style.display='none';
     const bau=document.getElementById('btnAddUser'); if(bau) bau.style.display='none';
     const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='none';
     const buk=document.getElementById('btnBulkUkd'); if(buk) buk.style.display='none';
-    // PIN ekranını tekrar göster
-    buf=''; updateDots(); setErr('');
-    document.getElementById('pinOverlay').style.display='flex';
     showToast('Oturum kapatıldı');
   }
 
@@ -1734,8 +1738,16 @@ window.PIN = (function(){
   function getIsAdmin(){ return isAdmin; }
 
   function init(){ if(typeof updateSubTitle==='function') updateSubTitle(); }
-  return { press, del, viewOnly, logout, change, addUser, getIsAdmin, init };
+  function showLogin(){
+    buf = ''; updateDots(); setErr('');
+    document.getElementById('pinOverlay').style.display = 'flex';
+  }
+  return { press, del, viewOnly, logout, change, addUser, getIsAdmin, init, showLogin };
 })();
+
+window.closeLogin = () => {
+  document.getElementById('pinOverlay').style.display = 'none';
+};
 
 
 // ── FUTCARD SİSTEMİ ─────────────────────────────────────────────────────────
@@ -1848,6 +1860,12 @@ async function renderChesscards(){
 
     const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
     const ukd = getStudentUkd(u);
+    let ukdDisplay = `UKD: ${ukd.val}`;
+    if(ukd.prev && ukd.val !== '—') {
+      const diff = parseInt(ukd.val) - parseInt(ukd.prev);
+      if(diff > 0) ukdDisplay += ` <span style="color:#4caf7d">▲${diff}</span>`;
+      else if(diff < 0) ukdDisplay += ` <span style="color:#e05a5a">▼${Math.abs(diff)}</span>`;
+    }
 
     const card = document.createElement('div');
     card.className = `chesscard ${fcCls}`;
@@ -1858,7 +1876,7 @@ async function renderChesscards(){
       <div class="chesscard-inner">
         <div class="fc-top">
           <div class="fc-score">${pts}</div>
-          <div class="fc-rank-badge">#${rank} <span style="margin-left:5px;opacity:0.8">UKD: ${ukd}</span></div>
+          <div class="fc-rank-badge">#${rank} <span style="margin-left:5px;opacity:0.8">${ukdDisplay}</span></div>
         </div>
         <div class="fc-photo-row">
           <div class="fc-logo-side">${logoHtml}</div>
@@ -2052,7 +2070,12 @@ window.processBulkUkd = async () => {
           // Satırdaki en büyük sayıyı UKD kabul et (sıra no, yaş gibi değerlerden daha büyüktür)
           const possibleScores = matches.map(Number).filter(n => n >= 100 && n <= 2999);
           if(possibleScores.length > 0) {
-            sObj.ukd = Math.max(...possibleScores).toString();
+            const newUkd = Math.max(...possibleScores).toString();
+            // Puan değiştiyse eskisini kaydet
+            if(sObj.ukd && sObj.ukd !== newUkd) {
+              sObj.pUkd = sObj.ukd;
+            }
+            sObj.ukd = newUkd;
             updateCount++;
             break;
           }
@@ -2093,8 +2116,6 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
   document.body.classList.add('readonly');
   renderGrid();
 
-  // PIN ekranini goster
-  document.getElementById('pinOverlay').style.display='flex';
   if(typeof PIN!=='undefined'&&PIN.init) PIN.init();
 })();
 </script>
