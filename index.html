@@ -1448,6 +1448,7 @@ function buildCard(username,d,rank){
 // ── KRİTER PANELİ ────────────────────────────────────
 window.toggleCrit=()=>{ const b=document.getElementById('critBody'),a=document.getElementById('critArrow'); b.classList.toggle('open'); a.textContent=b.classList.contains('open')?'▲':'▼'; };
 function buildCritPanel(){
+  const isAdmin = PIN.getIsAdmin();
   const defs=[
     {key:'minDailyGames',   b:{cls:'b-active',icon:'⚡',lbl:'Aktif'},        name:'Aktif Oyuncu',       rule:'Günlük min. maç sayısı'},
     {key:'minWinRate',      b:{cls:'b-gold',  icon:'🏆',lbl:'%Kazanma'},     name:'Yüksek Kazanma',     rule:'Min. kazanma oranı (%)'},
@@ -1464,22 +1465,26 @@ function buildCritPanel(){
   // Bullet toggle ayrı render
   const chk = APP.crit.countBullet ? 'checked' : '';
   const lbl = APP.crit.countBullet ? 'Dahil' : 'Hariç';
+  const dis = isAdmin ? '' : 'disabled';
   const bulletHTML = '<div class="crit-item" style="grid-column:1/-1;background:rgba(224,90,90,.06);border-color:rgba(224,90,90,.2)">'
     + '<span class="badge b-warn">🔴 Bullet</span>'
     + '<div class="crit-desc"><div class="crit-name">Bullet Maçları Say</div>'
     + '<div class="crit-rule">Maç sayısı, puan ve ısı haritasına dahil et</div></div>'
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text-muted)">'
-    + '<input type="checkbox" id="bulletToggle" '+chk+' onchange="toggleBullet(this.checked)"'
+    + '<input type="checkbox" id="bulletToggle" '+chk+' '+dis+' onchange="toggleBullet(this.checked)"'
     + ' style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"> '+lbl
     + '</label></div>';
   document.getElementById('critGrid').innerHTML=bulletHTML+defs.map(d=>`
     <div class="crit-item">
       <span class="badge ${d.b.cls}">${d.b.icon} ${d.b.lbl}</span>
       <div class="crit-desc"><div class="crit-name">${d.name}</div><div class="crit-rule">${d.rule}</div></div>
-      <input class="crit-input" type="number" min="0" max="100" step="${d.key==='ptPuzzle'?'0.5':'1'}" value="${APP.crit[d.key]}" onchange="updateCrit('${d.key}',this.value)">
+      <input class="crit-input" type="number" min="0" max="100" step="${d.key==='ptPuzzle'?'0.5':'1'}" value="${APP.crit[d.key]}" ${dis} onchange="updateCrit('${d.key}',this.value)">
     </div>`).join('');
 }
-window.updateCrit=async(key,val)=>{ APP.crit[key]=Math.max(0,parseFloat(val)||0); await fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); };
+window.updateCrit=async(key,val)=>{ 
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); buildCritPanel(); return; }
+  APP.crit[key]=Math.max(0,parseFloat(val)||0); await fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); 
+};
 window.setClubLogo=()=>{
   const input=document.createElement('input');
   input.type='file'; input.accept='image/*';
@@ -1498,6 +1503,7 @@ window.setClubLogo=()=>{
 };
 
 window.toggleBullet=async(checked)=>{
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); buildCritPanel(); return; }
   APP.crit.countBullet=checked?1:0;
   // Checkbox label güncelle
   const lbl=document.getElementById('bulletToggle');
