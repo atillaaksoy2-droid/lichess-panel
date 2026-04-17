@@ -328,6 +328,17 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .fc-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:20px}
 .fc-photo-wrap:hover .fc-photo-overlay{opacity:1}
 
+.fc-delete-btn{
+  position:absolute; top:4px; right:4px; 
+  width:18px; height:18px; border-radius:50%;
+  background:rgba(224,90,90,.8); color:#fff;
+  border:none; cursor:pointer; font-size:10px;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .2s; z-index:10;
+}
+.fc-photo-wrap:hover .fc-delete-btn{opacity:1}
+.fc-delete-btn:hover{background:#e05a5a; transform:scale(1.1)}
+
 /* İsim */
 .fc-name{text-align:center;font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.5px;text-transform:uppercase}
 
@@ -401,7 +412,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
       <span class="group-name-display" id="groupNameDisplay" id="groupNameBtn" onclick="openRenameModal()" title="Grubu yeniden adlandır">—</span>
       <span class="admin-indicator" id="adminInd">🔑 Yönetici</span>
       <span class="last-update" id="lastUpdate">—</span>
-      <button class="icon-btn" id="refreshBtn" onclick="refreshAll()">
+      <button class="icon-btn" id="refreshBtn" onclick="refreshAll(true)" title="Tüm verileri Lichess'ten zorla yenile">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
         Yenile
       </button>
@@ -583,7 +594,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getStorage, ref, uploadString, getDownloadURL }
+import { getStorage, ref, uploadString, getDownloadURL, deleteObject }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -714,7 +725,11 @@ function fbListen(){
           const s = await getDoc(doc(db,'panel','students_'+prefix+g.id));
           if(s.exists()) APP.studentLists[g.id]=s.data().list||[];
         }catch(e){ console.warn('fbListen grup yüklenemedi:',g.id); }
-      })).then(()=>{ renderGroupBar(); renderGrid(); });
+      }).then(()=>{ 
+        renderGroupBar(); 
+        renderGrid(); 
+        if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
+      });
       renderHeader(); buildCritPanel();
       setSyncStatus('ok','Başka cihazdan güncelleme alındı');
       setTimeout(()=>setSyncStatus('ok','Firebase bağlı ✓'),3000);
@@ -732,6 +747,7 @@ function fbListen(){
       }
     }
     renderGrid(); renderChamps(); renderScoreTable();
+    if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
   });
 }
 
@@ -957,6 +973,7 @@ window.switchGroup = async function switchGroup(id){
   }
   renderGroupBar();
   renderGrid();
+  if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
   if(getStudents().length>0) refreshAll();
 }
 
@@ -1076,27 +1093,51 @@ function removeStudent(username){
 }
 
 // ── VERİ YÜKLEME ─────────────────────────────────────
-window.refreshAll=async()=>{
+window.refreshAll=async(force=false)=>{
   const myId=++APP.refreshId;
   const students=getStudents();
   if(students.length===0) return;
   const btn=document.getElementById('refreshBtn'); btn.classList.add('spinning');
-  setLoadStatus(`Yükleniyor… 0/${students.length}`);
+  
+  // Önce mevcut verilerle UI'ı güncelle
   renderGrid();
+  if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
+  
+  // Sadece eski veya eksik verileri güncelle
+  const now = Date.now();
+  const cacheLimit = 5 * 60 * 1000; // 5 dakika
+  
+  const toRefresh = students.filter(u => {
+    if(force) return true;
+    const d = APP.liveData[u];
+    if(!d || d.error) return true;
+    return (now - (d.loadedAt || 0)) > cacheLimit;
+  });
+
+  if(toRefresh.length === 0){
+    btn.classList.remove('spinning');
+    setLoadStatus('');
+    return;
+  }
+
+  setLoadStatus(`Yükleniyor… 0/${toRefresh.length}`);
   let done=0;
-  for(const user of students){
+  for(const user of toRefresh){
     if(myId!==APP.refreshId) break;
     await loadOneStudent(user,myId);
     done++; if(myId!==APP.refreshId) break;
-    setLoadStatus(`Yükleniyor… ${done}/${students.length}`);
+    setLoadStatus(`Yükleniyor… ${done}/${toRefresh.length}`);
     updateOneCard(user,myId);
+    if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
+    
     // Lichess rate limit: öğrenciler arası 1.5sn bekle
-    if(done<students.length) await new Promise(r=>setTimeout(r,1500));
+    if(done<toRefresh.length) await new Promise(r=>setTimeout(r,1500));
   }
   if(myId===APP.refreshId){
     btn.classList.remove('spinning'); setLoadStatus('');
     document.getElementById('lastUpdate').textContent='Güncellendi: '+new Date().toLocaleTimeString('tr-TR');
     renderGrid(); renderChamps(); renderScoreTable();
+    if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
   }
 };
 
@@ -1917,9 +1958,20 @@ async function fcGetPhoto(username){
   try {
     const photoRef = ref(storage, `photos/${username}`);
     const url = await getDownloadURL(photoRef);
+    
+    // URL'yi doğrudan döndürmek yerine resmi çekip base64'e çevirerek saklayalım
+    // Bu sayede tarayıcı önbelleği sorunlarını aşarız ve offline çalışabiliriz
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const dataUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+
     // İndirilen resmi yerel önbelleğe yeni sürüm numarasıyla kaydet
-    if(url) await fcSetPhoto(username, url, false, dbPv); 
-    return url;
+    if(dataUrl) await fcSetPhoto(username, dataUrl, false, dbPv); 
+    return dataUrl;
   } catch(e) {
     return null;
   }
@@ -1952,6 +2004,49 @@ async function fcSetPhoto(username, dataUrl, uploadToCloud = true, pv = null){
   return pv;
 }
 
+window.fcDeletePhoto = async function(username){
+  if(!PIN.getIsAdmin()){ showToast('Yetkiniz yok', true); return; }
+  if(!confirm(`"${username}" için fotoğrafı silmek istediğinize emin misiniz?`)) return;
+  
+  try {
+    // 1. Firebase Storage'dan sil
+    try {
+      const photoRef = ref(storage, `photos/${username}`);
+      await deleteObject(photoRef);
+      console.log(`[${username}] fotoğrafı buluttan silindi.`);
+    } catch(e) {
+      console.warn('Bulut silme hatası (zaten silinmiş olabilir):', e);
+    }
+    
+    // 2. IndexedDB'den sil
+    if(!fcDb) await openFcDb();
+    await new Promise((res,rej)=>{
+      const tx = fcDb.transaction('photos','readwrite');
+      tx.objectStore('photos').delete(username);
+      tx.oncomplete = ()=> res();
+      tx.onerror = e => rej(e);
+    });
+    
+    // 3. Firestore'dan pv'yi kaldır
+    const list = APP.studentLists[APP.activeGid] || [];
+    const idx = list.findIndex(x => (typeof x === 'string' ? x : x.u) === username);
+    if(idx !== -1) {
+      if(typeof list[idx] === 'object') {
+        delete list[idx].pv;
+        // Eğer başka özellik kalmadıysa string'e dönebiliriz
+        if(Object.keys(list[idx]).length === 1 && list[idx].u) list[idx] = list[idx].u;
+      }
+      await fbSaveStudents(APP.activeGid);
+    }
+    
+    renderChesscards();
+    showToast('Fotoğraf silindi ✓');
+  } catch(e) {
+    console.error('Fotoğraf silme hatası:', e);
+    showToast('Hata: ' + e.message, true);
+  }
+}
+
 // Görünüm geçişi
 window.switchView = function(view){
   document.querySelectorAll('.view-tab').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
@@ -1973,18 +2068,15 @@ async function renderChesscards(){
   const scored = [...students].map(u=>({u,pts:calcScore(u,period)})).sort((a,b)=>b.pts-a.pts);
   const maxPts = scored[0]?.pts||1;
 
-  // Fotoğrafları paralel yükle
-  const photos = {};
-  await Promise.all(students.map(async u=>{ photos[u]=await fcGetPhoto(u); }));
-
   grid.innerHTML = '';
+  
+  // Önce iskelet yapıyı (placeholder ile) hızlıca oluştur
   scored.forEach(({u,pts},idx)=>{
     const d  = APP.liveData[u];
     const st = periodStats(u,period);
     const rank = idx+1;
     const fcCls = rank===1?'fc-gold':rank===2?'fc-silver':rank===3?'fc-bronze':'fc-normal';
-    const pct = Math.round((pts/maxPts)*100);
-
+    
     // Bar değerleri (normalize 0-100)
     const maxG = Math.max(...students.map(s=>periodStats(s,period).totalGames),1);
     const maxP = Math.max(...students.map(s=>periodStats(s,period).totalPuzzles),1);
@@ -1992,10 +2084,6 @@ async function renderChesscards(){
     const pBar = Math.round((st.totalPuzzles/maxP)*100);
     const maxAct = Math.max(...students.map(s=>periodStats(s,period).activeDays),1);
     const aBar = Math.round((st.activeDays/maxAct)*100);
-
-    const photoHtml = photos[u]
-      ? `<div class="fc-photo" style="background-image:url('${photos[u]}')"></div>`
-      : `<div class="fc-photo-placeholder">${escHtml(u[0].toUpperCase())}</div>`;
 
     const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
     const ukd = getStudentUkd(u);
@@ -2030,8 +2118,11 @@ async function renderChesscards(){
         <div class="fc-photo-row">
           <div class="fc-logo-side">${logoHtml}</div>
           <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
-            ${photoHtml}
+            <div class="fc-photo-container" id="fc-photo-${u.replace(/[^a-z0-9]/gi,'-')}">
+              <div class="fc-photo-placeholder">${escHtml(u[0].toUpperCase())}</div>
+            </div>
             <div class="fc-photo-overlay">📷</div>
+            <div class="fc-delete-container" id="fc-delete-${u.replace(/[^a-z0-9]/gi,'-')}"></div>
           </div>
           <div class="fc-logo-side">${logoHtml}</div>
         </div>
@@ -2063,9 +2154,24 @@ async function renderChesscards(){
             <button class="fc-dl-btn" onclick="event.stopPropagation();downloadCard('${escHtml(u)}')">⬇ PNG</button>
           </div>
         </div>
-
       </div>`;
     grid.appendChild(card);
+    
+    // Fotoğrafı arka planda yükle
+    (async () => {
+      const photoDataUrl = await fcGetPhoto(u);
+      const container = document.getElementById(`fc-photo-${u.replace(/[^a-z0-9]/gi,'-')}`);
+      const deleteContainer = document.getElementById(`fc-delete-${u.replace(/[^a-z0-9]/gi,'-')}`);
+      
+      if (container) {
+        if (photoDataUrl) {
+          container.innerHTML = `<div class="fc-photo" style="background-image:url('${photoDataUrl}')"></div>`;
+          if (PIN.getIsAdmin() && deleteContainer) {
+            deleteContainer.innerHTML = `<button class="fc-delete-btn" onclick="event.stopPropagation();fcDeletePhoto('${escHtml(u)}')" title="Fotoğrafı Kaldır">✕</button>`;
+          }
+        }
+      }
+    })();
   });
 }
 
