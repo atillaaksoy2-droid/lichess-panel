@@ -2001,7 +2001,7 @@ async function renderChesscards(){
     const ukd = getStudentUkd(u);
     const g=APP.groups.find(x=>x.id===APP.activeGid);
     const safeLvl = g ? (g.level === 'İleri' ? 'ileri' : g.level === 'Orta' ? 'orta' : g.level === 'Başlangıç' ? 'baslangic' : 'genel') : 'genel';
-    const lvlDisplay = (g && g.level && g.level !== 'Genel') ? `<div class="group-level-indicator bg-${safeLvl}" style="width:12px; height:12px; margin-top:4px;"></div>` : '';
+    const lvlDisplay = (g && g.level && g.level !== 'Genel') ? `<span class="group-level-indicator bg-${safeLvl}" style="width:12px; height:12px; vertical-align:middle;"></span>` : '';
     
     let ukdDisplay = `UKD: ${ukd.val}`;
     if(ukd.prev && ukd.val !== '—') {
@@ -2019,11 +2019,13 @@ async function renderChesscards(){
       <div class="chesscard-inner">
         <div class="fc-top">
           <div class="fc-score">${pts}</div>
-          <div class="fc-rank-badge">
-            #${rank}
-            ${lvlDisplay}
+          <div class="fc-top-right" style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              ${lvlDisplay}
+              <div class="fc-rank-badge" style="margin:0">#${rank}</div>
+            </div>
+            <div style="font-size:10px; font-weight:700; color:rgba(255,255,255,0.9); text-shadow:0 1px 3px rgba(0,0,0,0.5); background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:4px; white-space:nowrap;">${ukdDisplay}</div>
           </div>
-          <div style="position:absolute; right:12px; top:12px; font-size:9px; opacity:0.8; text-align:right;">${ukdDisplay}</div>
         </div>
         <div class="fc-photo-row">
           <div class="fc-logo-side">${logoHtml}</div>
