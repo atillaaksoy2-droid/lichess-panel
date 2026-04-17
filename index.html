@@ -545,6 +545,12 @@ function setSyncStatus(state, msg){
 async function fbLoad(){
   setSyncStatus('syncing','Yükleniyor…');
   try{
+    // Eğer bir kullanıcı seçilmemişse (izleme modu), ilk kullanıcıyı varsayılan yap
+    if(!APP.currentUser && APP.users) {
+      const uids = Object.keys(APP.users);
+      if(uids.length > 0) APP.currentUser = uids[0];
+    }
+
     // currentUser varsa ona özel config yükle, yoksa genel 'config' yükle
     const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
     let cfgSnap = await getDoc(doc(db,'panel',cfgKey));
@@ -625,7 +631,8 @@ async function fbSaveActivity(){
 
 // Gerçek zamanlı dinleyici — başka cihazdan değişiklik olunca güncelle
 function fbListen(){
-  onSnapshot(doc(db,'panel','config'), snap=>{
+  const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
+  onSnapshot(doc(db,'panel',cfgKey), snap=>{
     if(!snap.exists()) return;
     const d=snap.data();
     const changed = JSON.stringify(d.groups)!==JSON.stringify(APP.groups);
@@ -635,7 +642,8 @@ function fbListen(){
       // Aktif grup değiştiyse güncelle
       Promise.all(APP.groups.map(async g=>{
         try{
-          const s=await getDoc(doc(db,'panel','students_'+g.id));
+          const prefix = APP.currentUser ? APP.currentUser + '_' : '';
+          const s = await getDoc(doc(db,'panel','students_'+prefix+g.id));
           if(s.exists()) APP.studentLists[g.id]=s.data().list||[];
         }catch(e){ console.warn('fbListen grup yüklenemedi:',g.id); }
       })).then(()=>{ renderGroupBar(); renderGrid(); });
