@@ -26,16 +26,36 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .sync-dot.err{background:var(--loss)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
+/* SEVIYE RENKLERI */
+:root {
+  --lvl-ileri: #f5c842;
+  --lvl-orta: #3498db;
+  --lvl-baslangic: #2ecc71;
+  --lvl-genel: #95a5a6;
+}
+
 /* GRUP SEKMELERI */
-.group-bar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:15px;border-bottom:1px solid var(--border);padding-top:20px;overflow:visible}
+.group-bar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--border);padding-top:20px;overflow:visible}
 .group-level-section{display:flex;align-items:flex-end;gap:0;position:relative}
-.group-level-label{position:absolute;top:-16px;left:6px;font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);font-weight:700;opacity:0.8}
 .group-level-tabs{display:flex;align-items:flex-end;gap:0}
 .group-tab{display:flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
 .group-tab:hover{color:var(--text);border-color:var(--border);background:var(--surface)}
-.group-tab.active{color:var(--accent2);border-color:var(--border);background:var(--surface);border-bottom-color:var(--surface)}
+
+/* Seviye Bazlı Aktif Sekme Renkleri */
+.group-tab.active.lvl-ileri { color: var(--lvl-ileri); border-color: var(--border); background: var(--surface); border-bottom-color: var(--surface); border-top: 2px solid var(--lvl-ileri); }
+.group-tab.active.lvl-orta { color: var(--lvl-orta); border-color: var(--border); background: var(--surface); border-bottom-color: var(--surface); border-top: 2px solid var(--lvl-orta); }
+.group-tab.active.lvl-baslangic { color: var(--lvl-baslangic); border-color: var(--border); background: var(--surface); border-bottom-color: var(--surface); border-top: 2px solid var(--lvl-baslangic); }
+.group-tab.active.lvl-genel { color: var(--text); border-color: var(--border); background: var(--surface); border-bottom-color: var(--surface); border-top: 2px solid var(--lvl-genel); }
+
 .tab-count{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 6px;color:var(--text-muted)}
-.group-tab.active .tab-count{background:rgba(200,168,75,.12);border-color:rgba(200,168,75,.25);color:var(--accent)}
+.group-tab.active .tab-count{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:inherit}
+
+.group-level-indicator { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.bg-ileri { background: var(--lvl-ileri); box-shadow: 0 0 8px var(--lvl-ileri); }
+.bg-orta { background: var(--lvl-orta); box-shadow: 0 0 8px var(--lvl-orta); }
+.bg-baslangic { background: var(--lvl-baslangic); box-shadow: 0 0 8px var(--lvl-baslangic); }
+.bg-genel { background: var(--lvl-genel); }
+
 .new-group-btn{display:flex;align-items:center;gap:5px;padding:8px 14px;border:1px dashed var(--border);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px;margin-bottom:0}
 .new-group-btn:hover{color:var(--accent);border-color:var(--accent)}
 
@@ -891,18 +911,26 @@ function renderGroupBar(){
   levels.forEach(lvl => {
     const groupsInLvl = grouped[lvl];
     if(groupsInLvl && groupsInLvl.length > 0) {
+      const lvlClass = lvl.toLowerCase().replace('i','i').replace('ş','s').replace('ç','c').replace('ğ','g').replace('ü','u').replace('ö','o');
+      // Türkçe karakter düzeltme (basitleştirilmiş)
+      const safeLvl = lvl === 'İleri' ? 'ileri' : lvl === 'Orta' ? 'orta' : lvl === 'Başlangıç' ? 'baslangic' : 'genel';
+      
       html += `<div class="group-level-section">
-        <div class="group-level-label">${lvl}</div>
         <div class="group-level-tabs">`;
       html += groupsInLvl.map(g => {
         const n=(APP.studentLists[g.id]||[]).length;
-        return `<button class="group-tab ${g.id===APP.activeGid?'active':''}" onclick="switchGroup('${g.id}')">${escHtml(g.name)}<span class="tab-count">${n}</span></button>`;
+        const activeCls = g.id===APP.activeGid ? `active lvl-${safeLvl}` : '';
+        return `<button class="group-tab ${activeCls}" onclick="switchGroup('${g.id}')" title="Seviye: ${lvl}">
+          <span class="group-level-indicator bg-${safeLvl}"></span>
+          ${escHtml(g.name)}
+          <span class="tab-count">${n}</span>
+        </button>`;
       }).join('');
       html += `</div></div>`;
     }
   });
 
-  bar.innerHTML = html + `<button class="new-group-btn edit-only" onclick="openNewGroupModal()" style="margin-top:10px; width:100%">＋ Yeni Grup</button>`;
+  bar.innerHTML = html + `<button class="new-group-btn edit-only" onclick="openNewGroupModal()" style="margin-top:10px;">＋ Yeni Grup</button>`;
 }
 
 window.switchGroup = async function switchGroup(id){
@@ -974,8 +1002,10 @@ window.closeModal=id=>document.getElementById(id).style.display='none';
 function renderHeader(){
   const g=APP.groups.find(x=>x.id===APP.activeGid);
   const name = g ? g.name : '—';
-  const level = (g && g.level && g.level !== 'Genel') ? ` <span style="font-size:10px; color:var(--accent); vertical-align:middle; margin-left:5px; border:1px solid var(--accent); padding:1px 6px; border-radius:4px;">${g.level}</span>` : '';
-  document.getElementById('groupNameDisplay').innerHTML = name + level;
+  const safeLvl = g ? (g.level === 'İleri' ? 'ileri' : g.level === 'Orta' ? 'orta' : g.level === 'Başlangıç' ? 'baslangic' : 'genel') : 'genel';
+  const levelIndicator = g ? `<span class="group-level-indicator bg-${safeLvl}" style="width:10px; height:10px; margin-right:8px; vertical-align:middle;"></span>` : '';
+  
+  document.getElementById('groupNameDisplay').innerHTML = levelIndicator + name;
   document.title=(g?g.name+' — ':'')+'Lichess Koç Paneli';
 }
 
@@ -1970,7 +2000,8 @@ async function renderChesscards(){
     const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
     const ukd = getStudentUkd(u);
     const g=APP.groups.find(x=>x.id===APP.activeGid);
-    const lvlDisplay = (g && g.level && g.level !== 'Genel') ? `<div style="font-size:8px; color:var(--accent); margin-top:2px; font-weight:700;">${g.level.toUpperCase()}</div>` : '';
+    const safeLvl = g ? (g.level === 'İleri' ? 'ileri' : g.level === 'Orta' ? 'orta' : g.level === 'Başlangıç' ? 'baslangic' : 'genel') : 'genel';
+    const lvlDisplay = (g && g.level && g.level !== 'Genel') ? `<div class="group-level-indicator bg-${safeLvl}" style="width:12px; height:12px; margin-top:4px;"></div>` : '';
     
     let ukdDisplay = `UKD: ${ukd.val}`;
     if(ukd.prev && ukd.val !== '—') {
