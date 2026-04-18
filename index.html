@@ -723,6 +723,79 @@ async function fbSaveActivity(){
 }
 
 // Gerçek zamanlı dinleyici — başka cihazdan değişiklik olunca güncelle
+// students_ dokümanları için aktif dinleyicileri takip et
+const _studentsUnsubMap = {}; // { docKey: unsubscribeFn }
+
+function fbListenStudents(groups){
+  const prefix = APP.currentUser ? APP.currentUser + '_' : '';
+  const neededKeys = new Set(groups.map(g => 'students_' + prefix + g.id));
+
+  // Artık gerekli olmayan dinleyicileri kapat
+  for(const key of Object.keys(_studentsUnsubMap)){
+    if(!neededKeys.has(key)){
+      _studentsUnsubMap[key]();
+      delete _studentsUnsubMap[key];
+    }
+  }
+
+  // Yeni gruplar için dinleyici ekle
+  groups.forEach(g => {
+    const key = 'students_' + prefix + g.id;
+    if(_studentsUnsubMap[key]) return; // Zaten dinleniyor
+
+    const unsub = onSnapshot(doc(db,'panel',key), snap => {
+      if(!snap.exists()) return;
+      const newList = snap.data().list || [];
+      const oldList = APP.studentLists[g.id] || [];
+
+      // pv değeri değişti mi kontrol et (fotoğraf güncellemesi)
+      const pvChanged = newList.some((s,i) => {
+        const oldS = oldList[i];
+        if(!oldS) return false;
+        const newPv = (typeof s === 'object') ? (s.pv || 0) : 0;
+        const oldPv = (typeof oldS === 'object') ? (oldS.pv || 0) : 0;
+        return newPv !== oldPv;
+      });
+
+      const listChanged = JSON.stringify(newList) !== JSON.stringify(oldList);
+      if(!listChanged) return;
+
+      APP.studentLists[g.id] = newList;
+
+      if(pvChanged){
+        // Fotoğraf sürümü değişti — IndexedDB önbelleğini temizle (etkilenen kullanıcılar için)
+        newList.forEach(async (s) => {
+          const u = typeof s === 'string' ? s : s.u;
+          const newPv = (typeof s === 'object') ? (s.pv || 0) : 0;
+          const oldSObj = oldList.find(x => (typeof x === 'string' ? x : x.u) === u);
+          const oldPv = (oldSObj && typeof oldSObj === 'object') ? (oldSObj.pv || 0) : 0;
+          if(newPv !== oldPv && fcDb){
+            // IndexedDB'deki eski kaydı sil ki fcGetPhoto buluttan çeksin
+            try{
+              await new Promise((res,rej)=>{
+                const tx = fcDb.transaction('photos','readwrite');
+                tx.objectStore('photos').delete(u);
+                tx.oncomplete = ()=>res();
+                tx.onerror = e=>rej(e);
+              });
+            }catch(e){ console.warn('IndexedDB temizleme hatası:',e); }
+          }
+        });
+        if(document.getElementById('viewChesscard').style.display!=='none'){
+          renderChesscards();
+          setSyncStatus('ok','Fotoğraf güncellendi');
+          setTimeout(()=>setSyncStatus('ok','Firebase bağlı ✓'),3000);
+        }
+      } else {
+        renderGroupBar();
+        renderGrid();
+        if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
+      }
+    });
+    _studentsUnsubMap[key] = unsub;
+  });
+}
+
 function fbListen(){
   const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
   onSnapshot(doc(db,'panel',cfgKey), snap=>{
@@ -743,12 +816,16 @@ function fbListen(){
         renderGroupBar(); 
         renderGrid(); 
         if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
+        // Grup listesi değişince students_ dinleyicilerini de güncelle
+        fbListenStudents(APP.groups);
       });
       renderHeader(); buildCritPanel();
       setSyncStatus('ok','Başka cihazdan güncelleme alındı');
       setTimeout(()=>setSyncStatus('ok','Firebase bağlı ✓'),3000);
     }
   });
+  // Yükleme sonrası mevcut gruplar için students_ dinleyicilerini başlat
+  fbListenStudents(APP.groups);
   onSnapshot(doc(db,'panel','activity'), snap=>{
     if(!snap.exists()) return;
     const newAct=snap.data();
