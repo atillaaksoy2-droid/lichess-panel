@@ -740,7 +740,9 @@ function fbListenStudents(groups){
     const key = 'students_' + prefix + g.id;
     if(_studentsUnsubMap[key]) return;
 
+    let _firstSnap = true; // fbLoad zaten yükledi, ilk snapshot'ı atla
     const unsub = onSnapshot(doc(db,'panel',key), snap => {
+      if(_firstSnap){ _firstSnap = false; return; } // ilk tetiklenmeyi atla
       if(!snap.exists()) return;
       const newList = snap.data().list || [];
       const oldList = APP.studentLists[g.id] || [];
@@ -790,8 +792,10 @@ function fbListenStudents(groups){
 
 function fbListen(){
   const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
+  let _cfgFirstSnap = true; // ilk snapshot fbLoad'dan gelen veriyle aynıdır, atla
   onSnapshot(doc(db,'panel',cfgKey), snap=>{
     if(!snap.exists()) return;
+    if(_cfgFirstSnap){ _cfgFirstSnap = false; return; } // ilk tetiklenmeyi atla
     const d=snap.data();
     const changed = JSON.stringify(d.groups)!==JSON.stringify(APP.groups);
     if(changed){
@@ -2278,16 +2282,27 @@ window.fcPhotoClick = function(username){
       // 1. Fotoğrafı yükle ve yeni sürüm numarasını (pv) al
       const newPv = await fcSetPhoto(username, ev.target.result);
       
-      // 2. Veritabanındaki öğrenci listesini güncelle (yeni sürüm numarasını kaydet)
-      const list = APP.studentLists[APP.activeGid] || [];
-      const studentIdx = list.findIndex(x => (typeof x === 'string' ? x : x.u) === username);
-      
-      if(studentIdx !== -1) {
-        if(typeof list[studentIdx] === 'string') {
-          list[studentIdx] = { u: username, pv: newPv };
-        } else {
-          list[studentIdx].pv = newPv;
+      // 2. Öğrenciyi içeren TÜM gruplarda pv'yi güncelle
+      //    (sadece activeGid değil — diğer cihazlar pv değişimini görsün)
+      let savedAny = false;
+      for(const gid of Object.keys(APP.studentLists)){
+        const list = APP.studentLists[gid] || [];
+        const studentIdx = list.findIndex(x => (typeof x === 'string' ? x : x.u) === username);
+        if(studentIdx !== -1){
+          if(typeof list[studentIdx] === 'string'){
+            list[studentIdx] = { u: username, pv: newPv };
+          } else {
+            list[studentIdx].pv = newPv;
+          }
+          await fbSaveStudents(gid);
+          savedAny = true;
         }
+      }
+      if(!savedAny){
+        // Öğrenci hiçbir grupta bulunamadıysa (beklenmedik durum) yine de kaydet
+        const list = APP.studentLists[APP.activeGid] || [];
+        list.push({ u: username, pv: newPv });
+        APP.studentLists[APP.activeGid] = list;
         await fbSaveStudents(APP.activeGid);
       }
 
@@ -2593,12 +2608,26 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
     if(usersSnap.exists()) APP.users=usersSnap.data();
   }catch(e){ console.warn('Kullanici listesi yuklenemedi',e); }
 
-  // Genel veriyi yukle (goruntuleme modu icin)
+  // Genel veriyi yukle (goruntuleme modu icin) — tamamen bitmesini bekle
   await fbLoad();
-  fbListen();
-  buildCritPanel(); renderGroupBar(); renderHeader();
+
+  // Arayüzü oluştur
   document.body.classList.add('readonly');
-  renderGrid();
+  buildCritPanel(); renderGroupBar(); renderHeader();
+
+  // Sporcu varsa yükle, yoksa sadece boş ızgarayı göster
+  if(getStudents().length > 0){
+    renderGrid();
+    refreshAll();
+  } else {
+    renderGrid();
+  }
+
+  renderChamps(); renderScoreTable();
+
+  // Gerçek zamanlı dinleyiciyi SONRA başlat — fbLoad'dan hemen sonra
+  // tetiklenmemesi için kısa bir gecikme ekliyoruz
+  setTimeout(()=>{ fbListen(); }, 800);
 
   if(typeof PIN!=='undefined'&&PIN.init) PIN.init();
 })();
