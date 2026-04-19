@@ -595,8 +595,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getStorage, ref, uploadString, getDownloadURL, deleteObject }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+// Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
 const firebaseConfig = {
@@ -609,7 +608,6 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-const storage = getStorage(app);
 
 // ── SYNC DURUM GÖSTERGESI ────────────────────────────
 function setSyncStatus(state, msg){
@@ -748,43 +746,9 @@ function fbListenStudents(groups){
       const oldList = APP.studentLists[g.id] || [];
       if(JSON.stringify(newList) === JSON.stringify(oldList)) return;
 
-      // pv degisimi var mi kontrol et
-      const pvChanged = newList.some(s => {
-        const u = typeof s === 'string' ? s : s.u;
-        const newPv = (typeof s === 'object') ? (s.pv || 0) : 0;
-        const oldS = oldList.find(x => (typeof x === 'string' ? x : x.u) === u);
-        const oldPv = (oldS && typeof oldS === 'object') ? (oldS.pv || 0) : 0;
-        return newPv !== oldPv;
-      });
-
       APP.studentLists[g.id] = newList;
-
-      if(pvChanged && fcDb){
-        // Etkilenen kullanicilarin IndexedDB onbelleklerini temizle
-        newList.forEach(async s => {
-          const u = typeof s === 'string' ? s : s.u;
-          const newPv = (typeof s === 'object') ? (s.pv || 0) : 0;
-          const oldS = oldList.find(x => (typeof x === 'string' ? x : x.u) === u);
-          const oldPv = (oldS && typeof oldS === 'object') ? (oldS.pv || 0) : 0;
-          if(newPv !== oldPv){
-            try{
-              await new Promise((res,rej)=>{
-                const tx = fcDb.transaction('photos','readwrite');
-                tx.objectStore('photos').delete(u);
-                tx.oncomplete = ()=>res(); tx.onerror = e=>rej(e);
-              });
-            }catch(e){ console.warn('IndexedDB temizleme hatasi:',e); }
-          }
-        });
-        if(document.getElementById('viewChesscard').style.display!=='none'){
-          renderChesscards();
-          setSyncStatus('ok','Fotograf guncellendi');
-          setTimeout(()=>setSyncStatus('ok','Firebase bagli \u2713'),3000);
-        }
-      } else {
-        renderGroupBar(); renderGrid();
-        if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
-      }
+      renderGroupBar(); renderGrid();
+      if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
     });
     _studentsUnsubMap[key] = unsub;
   });
@@ -2002,142 +1966,76 @@ window.closeLogin = () => {
 
 
 // ── FUTCARD SİSTEMİ ─────────────────────────────────────────────────────────
-// Fotoğraflar IndexedDB'de saklanır (localStorage büyük resimleri kaldırmaz)
+// Fotoğraflar Firestore'da base64 olarak saklanır (/panel/photos dokümanı)
+// Her cihaz direkt Firestore'dan okur — IndexedDB/Storage/pv mantığı yok.
 
-const FC_DB_NAME = 'lichess_photos';
-const FC_DB_VER  = 1;
-let fcDb = null;
+// Fotoğraf veritabanını bellekte tut (sayfa içi önbellek)
+let _photoCache = {}; // { username: base64dataUrl }
+let _photoCacheLoaded = false;
 
-function openFcDb(){
-  return new Promise((res,rej)=>{
-    const req = indexedDB.open(FC_DB_NAME, FC_DB_VER);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('photos', {keyPath:'username'});
-    req.onsuccess = e => { fcDb = e.target.result; res(fcDb); };
-    req.onerror   = e => rej(e);
-  });
-}
-
-async function fcGetPhoto(username){
-  if(!fcDb) await openFcDb();
-
-  // Tüm gruplarda bu öğrenciyi ara (activeGid ile sınırlı değil)
-  let dbPv = 0;
-  for(const gid of Object.keys(APP.studentLists)){
-    const list = APP.studentLists[gid] || [];
-    const s = list.find(x => (typeof x === 'string' ? x : x.u) === username);
-    if(s && typeof s === 'object' && s.pv) { dbPv = s.pv; break; }
-  }
-
-  // Yerel önbelleğe bak
-  let localRecord = await new Promise((res)=>{
-    const tx  = fcDb.transaction('photos','readonly');
-    const req = tx.objectStore('photos').get(username);
-    req.onsuccess = e => res(e.target.result || null);
-    req.onerror   = ()=> res(null);
-  });
-
-  // Yerel kopya: gerçek resim verisi VE pv'si buluttakiyle eslesiyor ise kullan.
-  // dbPv=0 ise (pv hic kaydedilmemis) buluta git.
-  const localPv = localRecord ? (localRecord.pv || 0) : 0;
-  const hasLocalImage = !!(localRecord && localRecord.dataUrl && localRecord.dataUrl.startsWith('data:image'));
-  if(hasLocalImage && dbPv > 0 && localPv >= dbPv) {
-    return localRecord.dataUrl;
-  }
-
-  // Firebase Storage'dan cek
+async function fcLoadAllPhotos(){
   try {
-    const photoRef = ref(storage, 'photos/' + username);
-    const url = await getDownloadURL(photoRef);
-
-    // fetch ile base64'e cevir (onbellek icin); CORS hatasi olursa dogrudan URL kullan
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const blob = await response.blob();
-        const dataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-        if(dataUrl) await fcSetPhoto(username, dataUrl, false, dbPv || Date.now());
-        return dataUrl;
+    const snap = await getDoc(doc(db,'panel','photos'));
+    _photoCache = snap.exists() ? (snap.data() || {}) : {};
+    _photoCacheLoaded = true;
+    // Gerçek zamanlı dinle — başka cihazdan fotoğraf eklenince güncelle
+    onSnapshot(doc(db,'panel','photos'), snap => {
+      _photoCache = snap.exists() ? (snap.data() || {}) : {};
+      if(document.getElementById('viewChesscard').style.display !== 'none'){
+        renderChesscards();
       }
-    } catch (fetchErr) {
-      console.warn('[' + username + '] Fotograf fetch (CORS) hatasi, dogrudan URL kullanilacak:', fetchErr);
-    }
-
-    return url;
-  } catch(e) {
-    console.warn('[' + username + '] Fotograf bulutta bulunamadi:', e.message);
-    return null;
+    });
+  } catch(e){
+    console.warn('Fotoğraflar yüklenemedi:', e);
+    _photoCache = {};
+    _photoCacheLoaded = true;
   }
 }
 
-async function fcSetPhoto(username, dataUrl, uploadToCloud = true, pv = null){
-  if(!fcDb) await openFcDb();
-  
-  // Eğer pv belirtilmemişse ve buluta yükleniyorsa yeni bir tane oluştur
-  if(pv === null && uploadToCloud) pv = Date.now();
+function fcGetPhoto(username){
+  // Senkron — bellekteki önbellekten döner
+  return _photoCache[username] || null;
+}
 
-  // Yerel önbelleğe kaydet
-  await new Promise((res,rej)=>{
-    const tx  = fcDb.transaction('photos','readwrite');
-    tx.objectStore('photos').put({username, dataUrl, pv: pv || 0});
-    tx.oncomplete = ()=> res();
-    tx.onerror    = e => rej(e);
+// Fotoğrafı canvas ile küçült → max 600px, %70 kalite
+function fcResizeImage(dataUrl){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 600;
+      let w = img.width, h = img.height;
+      if(w > MAX || h > MAX){
+        if(w > h){ h = Math.round(h * MAX / w); w = MAX; }
+        else      { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.70));
+    };
+    img.onerror = () => resolve(dataUrl); // küçültemezse orijinali kullan
+    img.src = dataUrl;
   });
+}
 
-  // Buluta yükle
-  if(uploadToCloud && dataUrl.startsWith('data:image')) {
-    try {
-      const photoRef = ref(storage, `photos/${username}`);
-      await uploadString(photoRef, dataUrl, 'data_url');
-      console.log(`[${username}] fotoğrafı buluta yüklendi (v:${pv}).`);
-    } catch(e) {
-      console.error('Bulut yükleme hatası:', e);
-    }
+async function fcSaveAllPhotos(){
+  try {
+    await setDoc(doc(db,'panel','photos'), _photoCache);
+  } catch(e){
+    console.error('Fotoğraf kayıt hatası:', e);
+    showToast('Fotoğraf kaydedilemedi: ' + e.message, true);
   }
-  return pv;
 }
 
 window.fcDeletePhoto = async function(username){
   if(!PIN.getIsAdmin()){ showToast('Yetkiniz yok', true); return; }
   if(!confirm(`"${username}" için fotoğrafı silmek istediğinize emin misiniz?`)) return;
-  
   try {
-    // 1. Firebase Storage'dan sil
-    try {
-      const photoRef = ref(storage, `photos/${username}`);
-      await deleteObject(photoRef);
-      console.log(`[${username}] fotoğrafı buluttan silindi.`);
-    } catch(e) {
-      console.warn('Bulut silme hatası (zaten silinmiş olabilir):', e);
-    }
-    
-    // 2. IndexedDB'den sil
-    if(!fcDb) await openFcDb();
-    await new Promise((res,rej)=>{
-      const tx = fcDb.transaction('photos','readwrite');
-      tx.objectStore('photos').delete(username);
-      tx.oncomplete = ()=> res();
-      tx.onerror = e => rej(e);
-    });
-    
-    // 3. Firestore'dan pv'yi kaldır
-    const list = APP.studentLists[APP.activeGid] || [];
-    const idx = list.findIndex(x => (typeof x === 'string' ? x : x.u) === username);
-    if(idx !== -1) {
-      if(typeof list[idx] === 'object') {
-        delete list[idx].pv;
-        // Eğer başka özellik kalmadıysa string'e dönebiliriz
-        if(Object.keys(list[idx]).length === 1 && list[idx].u) list[idx] = list[idx].u;
-      }
-      await fbSaveStudents(APP.activeGid);
-    }
-    
+    delete _photoCache[username];
+    await fcSaveAllPhotos();
     renderChesscards();
     showToast('Fotoğraf silindi ✓');
-  } catch(e) {
+  } catch(e){
     console.error('Fotoğraf silme hatası:', e);
     showToast('Hata: ' + e.message, true);
   }
@@ -2153,7 +2051,6 @@ window.switchView = function(view){
 
 // Futcard ızgarasını oluştur
 async function renderChesscards(){
-  if(!fcDb) await openFcDb();
   const students = getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
   const grid = document.getElementById('chesscardGrid');
   if(students.length===0){
@@ -2253,21 +2150,16 @@ async function renderChesscards(){
       </div>`;
     grid.appendChild(card);
     
-    // Fotoğrafı arka planda yükle
-    (async (currentIdx) => {
-      const photoDataUrl = await fcGetPhoto(u);
-      const container = document.getElementById(`fc-photo-${currentIdx}`);
-      const deleteContainer = document.getElementById(`fc-delete-${currentIdx}`);
-      
-      if (container) {
-        if (photoDataUrl) {
-          container.innerHTML = `<div class="fc-photo" style="background-image:url('${photoDataUrl}')"></div>`;
-          if (PIN.getIsAdmin() && deleteContainer) {
-            deleteContainer.innerHTML = `<button class="fc-delete-btn" onclick="event.stopPropagation();fcDeletePhoto('${escHtml(u)}')" title="Fotoğrafı Kaldır">✕</button>`;
-          }
-        }
+    // Fotoğrafı önbellekten senkron olarak yükle
+    const photoDataUrl = fcGetPhoto(u);
+    const container = document.getElementById(`fc-photo-${idx}`);
+    const deleteContainer = document.getElementById(`fc-delete-${idx}`);
+    if(container && photoDataUrl){
+      container.innerHTML = `<div class="fc-photo" style="background-image:url('${photoDataUrl}')"></div>`;
+      if(PIN.getIsAdmin() && deleteContainer){
+        deleteContainer.innerHTML = `<button class="fc-delete-btn" onclick="event.stopPropagation();fcDeletePhoto('${escHtml(u)}')" title="Fotoğrafı Kaldır">✕</button>`;
       }
-    })(idx);
+    }
   });
 }
 
@@ -2279,33 +2171,13 @@ window.fcPhotoClick = function(username){
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
     reader.onload = async(ev)=>{
-      // 1. Fotoğrafı yükle ve yeni sürüm numarasını (pv) al
-      const newPv = await fcSetPhoto(username, ev.target.result);
-      
-      // 2. Öğrenciyi içeren TÜM gruplarda pv'yi güncelle
-      //    (sadece activeGid değil — diğer cihazlar pv değişimini görsün)
-      let savedAny = false;
-      for(const gid of Object.keys(APP.studentLists)){
-        const list = APP.studentLists[gid] || [];
-        const studentIdx = list.findIndex(x => (typeof x === 'string' ? x : x.u) === username);
-        if(studentIdx !== -1){
-          if(typeof list[studentIdx] === 'string'){
-            list[studentIdx] = { u: username, pv: newPv };
-          } else {
-            list[studentIdx].pv = newPv;
-          }
-          await fbSaveStudents(gid);
-          savedAny = true;
-        }
-      }
-      if(!savedAny){
-        // Öğrenci hiçbir grupta bulunamadıysa (beklenmedik durum) yine de kaydet
-        const list = APP.studentLists[APP.activeGid] || [];
-        list.push({ u: username, pv: newPv });
-        APP.studentLists[APP.activeGid] = list;
-        await fbSaveStudents(APP.activeGid);
-      }
-
+      setSyncStatus('syncing','Fotoğraf yükleniyor…');
+      // Fotoğrafı küçült (max 600px, %70 kalite)
+      const resized = await fcResizeImage(ev.target.result);
+      // Firestore'daki photos dokümanına kaydet
+      _photoCache[username] = resized;
+      await fcSaveAllPhotos();
+      setSyncStatus('ok','Firebase bağlı ✓');
       renderChesscards();
       showToast('Fotoğraf kaydedildi ✓');
     };
@@ -2593,10 +2465,6 @@ window.autoCreateBestGroup = async () => {
   showToast(`${bestStudents.length} sporcu ile "${groupName}" grubu güncellendi ✓`);
 };
 
-// IndexedDB'yi başlat
-openFcDb().catch(e=>console.warn('IndexedDB açılamadı:',e));
-
-// Auto-refresh 5 dakikada bir
 // Auto-refresh 10 dakikada bir (lichess rate limit için)
 setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 
@@ -2610,6 +2478,8 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 
   // Genel veriyi yukle (goruntuleme modu icin) — tamamen bitmesini bekle
   await fbLoad();
+  // Fotoğrafları Firestore'dan yükle ve gerçek zamanlı dinlemeyi başlat
+  await fcLoadAllPhotos();
 
   // Arayüzü oluştur
   document.body.classList.add('readonly');
