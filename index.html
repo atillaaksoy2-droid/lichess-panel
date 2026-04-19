@@ -723,72 +723,64 @@ async function fbSaveActivity(){
 }
 
 // Gerçek zamanlı dinleyici — başka cihazdan değişiklik olunca güncelle
-// students_ dokümanları için aktif dinleyicileri takip et
-const _studentsUnsubMap = {}; // { docKey: unsubscribeFn }
+// students_ dokümanlari için aktif dinleyicileri takip et
+const _studentsUnsubMap = {};
 
 function fbListenStudents(groups){
   const prefix = APP.currentUser ? APP.currentUser + '_' : '';
   const neededKeys = new Set(groups.map(g => 'students_' + prefix + g.id));
 
-  // Artık gerekli olmayan dinleyicileri kapat
+  // Artik gerekli olmayan dinleyicileri kapat
   for(const key of Object.keys(_studentsUnsubMap)){
-    if(!neededKeys.has(key)){
-      _studentsUnsubMap[key]();
-      delete _studentsUnsubMap[key];
-    }
+    if(!neededKeys.has(key)){ _studentsUnsubMap[key](); delete _studentsUnsubMap[key]; }
   }
 
   // Yeni gruplar için dinleyici ekle
   groups.forEach(g => {
     const key = 'students_' + prefix + g.id;
-    if(_studentsUnsubMap[key]) return; // Zaten dinleniyor
+    if(_studentsUnsubMap[key]) return;
 
     const unsub = onSnapshot(doc(db,'panel',key), snap => {
       if(!snap.exists()) return;
       const newList = snap.data().list || [];
       const oldList = APP.studentLists[g.id] || [];
+      if(JSON.stringify(newList) === JSON.stringify(oldList)) return;
 
-      // pv değeri değişti mi kontrol et (fotoğraf güncellemesi)
-      const pvChanged = newList.some((s,i) => {
-        const oldS = oldList[i];
-        if(!oldS) return false;
+      // pv degisimi var mi kontrol et
+      const pvChanged = newList.some(s => {
+        const u = typeof s === 'string' ? s : s.u;
         const newPv = (typeof s === 'object') ? (s.pv || 0) : 0;
-        const oldPv = (typeof oldS === 'object') ? (oldS.pv || 0) : 0;
+        const oldS = oldList.find(x => (typeof x === 'string' ? x : x.u) === u);
+        const oldPv = (oldS && typeof oldS === 'object') ? (oldS.pv || 0) : 0;
         return newPv !== oldPv;
       });
 
-      const listChanged = JSON.stringify(newList) !== JSON.stringify(oldList);
-      if(!listChanged) return;
-
       APP.studentLists[g.id] = newList;
 
-      if(pvChanged){
-        // Fotoğraf sürümü değişti — IndexedDB önbelleğini temizle (etkilenen kullanıcılar için)
-        newList.forEach(async (s) => {
+      if(pvChanged && fcDb){
+        // Etkilenen kullanicilarin IndexedDB onbelleklerini temizle
+        newList.forEach(async s => {
           const u = typeof s === 'string' ? s : s.u;
           const newPv = (typeof s === 'object') ? (s.pv || 0) : 0;
-          const oldSObj = oldList.find(x => (typeof x === 'string' ? x : x.u) === u);
-          const oldPv = (oldSObj && typeof oldSObj === 'object') ? (oldSObj.pv || 0) : 0;
-          if(newPv !== oldPv && fcDb){
-            // IndexedDB'deki eski kaydı sil ki fcGetPhoto buluttan çeksin
+          const oldS = oldList.find(x => (typeof x === 'string' ? x : x.u) === u);
+          const oldPv = (oldS && typeof oldS === 'object') ? (oldS.pv || 0) : 0;
+          if(newPv !== oldPv){
             try{
               await new Promise((res,rej)=>{
                 const tx = fcDb.transaction('photos','readwrite');
                 tx.objectStore('photos').delete(u);
-                tx.oncomplete = ()=>res();
-                tx.onerror = e=>rej(e);
+                tx.oncomplete = ()=>res(); tx.onerror = e=>rej(e);
               });
-            }catch(e){ console.warn('IndexedDB temizleme hatası:',e); }
+            }catch(e){ console.warn('IndexedDB temizleme hatasi:',e); }
           }
         });
         if(document.getElementById('viewChesscard').style.display!=='none'){
           renderChesscards();
-          setSyncStatus('ok','Fotoğraf güncellendi');
-          setTimeout(()=>setSyncStatus('ok','Firebase bağlı ✓'),3000);
+          setSyncStatus('ok','Fotograf guncellendi');
+          setTimeout(()=>setSyncStatus('ok','Firebase bagli \u2713'),3000);
         }
       } else {
-        renderGroupBar();
-        renderGrid();
+        renderGroupBar(); renderGrid();
         if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
       }
     });
@@ -805,26 +797,23 @@ function fbListen(){
     if(changed){
       APP.groups    = d.groups;
       APP.crit      = {...APP.crit,...(d.criteria||{})};
-      // Aktif grup değiştiyse güncelle
       Promise.all(APP.groups.map(async g=>{
         try{
           const prefix = APP.currentUser ? APP.currentUser + '_' : '';
           const s = await getDoc(doc(db,'panel','students_'+prefix+g.id));
           if(s.exists()) APP.studentLists[g.id]=s.data().list||[];
-        }catch(e){ console.warn('fbListen grup yüklenemedi:',g.id); }
+        }catch(e){ console.warn('fbListen grup yuklenemedi:',g.id); }
       })).then(()=>{ 
         renderGroupBar(); 
         renderGrid(); 
         if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
-        // Grup listesi değişince students_ dinleyicilerini de güncelle
         fbListenStudents(APP.groups);
       });
       renderHeader(); buildCritPanel();
-      setSyncStatus('ok','Başka cihazdan güncelleme alındı');
-      setTimeout(()=>setSyncStatus('ok','Firebase bağlı ✓'),3000);
+      setSyncStatus('ok','Baska cihazdan guncelleme alindi');
+      setTimeout(()=>setSyncStatus('ok','Firebase bagli \u2713'),3000);
     }
   });
-  // Yükleme sonrası mevcut gruplar için students_ dinleyicilerini başlat
   fbListenStudents(APP.groups);
   onSnapshot(doc(db,'panel','activity'), snap=>{
     if(!snap.exists()) return;
@@ -2026,11 +2015,14 @@ function openFcDb(){
 
 async function fcGetPhoto(username){
   if(!fcDb) await openFcDb();
-  
-  // Buluttaki sürüm numarasını (pv) bul
-  const list = APP.studentLists[APP.activeGid] || [];
-  const student = list.find(x => (typeof x === 'string' ? x : x.u) === username);
-  const dbPv = (student && typeof student === 'object') ? (student.pv || 0) : 0;
+
+  // Tüm gruplarda bu öğrenciyi ara (activeGid ile sınırlı değil)
+  let dbPv = 0;
+  for(const gid of Object.keys(APP.studentLists)){
+    const list = APP.studentLists[gid] || [];
+    const s = list.find(x => (typeof x === 'string' ? x : x.u) === username);
+    if(s && typeof s === 'object' && s.pv) { dbPv = s.pv; break; }
+  }
 
   // Yerel önbelleğe bak
   let localRecord = await new Promise((res)=>{
@@ -2039,19 +2031,21 @@ async function fcGetPhoto(username){
     req.onsuccess = e => res(e.target.result || null);
     req.onerror   = ()=> res(null);
   });
-  
-  // Eğer yerel kopya varsa VE sürümü buluttakiyle aynıysa (veya daha yeniyse) kullan
-  if(localRecord && localRecord.dataUrl && (localRecord.pv || 0) >= dbPv) {
+
+  // Yerel kopya: gerçek resim verisi VE pv'si buluttakiyle eslesiyor ise kullan.
+  // dbPv=0 ise (pv hic kaydedilmemis) buluta git.
+  const localPv = localRecord ? (localRecord.pv || 0) : 0;
+  const hasLocalImage = !!(localRecord && localRecord.dataUrl && localRecord.dataUrl.startsWith('data:image'));
+  if(hasLocalImage && dbPv > 0 && localPv >= dbPv) {
     return localRecord.dataUrl;
   }
 
-  // Yerelde yoksa veya eskiyse Firebase Storage'dan çek
+  // Firebase Storage'dan cek
   try {
-    const photoRef = ref(storage, `photos/${username}`);
+    const photoRef = ref(storage, 'photos/' + username);
     const url = await getDownloadURL(photoRef);
-    
-    // Arka planda resmi çekip base64'e çevirmeye çalışalım (CORS izin verirse)
-    // İzin vermezse bile en azından doğrudan URL'yi döndürelim
+
+    // fetch ile base64'e cevir (onbellek icin); CORS hatasi olursa dogrudan URL kullan
     try {
       const response = await fetch(url);
       if (response.ok) {
@@ -2061,17 +2055,16 @@ async function fcGetPhoto(username){
           reader.onloadend = () => resolve(reader.result);
           reader.readAsDataURL(blob);
         });
-        // İndirilen resmi yerel önbelleğe yeni sürüm numarasıyla kaydet
-        if(dataUrl) await fcSetPhoto(username, dataUrl, false, dbPv); 
+        if(dataUrl) await fcSetPhoto(username, dataUrl, false, dbPv || Date.now());
         return dataUrl;
       }
     } catch (fetchErr) {
-      console.warn(`[${username}] Fotoğraf fetch (CORS) hatası, doğrudan URL kullanılacak:`, fetchErr);
+      console.warn('[' + username + '] Fotograf fetch (CORS) hatasi, dogrudan URL kullanilacak:', fetchErr);
     }
 
-    return url; // Fetch başarısız olsa bile URL'yi döndür
+    return url;
   } catch(e) {
-    console.warn(`[${username}] Fotoğraf bulutta bulunamadı:`, e.message);
+    console.warn('[' + username + '] Fotograf bulutta bulunamadi:', e.message);
     return null;
   }
 }
