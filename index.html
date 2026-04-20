@@ -322,9 +322,9 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .fc-photo-row{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 auto 8px}
 .fc-logo-side{width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fc-logo-side img{width:26px;height:26px;border-radius:50%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
-.fc-photo-wrap{width:100px;height:120px;overflow:hidden;border-radius:8px 8px 0 0;background:transparent;position:relative;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.15)}
+.fc-photo-wrap{width:100px;height:120px;overflow:hidden;border-radius:8px 8px 0 0;position:relative;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.15)}
 .fc-photo-container{width:100%;height:100%}
-.fc-photo{width:100%;height:100%;background-size:contain;background-position:center top;background-repeat:no-repeat}
+.fc-photo{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
 .fc-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:42px;font-family:'Playfair Display',serif;font-weight:700;color:rgba(255,255,255,.3)}
 .fc-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:20px}
 .fc-photo-wrap:hover .fc-photo-overlay{opacity:1}
@@ -1997,23 +1997,47 @@ function fcGetPhoto(username){
   return _photoCache[username] || null;
 }
 
-// Fotoğrafı canvas ile küçült → max 600px, %70 kalite
-function fcResizeImage(dataUrl){
+// Fotoğraf alanı için kart arka plan renkleri
+const FC_BG_COLORS = {
+  'fc-gold':   '#3a2800',
+  'fc-silver': '#252b3a',
+  'fc-bronze': '#321800',
+  'fc-normal': '#152030'
+};
+
+// Fotoğrafı canvas ile hazırla:
+// - Kart rengini arka plana çiz (şeffaf PNG sorunu yok)
+// - Fotoğrafı oranını koruyarak ortala
+// - Sabit 400x440px (PNG'de 2000x2200 @ 5x) çıktı
+function fcPreparePhoto(dataUrl, cardClass){
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const MAX = 600;
-      let w = img.width, h = img.height;
-      if(w > MAX || h > MAX){
-        if(w > h){ h = Math.round(h * MAX / w); w = MAX; }
-        else      { w = Math.round(w * MAX / h); h = MAX; }
-      }
+      const OUT_W = 400;
+      const OUT_H = 440;
+      const bgColor = FC_BG_COLORS[cardClass] || '#152030';
+
       const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', 0.70));
+      canvas.width  = OUT_W;
+      canvas.height = OUT_H;
+      const ctx = canvas.getContext('2d');
+
+      // 1. Kart rengiyle doldur
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, OUT_W, OUT_H);
+
+      // 2. Fotoğrafı oranını koruyarak sığdır (contain mantığı)
+      const scale = Math.min(OUT_W / img.width, OUT_H / img.height);
+      const dw = img.width  * scale;
+      const dh = img.height * scale;
+      const dx = (OUT_W - dw) / 2;
+      const dy = 0; // üste yasla
+
+      ctx.drawImage(img, dx, dy, dw, dh);
+
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
     };
-    img.onerror = () => resolve(dataUrl); // küçültemezse orijinali kullan
+    img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
 }
@@ -2155,17 +2179,7 @@ async function renderChesscards(){
     const container = document.getElementById(`fc-photo-${idx}`);
     const deleteContainer = document.getElementById(`fc-delete-${idx}`);
     if(container && photoDataUrl){
-      // Kart rengini arka plan olarak kullan — şeffaf PNG alanlarında kart rengi görünür
-      const bgColors = {
-        'fc-gold':   '#3a2800',
-        'fc-silver': '#252b3a',
-        'fc-bronze': '#321800',
-        'fc-normal': '#152030'
-      };
-      const cardEl = container.closest('.chesscard');
-      const cardCls = ['fc-gold','fc-silver','fc-bronze','fc-normal'].find(c => cardEl && cardEl.classList.contains(c)) || 'fc-normal';
-      const bgColor = bgColors[cardCls];
-      container.innerHTML = `<div class="fc-photo" style="background-image:url('${photoDataUrl}');background-color:${bgColor}"></div>`;
+      container.innerHTML = `<img class="fc-photo" src="${photoDataUrl}" alt="${escHtml(u)}">`;
       if(PIN.getIsAdmin() && deleteContainer){
         deleteContainer.innerHTML = `<button class="fc-delete-btn" onclick="event.stopPropagation();fcDeletePhoto('${escHtml(u)}')" title="Fotoğrafı Kaldır">✕</button>`;
       }
@@ -2182,10 +2196,12 @@ window.fcPhotoClick = function(username){
     const reader = new FileReader();
     reader.onload = async(ev)=>{
       setSyncStatus('syncing','Fotoğraf yükleniyor…');
-      // Fotoğrafı küçült (max 600px, %70 kalite)
-      const resized = await fcResizeImage(ev.target.result);
-      // Firestore'daki photos dokümanına kaydet
-      _photoCache[username] = resized;
+      // Kartın sınıfını bul (altın/gümüş/bronz/normal)
+      const cardEl = document.querySelector(`.chesscard[data-user="${CSS.escape(username)}"]`);
+      const cardCls = ['fc-gold','fc-silver','fc-bronze','fc-normal'].find(c => cardEl && cardEl.classList.contains(c)) || 'fc-normal';
+      // Fotoğrafı kart rengiyle birleştir, oranı koru
+      const prepared = await fcPreparePhoto(ev.target.result, cardCls);
+      _photoCache[username] = prepared;
       await fcSaveAllPhotos();
       setSyncStatus('ok','Firebase bağlı ✓');
       renderChesscards();
@@ -2223,26 +2239,7 @@ window.downloadCard = async function(username){
     card.style.height     = RENDER_H + 'px';
     card.style.overflow   = 'hidden';
 
-    // Fotoğraf alanını da sabit yüksekliğe kilitle (taşmasın)
-    const photoWrap = card.querySelector('.fc-photo-wrap');
-    const origPhotoStyle = photoWrap ? photoWrap.style.cssText : '';
-    if(photoWrap){
-      photoWrap.style.height    = '120px';
-      photoWrap.style.minHeight = '120px';
-      photoWrap.style.overflow  = 'hidden';
-    }
-    // background-image div — oranı koru (contain), kırpma yok
-    const photoDiv = card.querySelector('.fc-photo');
-    const origDivStyle = photoDiv ? photoDiv.style.cssText : '';
-    if(photoDiv){
-      photoDiv.style.width           = '100%';
-      photoDiv.style.height          = '120px';
-      photoDiv.style.backgroundSize  = 'contain';
-      photoDiv.style.backgroundPosition = 'center top';
-      photoDiv.style.backgroundRepeat   = 'no-repeat';
-    }
-
-    // Lichess logosu gibi harici img'lerin yüklenmesini bekle
+    // img etiketlerinin yüklenmesini bekle
     const imgs = card.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img =>
       img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
@@ -2270,8 +2267,6 @@ window.downloadCard = async function(username){
     // Orijinal stilleri geri yükle
     card.style.cssText = originalStyle;
     hideEls.forEach(el=>{ el.style.visibility=''; });
-    if(photoWrap) photoWrap.style.cssText = origPhotoStyle;
-    if(photoDiv)  photoDiv.style.cssText  = origDivStyle;
 
     // Sabit 1000x1550 canvas'a çiz (captured zaten 1000x310 ~ ama biz tam 1550 istiyoruz)
     // captured: 1000 x (TARGET_W/RENDER_W * RENDER_H) = 1000 x 1550 — zaten doğru boyut
