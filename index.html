@@ -2099,12 +2099,20 @@ window.fcPreparePhoto = function(dataUrl) {
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const targetWidth = 600;
+      
+      // Kart performansını korumak için boyutu optimize edelim
+      const targetWidth = 500; 
       const scale = targetWidth / img.width;
       canvas.width = targetWidth;
       canvas.height = img.height * scale;
+
+      // KANVASIN TAMAMEN ŞEFFAF OLDUĞUNDAN EMİN OLALIM
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Fotoğrafı çiz (Arka plan eklemeden)
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // PNG OLARAK KAYDET (Şeffaflık sadece PNG'de çalışır)
       resolve(canvas.toDataURL('image/png'));
     };
     img.src = dataUrl;
@@ -2217,30 +2225,35 @@ async function renderChesscards(){
  
 // Fotoğraf tıklama — yönetici modunda yükleme aç
 window.fcPhotoClick = function(username){
-  if(!PIN.getIsAdmin()){ showToast('Fotoğraf yüklemek için yönetici girişi gerekli',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Yönetici girişi gerekli', true); return; }
   const input = document.getElementById('fcPhotoInput');
   input.onchange = async(e)=>{
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
     reader.onload = async(ev)=>{
-      setSyncStatus('syncing','Fotoğraf yükleniyor…');
-      // Kartın sınıfını bul (altın/gümüş/bronz/normal)
-      const cardEl = document.querySelector(`.chesscard[data-user="${CSS.escape(username)}"]`);
-      const cardCls = ['fc-gold','fc-silver','fc-bronze','fc-normal'].find(c => cardEl && cardEl.classList.contains(c)) || 'fc-normal';
-      // Fotoğrafı kart rengiyle birleştir, oranı koru
-      const prepared = await fcPreparePhoto(ev.target.result, cardCls);
+      setSyncStatus('syncing', 'Hazırlanıyor…');
+      
+      // 1. Fotoğrafı şeffaf PNG olarak hazırla
+      const prepared = await fcPreparePhoto(ev.target.result);
+      
+      // 2. Önce yerel belleğe yaz (UI anında güncellensin)
       _photoCache[username] = prepared;
-      await fcSaveAllPhotos();
-      setSyncStatus('ok','Firebase bağlı ✓');
-      renderChesscards();
-      showToast('Fotoğraf kaydedildi ✓');
+      renderChesscards(); 
+      
+      // 3. Firebase'e kaydet
+      try {
+        await setDoc(doc(db,'panel','photos'), _photoCache);
+        showToast('Fotoğraf başarıyla kaydedildi ✓');
+        setSyncStatus('ok', 'Firebase güncellendi ✓');
+      } catch(err) {
+        showToast('Kayıt hatası!', true);
+      }
     };
     reader.readAsDataURL(file);
-    input.value='';
+    input.value = '';
   };
   input.click();
 };
-
 // Tek kart PNG indir
 window.downloadCard = async function(username){
   const card = document.querySelector(`.chesscard[data-user="${CSS.escape(username)}"]`);
