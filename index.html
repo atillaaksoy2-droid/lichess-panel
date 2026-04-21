@@ -294,71 +294,155 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 
 .chesscard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;padding:4px}
 
-/* ── CHESSCARD ── */
-.chesscard{
-  width:200px;border-radius:14px;overflow:hidden;position:relative;
-  cursor:pointer;transition:transform .2s,box-shadow .2s;
-  box-shadow:0 8px 24px rgba(0,0,0,.5);
-  font-family:'IBM Plex Mono',monospace;
-  image-rendering: -webkit-optimize-contrast;
-  backface-visibility: hidden;
+/* ── YENİ NESİL REKTANGÜLER CHESSCARD (GÜNCEL) ── */
+.chesscard {
+  width: 230px;
+  height: 330px;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  background: #111;
+  transition: transform .3s ease;
+  border: 4px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  font-family: 'IBM Plex Mono', monospace;
 }
-.chesscard:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 14px 36px rgba(0,0,0,.6)}
 
-/* Renk temaları — öncekinden biraz daha açık */
-.chesscard.fc-gold{background:linear-gradient(160deg,#3a2800 0%,#5a4500 50%,#d4a83a 100%)}
-.chesscard.fc-silver{background:linear-gradient(160deg,#252b3a 0%,#38455a 50%,#708090 100%)}
-.chesscard.fc-bronze{background:linear-gradient(160deg,#321800 0%,#4a2812 50%,#9a5a28 100%)}
-.chesscard.fc-normal{background:linear-gradient(160deg,#152030 0%,#253545 50%,#354a60 100%)}
+.chesscard:hover { transform: translateY(-5px); }
 
-.chesscard-inner{padding:16px 14px 12px;position:relative;z-index:1}
-
-/* Puan ve rozet */
-.fc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.fc-score{font-size:36px;font-weight:900;font-family:'Playfair Display',serif;line-height:1;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5)}
-.fc-rank-badge{background:rgba(255,255,255,.15);border-radius:5px;padding:2px 7px;font-size:10px;color:rgba(255,255,255,.8);font-weight:600;backdrop-filter:blur(4px)}
-
-/* Fotoğraf — büyük, çerçevesiz */
-.fc-photo-row{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 auto 8px}
-.fc-logo-side{width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.fc-logo-side img{width:26px;height:26px;border-radius:50%;object-fit:contain;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
-.fc-photo-wrap{width:100px;height:120px;overflow:hidden;border-radius:8px 8px 0 0;position:relative;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.15)}
-.fc-photo-container{width:100%;height:100%}
-.fc-photo{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
-.fc-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:42px;font-family:'Playfair Display',serif;font-weight:700;color:rgba(255,255,255,.3)}
-.fc-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:20px}
-.fc-photo-wrap:hover .fc-photo-overlay{opacity:1}
-
-.fc-delete-btn{
-  position:absolute; top:4px; right:4px; 
-  width:18px; height:18px; border-radius:50%;
-  background:rgba(224,90,90,.8); color:#fff;
-  border:none; cursor:pointer; font-size:10px;
-  display:flex; align-items:center; justify-content:center;
-  opacity:0; transition:opacity .2s; z-index:10;
+/* Arka Plan Hareketli Dokular */
+.chesscard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    url('https://www.transparenttextures.com/patterns/carbon-fibre.png'),
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,0.15) 0%, transparent 60%);
+  opacity: 0.4;
+  z-index: 0;
 }
-.fc-photo-wrap:hover .fc-delete-btn{opacity:1}
-.fc-delete-btn:hover{background:#e05a5a; transform:scale(1.1)}
 
-/* İsim */
-.fc-name{text-align:center;font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.5px;text-transform:uppercase}
+/* Renk Temaları */
+.chesscard.fc-gold { 
+  background: linear-gradient(165deg, #4d3d0d 0%, #d4a83a 40%, #8a6d29 100%); 
+  border-color: #f5c842;
+}
+.chesscard.fc-silver { 
+  background: linear-gradient(165deg, #2c3e50 0%, #bdc3c7 40%, #7f8c8d 100%); 
+  border-color: #b0bec5;
+}
+.chesscard.fc-bronze { 
+  background: linear-gradient(165deg, #3d1c02 0%, #a0522d 40%, #5d2906 100%); 
+  border-color: #cd7f32;
+}
+.chesscard.fc-normal { 
+  background: linear-gradient(165deg, #0f2027 0%, #203a43 40%, #2c5364 100%); 
+  border-color: #3498db;
+}
 
-/* İstatistik barlar */
-.fc-stats{display:flex;flex-direction:column;gap:5px}
-.fc-stat{display:flex;align-items:center;gap:6px}
-.fc-stat-label{font-size:8px;color:rgba(255,255,255,.6);letter-spacing:1px;text-transform:uppercase;width:24px;flex-shrink:0}
-.fc-stat-bar-wrap{flex:1;height:4px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden}
-.fc-stat-bar{height:100%;border-radius:10px}
-.fc-stat-val{font-size:10px;font-weight:700;color:#fff;width:30px;text-align:right;flex-shrink:0}
+.chesscard-inner { position: relative; z-index: 5; height: 100%; }
 
-/* Footer */
-.fc-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}
-.fc-lichess-logo{display:flex;align-items:center}
-.fc-lichess-logo img{width:16px;height:16px;filter:brightness(0) invert(1);opacity:.6}
-.fc-screen-only .fc-dl-btn{background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);font-size:10px;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;transition:all .15s;backdrop-filter:blur(4px);min-width:52px;min-height:22px}
-.fc-screen-only .fc-dl-btn:hover{background:rgba(255,255,255,.25);color:#fff}
-.fc-photo-input{display:none}
+/* Fotoğraf Alanı - Bütünleşik */
+.fc-photo-wrap {
+  position: absolute;
+  top: 45px;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  z-index: 1;
+  cursor: pointer;
+}
 
+.fc-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom;
+  -webkit-mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+  filter: drop-shadow(0 10px 15px rgba(0,0,0,0.6));
+}
+
+.fc-top {
+  position: relative;
+  z-index: 10;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.fc-score {
+  font-size: 40px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+  font-family: 'Playfair Display', serif;
+}
+
+.fc-rank-badge {
+  background: rgba(0,0,0,0.5);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #fff;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.fc-name {
+  position: absolute;
+  top: 220px;
+  width: 100%;
+  z-index: 10;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.fc-stats {
+  position: absolute;
+  bottom: 12px;
+  left: 10px;
+  right: 10px;
+  z-index: 10;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 6px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.fc-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+.fc-stat:last-child { border-right: none; }
+.fc-stat-label { font-size: 7px; color: #ccc; text-transform: uppercase; }
+.fc-stat-val { font-size: 13px; font-weight: 700; color: #fff; }
+
+.fc-footer {
+  position: absolute;
+  bottom: 60px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  opacity: 0.6;
+}
+.fc-dl-btn {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    z-index: 20;
+}
 /* Büyük kart modal */
 .fc-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
 .fc-modal{position:relative}
@@ -2009,39 +2093,23 @@ const FC_BG_COLORS = {
 // - Kart rengini arka plana çiz (şeffaf PNG sorunu yok)
 // - Fotoğrafı oranını koruyarak ortala
 // - Sabit 400x440px (PNG'de 2000x2200 @ 5x) çıktı
-function fcPreparePhoto(dataUrl, cardClass){
+window.fcPreparePhoto = function(dataUrl) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const OUT_W = 400;
-      const OUT_H = 440;
-      const bgColor = FC_BG_COLORS[cardClass] || '#152030';
-
       const canvas = document.createElement('canvas');
-      canvas.width  = OUT_W;
-      canvas.height = OUT_H;
       const ctx = canvas.getContext('2d');
-
-      // 1. Kart rengiyle doldur
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, OUT_W, OUT_H);
-
-      // 2. Fotoğrafı oranını koruyarak sığdır (contain mantığı)
-      const scale = Math.min(OUT_W / img.width, OUT_H / img.height);
-      const dw = img.width  * scale;
-      const dh = img.height * scale;
-      const dx = (OUT_W - dw) / 2;
-      const dy = 0; // üste yasla
-
-      ctx.drawImage(img, dx, dy, dw, dh);
-
-      resolve(canvas.toDataURL('image/jpeg', 0.92));
+      const targetWidth = 600;
+      const scale = targetWidth / img.width;
+      canvas.width = targetWidth;
+      canvas.height = img.height * scale;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
     };
-    img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
-}
-
+};
 async function fcSaveAllPhotos(){
   try {
     await setDoc(doc(db,'panel','photos'), _photoCache);
@@ -2083,110 +2151,70 @@ async function renderChesscards(){
   }
   const period = APP.scorePeriod||'week';
   const scored = [...students].map(u=>({u,pts:calcScore(u,period)})).sort((a,b)=>b.pts-a.pts);
-  const maxPts = scored[0]?.pts||1;
 
   grid.innerHTML = '';
   
-  // Önce iskelet yapıyı (placeholder ile) hızlıca oluştur
   scored.forEach(({u,pts},idx)=>{
     const d  = APP.liveData[u];
     const st = periodStats(u,period);
     const rank = idx+1;
     const fcCls = rank===1?'fc-gold':rank===2?'fc-silver':rank===3?'fc-bronze':'fc-normal';
-    
-    // Bar değerleri (normalize 0-100)
-    const maxG = Math.max(...students.map(s=>periodStats(s,period).totalGames),1);
-    const maxP = Math.max(...students.map(s=>periodStats(s,period).totalPuzzles),1);
-    const gBar = Math.round((st.totalGames/maxG)*100);
-    const pBar = Math.round((st.totalPuzzles/maxP)*100);
-    const maxAct = Math.max(...students.map(s=>periodStats(s,period).activeDays),1);
-    const aBar = Math.round((st.activeDays/maxAct)*100);
-
-    const barColor = rank===1?'#f5c842':rank===2?'#b0bec5':rank===3?'#cd7f32':'#4caf7d';
     const ukd = getStudentUkd(u);
-    const g=APP.groups.find(x=>x.id===APP.activeGid);
-    const safeLvl = g ? (g.level === 'İleri' ? 'ileri' : g.level === 'Orta' ? 'orta' : g.level === 'Başlangıç' ? 'baslangic' : 'genel') : 'genel';
-    const lvlDisplay = (g && g.level && g.level !== 'Genel') ? `<span class="group-level-indicator bg-${safeLvl}" style="width:12px; height:12px; vertical-align:middle;"></span>` : '';
-    
-    let ukdDisplay = `UKD: ${ukd.val}`;
-    if(ukd.prev && ukd.val !== '—') {
-      const diff = parseInt(ukd.val) - parseInt(ukd.prev);
-      if(diff > 0) ukdDisplay += ` <span style="color:#4caf7d">▲${diff}</span>`;
-      else if(diff < 0) ukdDisplay += ` <span style="color:#e05a5a">▼${Math.abs(diff)}</span>`;
-    }
 
     const card = document.createElement('div');
     card.className = `chesscard ${fcCls}`;
     card.setAttribute('data-user', u);
-    const logoHtml = APP.clubLogoUrl ? `<img src="${APP.clubLogoUrl}" alt="">` : '';
 
     card.innerHTML = `
       <div class="chesscard-inner">
         <div class="fc-top">
           <div class="fc-score">${pts}</div>
-          <div class="fc-top-right" style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              ${lvlDisplay}
-              <div class="fc-rank-badge" style="margin:0">#${rank}</div>
-            </div>
-            <div style="font-size:10px; font-weight:700; color:rgba(255,255,255,0.9); text-shadow:0 1px 3px rgba(0,0,0,0.5); background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:4px; white-space:nowrap;">${ukdDisplay}</div>
-          </div>
+          <div class="fc-rank-badge">#${rank}</div>
         </div>
-        <div class="fc-photo-row">
-          <div class="fc-logo-side">${logoHtml}</div>
-          <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
-            <div class="fc-photo-container" id="fc-photo-${idx}">
-              <div class="fc-photo-placeholder">${escHtml(u[0].toUpperCase())}</div>
-            </div>
-            <div class="fc-photo-overlay">📷</div>
-            <div class="fc-delete-container" id="fc-delete-${idx}"></div>
+        
+        <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
+          <div class="fc-photo-container" id="fc-photo-${idx}">
+            <div class="fc-photo-placeholder">👤</div>
           </div>
-          <div class="fc-logo-side">${logoHtml}</div>
+          <div id="fc-delete-${idx}"></div>
         </div>
+
         <div class="fc-name">${escHtml(getStudentDisplayName(u))}</div>
+
         <div class="fc-stats">
           <div class="fc-stat">
-            <div class="fc-stat-label">MAÇ</div>
-            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${gBar}%;background:${barColor}"></div></div>
-            <div class="fc-stat-val">${st.totalGames}</div>
-          </div>
-
-          <div class="fc-stat">
-            <div class="fc-stat-label">BUL</div>
-            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${pBar}%;background:${barColor}"></div></div>
-            <div class="fc-stat-val">${st.totalPuzzles}</div>
+            <span class="fc-stat-label">MAÇ</span>
+            <span class="fc-stat-val">${st.totalGames}</span>
           </div>
           <div class="fc-stat">
-            <div class="fc-stat-label">AKT</div>
-            <div class="fc-stat-bar-wrap"><div class="fc-stat-bar" style="width:${aBar}%;background:${barColor}"></div></div>
-            <div class="fc-stat-val">${st.activeDays}g</div>
+            <span class="fc-stat-label">BULMACA</span>
+            <span class="fc-stat-val">${st.totalPuzzles}</span>
+          </div>
+          <div class="fc-stat">
+            <span class="fc-stat-label">UKD</span>
+            <span class="fc-stat-val">${ukd.val}</span>
           </div>
         </div>
-        <div class="fc-footer">
-          <div class="fc-lichess-logo">
-            <img src="https://lichess1.org/assets/logo/lichess-favicon-256.png"
-                 onerror="this.style.display='none'" alt="lichess">
-          </div>
-          <div class="fc-screen-only">
-            <button class="fc-dl-btn" onclick="event.stopPropagation();downloadCard('${escHtml(u)}')">⬇ PNG</button>
-          </div>
+
+        <div class="fc-screen-only">
+            <button class="fc-dl-btn" onclick="event.stopPropagation();downloadCard('${escHtml(u)}')">⬇</button>
         </div>
       </div>`;
+    
     grid.appendChild(card);
     
-    // Fotoğrafı önbellekten senkron olarak yükle
     const photoDataUrl = fcGetPhoto(u);
     const container = document.getElementById(`fc-photo-${idx}`);
     const deleteContainer = document.getElementById(`fc-delete-${idx}`);
     if(container && photoDataUrl){
-      container.innerHTML = `<img class="fc-photo" src="${photoDataUrl}" alt="${escHtml(u)}">`;
+      container.innerHTML = `<img class="fc-photo" src="${photoDataUrl}">`;
       if(PIN.getIsAdmin() && deleteContainer){
-        deleteContainer.innerHTML = `<button class="fc-delete-btn" onclick="event.stopPropagation();fcDeletePhoto('${escHtml(u)}')" title="Fotoğrafı Kaldır">✕</button>`;
+        deleteContainer.innerHTML = `<button class="fc-delete-btn" onclick="event.stopPropagation();fcDeletePhoto('${escHtml(u)}')" title="Sil">✕</button>`;
       }
     }
   });
 }
-
+ 
 // Fotoğraf tıklama — yönetici modunda yükleme aç
 window.fcPhotoClick = function(username){
   if(!PIN.getIsAdmin()){ showToast('Fotoğraf yüklemek için yönetici girişi gerekli',true); return; }
@@ -2248,7 +2276,7 @@ window.downloadCard = async function(username){
     // html2canvas ile yakalama
     const captured = await html2canvas(card, {
       backgroundColor: null,
-      scale: TARGET_W / RENDER_W, // 1000/200 = 5x
+      scale: 4,
       useCORS: true,
       logging: false,
       allowTaint: true,
