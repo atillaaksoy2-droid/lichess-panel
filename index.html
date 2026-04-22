@@ -2653,26 +2653,15 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
   // Genel veriyi yukle (goruntuleme modu icin) — tamamen bitmesini bekle
   await fbLoad();
   
-  if(splashStatus) splashStatus.textContent = 'Fotoğraflar yükleniyor...';
-  // Fotoğrafları Firestore'dan yükle ve gerçek zamanlı dinlemeyi başlat
-  await fcLoadAllPhotos();
-
   // Arayüzü oluştur
   document.body.classList.add('readonly');
   buildCritPanel(); renderGroupBar(); renderHeader();
 
-  // Sporcu varsa yükle, yoksa sadece boş ızgarayı göster
-  if(getStudents().length > 0){
-    renderGrid();
-    if(splashStatus) splashStatus.textContent = 'Lichess verileri güncelleniyor...';
-    await refreshAll();
-  } else {
-    renderGrid();
-  }
-
+  // Sporcu varsa ızgarayı hemen göster (Skeleton'lar belirecektir)
+  renderGrid();
   renderChamps(); renderScoreTable();
 
-  // Yükleme tamamlandı, splash ekranını gizle
+  // Yükleme tamamlandı, arayüz hazır, splash ekranını gizle!
   const splash = document.getElementById('splashScreen');
   if(splash) {
     splash.style.opacity = '0';
@@ -2680,6 +2669,18 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
       splash.style.visibility = 'hidden';
       splash.style.display = 'none';
     }, 600);
+  }
+
+  // Fotoğrafları arka planda yükle
+  fcLoadAllPhotos().then(() => {
+    if(document.getElementById('viewChesscard').style.display !== 'none'){
+      renderChesscards();
+    }
+  });
+
+  // Lichess verilerini arka planda güncelle (AWAIT ETMİYORUZ)
+  if(getStudents().length > 0){
+    refreshAll();
   }
 
   // Gerçek zamanlı dinleyiciyi SONRA başlat — fbLoad'dan hemen sonra
