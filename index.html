@@ -954,6 +954,7 @@ const APP = {
     minPuzzleDaily:5, streakPuzzleDays:3,
     ptWin:3, ptPlay:1, ptPuzzle:0.5,
     ptDailyBonus:5, ptPuzzleBonus:3, ptStreak:2,
+    minWeeklyScore:50,
     countBullet:0  // 0=bullet sayma, 1=bullet say
   },
   curSort: 'score',
@@ -1509,6 +1510,15 @@ function getBadges(username,d){
   if(gs>=APP.crit.streakDays) badges.push({cls:'b-streak',icon:'🔥',label:`${gs}g Seri`,tip:`${gs} gün üst üste`});
   if(puz>=APP.crit.minPuzzleDaily) badges.push({cls:'b-puzzle',icon:'🧩',label:`${puz}`,tip:`${APP.crit.minPuzzleDaily}+ bulmaca`});
   if(ps>=APP.crit.streakPuzzleDays) badges.push({cls:'b-pstreak',icon:'🎯',label:`${ps}g🧩`,tip:`${ps} gün bulmaca serisi`});
+  
+  const weeklyScore = calcScore(username, 'week');
+  const isBelow = weeklyScore < (APP.crit.minWeeklyScore || 0);
+  if (isBelow) {
+    badges.push({cls:'b-warn',icon:'🔻',label:'Baraj Altı',tip:`Haftalık barajın (${APP.crit.minWeeklyScore}) altında`});
+  } else {
+    badges.push({cls:'b-active',icon:'🌟',label:'Baraj Üstü',tip:`Haftalık barajın (${APP.crit.minWeeklyScore}) üzerinde`});
+  }
+  
   return badges;
 }
 
@@ -1663,6 +1673,8 @@ function renderScoreTable(){
     const rCls = rank===1?'sr1':rank===2?'sr2':rank===3?'sr3':'';
     const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
     const pct   = Math.round((pts/maxPts)*100);
+    const isBelow = APP.scorePeriod==='week' && pts < (APP.crit.minWeeklyScore || 0);
+    const barColor = isBelow ? 'var(--loss)' : 'var(--win)';
 
     // İstatistik etiketleri
     const tags=[];
@@ -1677,10 +1689,10 @@ function renderScoreTable(){
       <div class="score-info">
         <div class="score-name">${escHtml(getStudentDisplayName(u))}</div>
         <div class="score-tags">${tags.join('')}</div>
-        <div class="score-bar-bg" style="margin-top:4px"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+        <div class="score-bar-bg" style="margin-top:4px"><div class="score-bar-fill" style="width:${pct}%;background:${APP.scorePeriod==='week'?barColor:''}"></div></div>
       </div>
       <div class="score-pts-wrap">
-        <div class="score-pts">${pts}</div>
+        <div class="score-pts" style="color:${APP.scorePeriod==='week'?barColor:''}">${pts}</div>
         <div class="score-pts-lbl">puan</div>
       </div>
     </div>`;
@@ -1809,6 +1821,7 @@ window.toggleCrit=()=>{ const b=document.getElementById('critBody'),a=document.g
 function buildCritPanel(){
   const isAdmin = PIN.getIsAdmin();
   const defs=[
+    {key:'minWeeklyScore',  b:{cls:'b-warn',icon:'🛑',lbl:'Baraj'},   name:'Haftalık Alt Baraj',  rule:'Haftalık antrenman baraj puanı'},
     {key:'minDailyGames',   b:{cls:'b-active',icon:'⚡',lbl:'Aktif'},        name:'Aktif Oyuncu',       rule:'Günlük min. maç sayısı'},
     {key:'minWinRate',      b:{cls:'b-gold',  icon:'🏆',lbl:'%Kazanma'},     name:'Yüksek Kazanma',     rule:'Min. kazanma oranı (%)'},
     {key:'streakDays',      b:{cls:'b-streak',icon:'🔥',lbl:'Seri'},         name:'Maç Serisi (gün)',   rule:'Üst üste kaç gün?'},
