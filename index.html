@@ -1335,15 +1335,16 @@ window.refreshAll=async(force=false)=>{
   }
 };
 
-async function fetchAndParseGames(username, since) {
+async function fetchAndParseGames(username, fetchSince, todayMidnight) {
   let wins=0, losses=0, draws=0;
   const recent=[];
   const perfs = APP.crit.countBullet ? 'bullet,blitz,rapid,classical' : 'blitz,rapid,classical';
-  const gRes = await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=50&moves=false&opening=false&clocks=false&perf=${perfs}`, {headers:{Accept:'application/x-ndjson'}}, 20000);
+  const gRes = await fetchWT(`https://lichess.org/api/games/user/${username}?since=${fetchSince}&max=100&moves=false&opening=true&clocks=false&perf=${perfs}`, {headers:{Accept:'application/x-ndjson'}}, 20000);
   const gText = await gRes.text();
   const games = gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
 
   const NONSTANDARD = new Set(['correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse','ultraBullet']);
+  const openingCounts = { white: {}, black: {} };
 
   for (const g of games) {
     if (NONSTANDARD.has(g.perf)) continue;
@@ -1354,21 +1355,38 @@ async function fetchAndParseGames(username, since) {
     const winner = g.winner;
     let result;
 
+    const ts = g.lastMoveAt || g.createdAt;
+    const isToday = ts >= todayMidnight;
+
     if (!winner) {
       if (g.status==='aborted' || g.status==='noStart') continue;
-      draws++; result='draw';
+      if (isToday) draws++; 
+      result='draw';
     } else if (winner===color) {
-      wins++; result='win';
+      if (isToday) wins++; 
+      result='win';
     } else {
-      losses++; result='loss';
+      if (isToday) losses++; 
+      result='loss';
+    }
+
+    if (g.opening && g.opening.name) {
+      const opName = g.opening.name.split(':')[0].trim();
+      openingCounts[color][opName] = (openingCounts[color][opName] || 0) + 1;
     }
 
     const opp = color==='white' ? (g.players?.black?.user?.name||'Anonim') : (g.players?.white?.user?.name||'Anonim');
-    const ts = g.lastMoveAt || g.createdAt;
-    recent.push({ result, opponent: opp, speed: g.speed||'', time: ts ? fmtTime(new Date(ts)) : '' });
+    if (isToday) {
+       recent.push({ result, opponent: opp, speed: g.speed||'', time: ts ? fmtTime(new Date(ts)) : '' });
+    }
   }
 
-  return { wins, losses, draws, recent };
+  const topOpenings = {
+     white: Object.entries(openingCounts.white).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]),
+     black: Object.entries(openingCounts.black).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])
+  };
+
+  return { wins, losses, draws, recent, topOpenings };
 }
 
 async function fetchAndParseActivity(username) {
@@ -1440,10 +1458,11 @@ async function loadOneStudent(username,myId){
     if(myId&&myId!==APP.refreshId) return;
 
     let online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
-    const now=new Date(), since=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+    const now=new Date(), todayMidnight=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+    const weekAgo = todayMidnight - 7 * 24 * 60 * 60 * 1000;
 
     // 1. Maçları Çek ve Ayıkla (Modüler Fonksiyon)
-    const { wins, losses, draws, recent } = await fetchAndParseGames(username, since);
+    const { wins, losses, draws, recent, topOpenings } = await fetchAndParseGames(username, weekAgo, todayMidnight);
     if(myId&&myId!==APP.refreshId) return;
 
     // 2. Rating'leri Hesapla
@@ -1458,7 +1477,7 @@ async function loadOneStudent(username,myId){
     }catch(e){ console.warn(`[${username}] aktivite:`,e.message); }
     if(myId&&myId!==APP.refreshId) return;
 
-    APP.liveData[username]={displayName:user.username,title:user.title||'',online,ratings,wins,losses,draws,puzzlesSolved,puzzleRating,recentGames:recent,loadedAt:Date.now()};
+    APP.liveData[username]={displayName:user.username,title:user.title||'',online,ratings,wins,losses,draws,puzzlesSolved,puzzleRating,recentGames:recent,topOpenings,loadedAt:Date.now()};
     logActivity(username,wins+losses+draws,puzzlesSolved,wins);
   }catch(err){
     console.warn(`[${username}]:`,err.message);
@@ -1756,10 +1775,25 @@ function buildCard(username,d,rank){
      else if(diff < 0) ukdDiffHTML = `<div class="r-chg dn">▼${Math.abs(diff)}</div>`;
    }
    const ukdHTML = `<div class="r-item ukd-item" title="Ulusal Kuvvet Derecesi (Önceki: ${ukd.prev || '—'})"><div class="r-type">UKD</div><div class="r-val">${ukd.val}</div>${ukdDiffHTML}</div>`;
-  const gHTML=(d.recentGames||[]).slice(0,4).map(g=>{
-    const r=g.result==='win'?'W':g.result==='loss'?'L':'D';
-    return `<div class="g-row"><div class="g-res ${r}">${r}</div><div class="g-opp" title="${escHtml(g.opponent||'?')}">${escHtml(g.opponent||'?')}</div><div class="g-spd">${g.speed||''}</div><div class="g-t">${g.time||''}</div></div>`;
-  }).join('');
+  
+  let opHTML = '';
+  if (d.topOpenings && (d.topOpenings.white?.length > 0 || d.topOpenings.black?.length > 0)) {
+    const wOp = d.topOpenings.white.join(', ') || 'Veri yok';
+    const bOp = d.topOpenings.black.join(', ') || 'Veri yok';
+    opHTML = `
+      <div class="wld-row" style="margin-bottom:0">
+        <div class="wld-box" style="flex:1;text-align:left;padding:6px;border-color:rgba(200,168,75,.3);background:rgba(200,168,75,.04);grid-column:1/span 2">
+          <div class="wld-lbl" style="color:var(--text);margin-bottom:4px;font-size:9px">⚪ Beyazla Sık Oynananlar</div>
+          <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escHtml(wOp)}">${escHtml(wOp)}</div>
+        </div>
+        <div class="wld-box" style="flex:1;text-align:left;padding:6px;border-color:rgba(176,190,197,.3);background:rgba(176,190,197,.04);grid-column:1/span 2">
+          <div class="wld-lbl" style="color:var(--text);margin-bottom:4px;font-size:9px">⚫ Siyahla Sık Oynananlar</div>
+          <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escHtml(bOp)}">${escHtml(bOp)}</div>
+        </div>
+      </div>
+    `;
+  }
+  
   const days14=get14Days(username);
   const pipHtml=days14.map(day=>{
     const isT=day.date===todayStr(), hg=day.games>=APP.crit.minDailyGames, hp=day.puzzles>=APP.crit.minPuzzleDaily;
@@ -1813,7 +1847,7 @@ function buildCard(username,d,rank){
         <div class="train-pts">${score}</div>
         <div class="train-breakdown">${bd||'—'}</div>
       </div>
-      ${gHTML?`<div class="s-title" style="margin-top:5px">Son Maçlar</div><div class="recent">${gHTML}</div>`:''}
+      ${opHTML?`<div class="s-title" style="margin-top:5px">Favori Açılışlar (Son 7 Gün)</div>${opHTML}`:''}
     </div>
   </div>`;
 }
