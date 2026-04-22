@@ -2161,8 +2161,8 @@ window.fcPreparePhoto = function(dataUrl) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Kart performansını korumak için boyutu optimize edelim
-      const targetWidth = 500; 
+      // Kart boyutuna uygun ve Firebase 1MB doküman limitini aşmayacak şekilde boyutu optimize edelim
+      const targetWidth = 240; 
       const scale = targetWidth / img.width;
       canvas.width = targetWidth;
       canvas.height = img.height * scale;
@@ -2173,8 +2173,9 @@ window.fcPreparePhoto = function(dataUrl) {
       // Fotoğrafı çiz (Arka plan eklemeden)
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-      // PNG OLARAK KAYDET (Şeffaflık sadece PNG'de çalışır)
-      resolve(canvas.toDataURL('image/png'));
+      // WEBP OLARAK KAYDET (Şeffaflığı korur, PNG'den çok daha az yer kaplar)
+      // Varsayılan kalite (0.85) ile boyut ciddi oranda düşer
+      resolve(canvas.toDataURL('image/webp', 0.85));
     };
     img.src = dataUrl;
   });
