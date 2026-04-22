@@ -741,11 +741,34 @@ async function fbLoad(){
       } catch(e) { console.warn('fbLoad users fetch error:', e); }
     }
 
-    // Eğer bir kullanıcı seçilmemişse (izleme modu), ilk kullanıcıyı varsayılan yap
-    if(!APP.currentUser && APP.users) {
-      const uids = Object.keys(APP.users);
-      if(uids.length > 0) APP.currentUser = uids[0];
+    // Eğer bir kullanıcı seçilmemişse (izleme modu), uygun kullanıcıyı seç
+    if(!APP.currentUser) {
+      const savedUser = localStorage.getItem('lastViewedCoach');
+      if (APP.users) {
+        const uids = Object.keys(APP.users);
+        if (uids.length > 0) {
+          if (savedUser && uids.includes(savedUser)) {
+            APP.currentUser = savedUser;
+          } else {
+            // Verisi olan ilk koçu bulmaya çalış
+            for (const uid of uids) {
+              const checkSnap = await getDoc(doc(db, 'panel', 'config_' + uid));
+              if (checkSnap.exists() && checkSnap.data().groups && checkSnap.data().groups.length > 0) {
+                APP.currentUser = uid;
+                break;
+              }
+            }
+            if(!APP.currentUser) APP.currentUser = uids[0]; // Fallback
+          }
+        }
+      } else if (savedUser) {
+        // APP.users yüklenemese bile (offline/cache), local'den biliyorsak kullan
+        APP.currentUser = savedUser;
+      }
     }
+
+    // Seçilen kullanıcıyı her zaman kaydet
+    if(APP.currentUser) localStorage.setItem('lastViewedCoach', APP.currentUser);
 
     // currentUser varsa ona özel config yükle, yoksa genel 'config' yükle
     const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
@@ -754,17 +777,27 @@ async function fbLoad(){
     // Fallback: Kullanıcıya özel config yoksa ama kullanıcı varsa, varsayılan değerlerle devam et
     const cfg = cfgSnap.exists() ? cfgSnap.data() : null;
 
+    // EĞER hala boşsa ve APP.currentUser varsa, belki de daha migrate edilmemiştir, 
+    // legacy 'config'i kontrol etmeyi deneyebiliriz.
+    let finalCfg = cfg;
+    if (!finalCfg && APP.currentUser) {
+      const legacySnap = await getDoc(doc(db,'panel','config'));
+      if (legacySnap.exists() && legacySnap.data().groups && legacySnap.data().groups.length > 0) {
+        finalCfg = legacySnap.data();
+      }
+    }
+
     const actSnap = await getDoc(doc(db,'panel','activity'));
     const act = actSnap.exists() ? actSnap.data() : {};
 
-    if(cfg && cfg.criteria){
-      APP.crit = { ...APP.crit, ...cfg.criteria };
+    if(finalCfg && finalCfg.criteria){
+      APP.crit = { ...APP.crit, ...finalCfg.criteria };
     }
 
-    if(cfg && cfg.groups && cfg.groups.length > 0){
-      APP.groups = cfg.groups;
-      if(!cfg.groups.find(g => g.id === APP.activeGid)){
-        APP.activeGid = cfg.groups[0].id;
+    if(finalCfg && finalCfg.groups && finalCfg.groups.length > 0){
+      APP.groups = finalCfg.groups;
+      if(!finalCfg.groups.find(g => g.id === APP.activeGid)){
+        APP.activeGid = finalCfg.groups[0].id;
       }
     } else {
       // Varsayılan grup ayarları
