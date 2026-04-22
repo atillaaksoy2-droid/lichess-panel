@@ -453,6 +453,32 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 </head>
 <body>
 
+<style>
+  @keyframes splashFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes splashPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+</style>
+<div id="splashScreen" style="position:fixed; inset:0; background:var(--bg); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity 0.6s ease, visibility 0.6s;">
+  <div style="position:absolute; inset:0; background:radial-gradient(circle at center, rgba(200,168,75,0.12) 0%, transparent 70%); z-index:0; pointer-events:none;"></div>
+  
+  <div style="position:relative; z-index:1; display:flex; flex-direction:column; align-items:center;">
+    <!-- Koç Resmi -->
+    <div style="width:130px; height:130px; border-radius:50%; border: 3px solid var(--accent); padding: 4px; box-shadow:0 15px 40px rgba(200,168,75,0.35); margin-bottom:28px; animation:splashFloat 3s ease-in-out infinite; background: var(--surface2); overflow:hidden;">
+      <img src="https://images.unsplash.com/photo-1529699211952-734e80c4d42b?auto=format&fit=crop&w=250&q=80" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" alt="Koç">
+    </div>
+    
+    <h1 style="font-family:'Playfair Display', serif; font-size:36px; font-weight:900; color:var(--accent2); margin-bottom:12px; letter-spacing:-0.5px;">Koç Paneli</h1>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="spinner" style="width:18px; height:18px; border-width:2px;"></div>
+      <span id="splashStatus" style="font-size:12px; color:var(--text-muted); font-family:'IBM Plex Mono', monospace; letter-spacing:1px; animation:splashPulse 2s infinite;">Başlatılıyor...</span>
+    </div>
+  </div>
+</div>
 
 <div class="pin-overlay" id="pinOverlay" style="display:none">
   <div class="pin-box">
@@ -1273,110 +1299,129 @@ window.refreshAll=async(force=false)=>{
   }
 };
 
+async function fetchAndParseGames(username, since) {
+  let wins=0, losses=0, draws=0;
+  const recent=[];
+  const perfs = APP.crit.countBullet ? 'bullet,blitz,rapid,classical' : 'blitz,rapid,classical';
+  const gRes = await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=50&moves=false&opening=false&clocks=false&perf=${perfs}`, {headers:{Accept:'application/x-ndjson'}}, 20000);
+  const gText = await gRes.text();
+  const games = gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
+
+  const NONSTANDARD = new Set(['correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse','ultraBullet']);
+
+  for (const g of games) {
+    if (NONSTANDARD.has(g.perf)) continue;
+    if (!APP.crit.countBullet && (g.speed==='bullet'||g.speed==='ultraBullet')) continue;
+
+    const wu = (g.players?.white?.user?.name||'').toLowerCase();
+    const color = wu===username ? 'white' : 'black';
+    const winner = g.winner;
+    let result;
+
+    if (!winner) {
+      if (g.status==='aborted' || g.status==='noStart') continue;
+      draws++; result='draw';
+    } else if (winner===color) {
+      wins++; result='win';
+    } else {
+      losses++; result='loss';
+    }
+
+    const opp = color==='white' ? (g.players?.black?.user?.name||'Anonim') : (g.players?.white?.user?.name||'Anonim');
+    const ts = g.lastMoveAt || g.createdAt;
+    recent.push({ result, opponent: opp, speed: g.speed||'', time: ts ? fmtTime(new Date(ts)) : '' });
+  }
+
+  return { wins, losses, draws, recent };
+}
+
+async function fetchAndParseActivity(username) {
+  let puzzlesSolved = 0;
+  const aRes = await fetchWT(`https://lichess.org/api/user/${username}/activity`, {}, 15000);
+  if (!aRes.ok) return puzzlesSolved;
+
+  const aData = await aRes.json();
+  if (!Array.isArray(aData)) return puzzlesSolved;
+
+  if (!APP.actLog[username]) APP.actLog[username] = {};
+  for (let di=0; di<=14; di++) {
+    const dk = dateStr(-di);
+    if (dk !== todayStr()) APP.actLog[username][dk] = {games:0, puzzles:0};
+  }
+
+  for (const entry of aData) {
+    let eDate = entry.interval?.start || entry.date || null;
+    if (!eDate) continue;
+    if (typeof eDate==='number') {
+      const d = new Date(eDate);
+      eDate = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    }
+
+    if (eDate === todayStr()) {
+      const cnt = getPuzzleCount(entry);
+      if (cnt > puzzlesSolved) puzzlesSolved = cnt;
+    }
+
+    const diff = daysBetween(todayStr(), eDate);
+    if (diff<0 || diff>14) continue;
+
+    let eg=0;
+    if (entry.games && typeof entry.games==='object') {
+      const skip = APP.crit.countBullet ? new Set([]) : new Set(['bullet','ultraBullet']);
+      for (const [fmt,v] of Object.entries(entry.games)) {
+        if (v && typeof v==='object' && !skip.has(fmt)) {
+          eg += (v.win||0) + (v.loss||0) + (v.draw||0);
+        }
+      }
+    }
+
+    const ep = getPuzzleCount(entry);
+
+    if (eDate === todayStr()) {
+      const prevT = APP.actLog[username][todayStr()] || {games:0, puzzles:0, wins:0};
+      APP.actLog[username][todayStr()] = {games:prevT.games, puzzles:ep, wins:prevT.wins||0};
+    } else {
+      let ew=0;
+      if (entry.games && typeof entry.games==='object') {
+        const skip = APP.crit.countBullet
+          ? new Set(['ultraBullet','correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse'])
+          : new Set(['bullet','ultraBullet','correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse']);
+        for (const [fmt,v] of Object.entries(entry.games)) {
+          if (v && typeof v==='object' && !skip.has(fmt)) ew += (v.win||0);
+        }
+      }
+      APP.actLog[username][eDate] = {games:eg, puzzles:ep, wins:ew};
+    }
+  }
+  return puzzlesSolved;
+}
+
 async function loadOneStudent(username,myId){
   try{
     const userRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},12000);
     if(!userRes.ok) throw new Error('not_found');
     const user=await userRes.json();
     if(myId&&myId!==APP.refreshId) return;
+
     let online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
     const now=new Date(), since=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
-    const gRes=await fetchWT(`https://lichess.org/api/games/user/${username}?since=${since}&max=50&moves=false&opening=false&clocks=false&perf=${APP.crit.countBullet?'bullet,blitz,rapid,classical':'blitz,rapid,classical'}`,{headers:{Accept:'application/x-ndjson'}},20000);
+
+    // 1. Maçları Çek ve Ayıkla (Modüler Fonksiyon)
+    const { wins, losses, draws, recent } = await fetchAndParseGames(username, since);
     if(myId&&myId!==APP.refreshId) return;
-    const gText=await gRes.text();
-    const games=gText.trim().split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch{return null;}}).filter(Boolean);
-    let wins=0,losses=0,draws=0; const recent=[];
-    for(const g of games){
-      // Varyant ve yazışmalı satranç hariç
-      const NONSTANDARD = new Set(['correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse','ultraBullet']);
-      if(NONSTANDARD.has(g.perf)) continue;
-      // Bullet toggle'a göre filtrele
-      if(!APP.crit.countBullet && (g.speed==='bullet'||g.speed==='ultraBullet')) continue;
-      const wu=(g.players?.white?.user?.name||'').toLowerCase();
-      const color=wu===username?'white':'black', winner=g.winner;
-      let result;
-      if(!winner){ if(g.status==='aborted'||g.status==='noStart') continue; draws++; result='draw'; }
-      else if(winner===color){ wins++; result='win'; }
-      else{ losses++; result='loss'; }
-      const opp=color==='white'?(g.players?.black?.user?.name||'Anonim'):(g.players?.white?.user?.name||'Anonim');
-      const ts=g.lastMoveAt||g.createdAt;
-      recent.push({result,opponent:opp,speed:g.speed||'',time:ts?fmtTime(new Date(ts)):''});
-    }
-    if(myId&&myId!==APP.refreshId) return;
+
+    // 2. Rating'leri Hesapla
     const ratings={}, perf=user.perfs||{};
     for(const k of ['bullet','blitz','rapid','classical']) if(perf[k]&&perf[k].games>0) ratings[k]={int:perf[k].rating,prog:perf[k].prog||0};
-    let puzzlesSolved=0, puzzleRating=perf.puzzle?perf.puzzle.rating:null;
+    let puzzleRating=perf.puzzle?perf.puzzle.rating:null;
+
+    // 3. Aktivite / Bulmaca Çek ve Ayıkla (Modüler Fonksiyon)
+    let puzzlesSolved=0;
     try{
-      const aRes=await fetchWT(`https://lichess.org/api/user/${username}/activity`,{},15000);
-      if(aRes.ok){
-        const aData=await aRes.json();
-        if(myId&&myId!==APP.refreshId) return;
-        if(Array.isArray(aData)){
-          // ── actLog'u sıfırla ve API verisiyle güncelle ──────────────────
-          // Önce bu kullanıcının son 14 gününü sıfırla
-          // (API'den gelmeyen günler = aktivite yok = 0 olmalı)
-          if(!APP.actLog[username]) APP.actLog[username]={};
-          for(let di=0; di<=14; di++){
-            const dk = dateStr(-di);
-            // Bugünü sıfırlama — maç verisi oyun API'sinden geliyor, logActivity yazar
-            if(dk !== todayStr()){
-              APP.actLog[username][dk] = {games:0, puzzles:0};
-            }
-          }
-
-          // API'den gelen günlerin verilerini yaz
-          for(const entry of aData){
-            let eDate=entry.interval?.start||entry.date||null;
-            if(!eDate) continue;
-            if(typeof eDate==='number'){
-              const d=new Date(eDate);
-              eDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-            }
-
-            // Bugünkü bulmaca sayısını puzzlesSolved'a yaz
-            if(eDate===todayStr()){
-              const cnt=getPuzzleCount(entry);
-              if(cnt>puzzlesSolved) puzzlesSolved=cnt;
-            }
-
-            const diff=daysBetween(todayStr(),eDate);
-            if(diff<0 || diff>14) continue; // 14 günden eski atla
-
-            // Maç sayısı — bullet toggle'a göre
-            let eg=0;
-            if(entry.games && typeof entry.games==='object'){
-              const skip = APP.crit.countBullet ? new Set([]) : new Set(['bullet','ultraBullet']);
-              for(const [fmt,v] of Object.entries(entry.games)){
-                if(v && typeof v==='object' && !skip.has(fmt))
-                  eg += (v.win||0)+(v.loss||0)+(v.draw||0);
-              }
-            }
-
-            // Bulmaca sayısı
-            const ep = getPuzzleCount(entry);
-
-            if(eDate===todayStr()){
-              // Bugün: sadece bulmacayı güncelle, maçı logActivity yazar
-              const prevT = APP.actLog[username][todayStr()]||{games:0,puzzles:0,wins:0};
-              APP.actLog[username][todayStr()] = {games:prevT.games, puzzles:ep, wins:prevT.wins||0};
-            } else {
-              // Geçmiş: direkt yaz — wins de dahil
-              let ew=0;
-              if(entry.games&&typeof entry.games==='object'){
-                const STANDARD = new Set(['bullet','blitz','rapid','classical']);
-                const skip = APP.crit.countBullet
-                  ? new Set(['ultraBullet','correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse'])
-                  : new Set(['bullet','ultraBullet','correspondence','chess960','kingOfTheHill','threeCheck','antichess','atomic','horde','racingKings','crazyhouse']);
-                for(const [fmt,v] of Object.entries(entry.games))
-                  if(v&&typeof v==='object'&&!skip.has(fmt)) ew+=(v.win||0);
-              }
-              APP.actLog[username][eDate] = {games:eg, puzzles:ep, wins:ew};
-            }
-          }
-        }
-      }
+      puzzlesSolved = await fetchAndParseActivity(username);
     }catch(e){ console.warn(`[${username}] aktivite:`,e.message); }
     if(myId&&myId!==APP.refreshId) return;
+
     APP.liveData[username]={displayName:user.username,title:user.title||'',online,ratings,wins,losses,draws,puzzlesSolved,puzzleRating,recentGames:recent,loadedAt:Date.now()};
     logActivity(username,wins+losses+draws,puzzlesSolved,wins);
   }catch(err){
@@ -1796,9 +1841,25 @@ window.toggleBullet=async(checked)=>{
 };
 
 // ── YARDIMCILAR ──────────────────────────────────────
-function fetchWT(url,opts={},ms=10000){
-  const ctrl=new AbortController(), t=setTimeout(()=>ctrl.abort(),ms);
-  return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(t));
+async function fetchWT(url, opts={}, ms=10000, retries=2){
+  for (let i = 0; i <= retries; i++) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+      const res = await fetch(url, { ...opts, signal: ctrl.signal });
+      clearTimeout(t);
+      // Lichess API Rate Limit (429) tespiti
+      if (res.status === 429 && i < retries) {
+        await new Promise(r => setTimeout(r, 6000)); // 6 saniye ceza beklemesi
+        continue;
+      }
+      return res;
+    } catch (e) {
+      clearTimeout(t);
+      if (i === retries) throw e;
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
 }
 function fmtTime(date){
   const diff=Math.floor((Date.now()-date.getTime())/60000);
@@ -2546,6 +2607,9 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 
 // ── BAŞLANGIÇ ────────────────────────────────────────
 (async()=>{
+  const splashStatus = document.getElementById('splashStatus');
+  if(splashStatus) splashStatus.textContent = 'Veritabanına bağlanıyor...';
+
   // Once kullanici listesini yukle (PIN ekrani icin)
   try{
     const usersSnap=await getDoc(doc(db,'panel','users'));
@@ -2554,6 +2618,8 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 
   // Genel veriyi yukle (goruntuleme modu icin) — tamamen bitmesini bekle
   await fbLoad();
+  
+  if(splashStatus) splashStatus.textContent = 'Fotoğraflar yükleniyor...';
   // Fotoğrafları Firestore'dan yükle ve gerçek zamanlı dinlemeyi başlat
   await fcLoadAllPhotos();
 
@@ -2564,12 +2630,23 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
   // Sporcu varsa yükle, yoksa sadece boş ızgarayı göster
   if(getStudents().length > 0){
     renderGrid();
-    refreshAll();
+    if(splashStatus) splashStatus.textContent = 'Lichess verileri güncelleniyor...';
+    await refreshAll();
   } else {
     renderGrid();
   }
 
   renderChamps(); renderScoreTable();
+
+  // Yükleme tamamlandı, splash ekranını gizle
+  const splash = document.getElementById('splashScreen');
+  if(splash) {
+    splash.style.opacity = '0';
+    setTimeout(() => {
+      splash.style.visibility = 'hidden';
+      splash.style.display = 'none';
+    }, 600);
+  }
 
   // Gerçek zamanlı dinleyiciyi SONRA başlat — fbLoad'dan hemen sonra
   // tetiklenmemesi için kısa bir gecikme ekliyoruz
