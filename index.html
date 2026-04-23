@@ -35,7 +35,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 }
 
 /* GRUP SEKMELERI */
-.group-bar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--border);padding-top:20px;overflow:visible}
+.group-bar{display:flex;align-items:flex-end;flex-wrap:nowrap;gap:12px;border-bottom:1px solid var(--border);padding-top:20px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;padding-bottom:1px}
+.group-bar::-webkit-scrollbar{height:4px;display:none}
+@media(hover: hover){.group-bar::-webkit-scrollbar{display:block}}
+.group-bar::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 .group-level-section{display:flex;align-items:flex-end;gap:0;position:relative}
 .group-level-tabs{display:flex;align-items:flex-end;gap:0}
 .group-tab{display:flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
@@ -122,7 +125,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .score-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
 .score-title{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .score-title::after{content:'';flex:1;height:1px;background:var(--border)}
-.score-tabs{display:flex;gap:6px;margin-bottom:10px}
+.score-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .score-tab{background:var(--bg);border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:10px;transition:all .2s}
 .score-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.07)}
 .score-rows{display:flex;flex-direction:column;gap:3px}
@@ -287,7 +290,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 
 
 /* ── GÖRÜNÜM SEKMELERİ ── */
-.view-tabs{display:flex;gap:6px;align-items:center;margin-bottom:14px}
+.view-tabs{display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
 .view-tab{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:6px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all .15s}
 .view-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0d0f14;border-color:transparent}
 .view-tab:hover:not(.active){border-color:var(--accent);color:var(--accent)}
