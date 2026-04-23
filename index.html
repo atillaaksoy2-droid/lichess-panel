@@ -733,7 +733,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 <!-- FIREBASE SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs }
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
@@ -2233,12 +2233,14 @@ let _photoCacheLoaded = false;
 
 async function fcLoadAllPhotos(){
   try {
-    const snap = await getDoc(doc(db,'panel','photos'));
-    _photoCache = snap.exists() ? (snap.data() || {}) : {};
+    const snap = await getDocs(collection(db,'photos'));
+    _photoCache = {};
+    snap.forEach(docSnap => { _photoCache[docSnap.id] = docSnap.data().data; });
     _photoCacheLoaded = true;
     // Gerçek zamanlı dinle — başka cihazdan fotoğraf eklenince güncelle
-    onSnapshot(doc(db,'panel','photos'), snap => {
-      _photoCache = snap.exists() ? (snap.data() || {}) : {};
+    onSnapshot(collection(db,'photos'), snap => {
+      _photoCache = {};
+      snap.forEach(docSnap => { _photoCache[docSnap.id] = docSnap.data().data; });
       if(document.getElementById('viewChesscard').style.display !== 'none'){
         renderChesscards();
       }
@@ -2294,12 +2296,7 @@ window.fcPreparePhoto = function(dataUrl) {
   });
 };
 async function fcSaveAllPhotos(){
-  try {
-    await setDoc(doc(db,'panel','photos'), _photoCache);
-  } catch(e){
-    console.error('Fotoğraf kayıt hatası:', e);
-    showToast('Fotoğraf kaydedilemedi: ' + e.message, true);
-  }
+  // Artık kullanılmıyor, her fotoğraf ayrı kaydediliyor.
 }
 
 window.fcDeletePhoto = async function(username){
@@ -2307,7 +2304,7 @@ window.fcDeletePhoto = async function(username){
   if(!confirm(`"${username}" için fotoğrafı silmek istediğinize emin misiniz?`)) return;
   try {
     delete _photoCache[username];
-    await fcSaveAllPhotos();
+    await deleteDoc(doc(db,'photos',username));
     renderChesscards();
     showToast('Fotoğraf silindi ✓');
   } catch(e){
@@ -2417,11 +2414,11 @@ window.fcPhotoClick = function(username){
       
       // 3. Firebase'e kaydet
       try {
-        await setDoc(doc(db,'panel','photos'), _photoCache);
+        await setDoc(doc(db,'photos',username), { data: prepared });
         showToast('Fotoğraf başarıyla kaydedildi ✓');
         setSyncStatus('ok', 'Firebase güncellendi ✓');
       } catch(err) {
-        showToast('Kayıt hatası!', true);
+        showToast('Kayıt hatası: ' + err.message, true);
       }
     };
     reader.readAsDataURL(file);
