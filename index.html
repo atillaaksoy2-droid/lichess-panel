@@ -536,6 +536,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
       <button class="icon-btn" id="btnClubLogo" onclick="setClubLogo()" title="Kulüp logosu" style="display:none">🏅 Logo</button>
       <button class="icon-btn" id="btnBulkUkd" onclick="openBulkUkdModal()" title="UKD Toplu Güncelle" style="display:none">📊 UKD Güncelle</button>
       <button class="icon-btn" id="btnStudentList" onclick="openStudentListModal()" title="Tüm Sporcu Listesini Al" style="display:none">📋 Liste Al</button>
+      <button class="icon-btn" id="btnStats" onclick="openStatsModal()" title="Uygulama kullanım istatistikleri" style="display:none">📈 İstatistikler</button>
       <button class="icon-btn" id="btnAutoBest" onclick="autoCreateBestGroup()" title="Haftanın en iyileri grubunu otomatik oluştur" style="display:none">🏆 En İyiler</button>
       <button class="icon-btn" id="btnLogout" onclick="PIN.logout()" style="display:none;border-color:rgba(224,90,90,.3);color:var(--loss)">⏏ Çıkış</button>
     </div>
@@ -697,6 +698,33 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     </div>
     <div class="modal-btns" style="margin-top: 15px;">
       <button class="modal-cancel" onclick="closeModal('modalStudentList')">Kapat</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="modalStats" style="display:none" onclick="if(event.target===this)closeModal('modalStats')">
+  <div class="modal" style="max-width: 320px;">
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin:0">📈 Uygulama İstatistikleri</h3>
+    </div>
+    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:12px;">
+      <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px;">Günlük Tekil Ziyaretçi</div>
+      <div style="display:flex; align-items:baseline; gap:8px;">
+        <span style="font-size:24px; font-weight:700; color:var(--accent2); font-family:'Playfair Display',serif" id="statToday">0</span>
+        <span style="font-size:12px; color:var(--text-muted)">kişi (Bugün)</span>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px;">
+        <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">Dün</div>
+        <div style="font-size:16px; font-weight:600; color:var(--text)" id="statYesterday">0</div>
+      </div>
+      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px;">
+        <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">Son 7 Gün</div>
+        <div style="font-size:16px; font-weight:600; color:var(--text)" id="statWeek">0</div>
+      </div>
+    </div>
+    <div class="modal-btns" style="margin-top: 15px;">
+      <button class="modal-cancel" onclick="closeModal('modalStats')">Kapat</button>
     </div>
   </div>
 </div>
@@ -951,6 +979,7 @@ const APP = {
   studentLists: {},  // { [gid]: [username,...] }
   actLog: {},
   liveData: {},
+  stats: {}, // { [date]: count }
   crit: {
     minDailyGames:3, minWinRate:50, streakDays:3,
     minPuzzleDaily:5, streakPuzzleDays:3,
@@ -2092,6 +2121,7 @@ window.PIN = (function(){
       const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='flex';
       const buk=document.getElementById('btnBulkUkd');  if(buk) buk.style.display='flex';
       const bsl=document.getElementById('btnStudentList'); if(bsl) bsl.style.display='flex';
+      const bst=document.getElementById('btnStats');    if(bst) bst.style.display='flex';
       const bab=document.getElementById('btnAutoBest'); if(bab) bab.style.display='flex';
       const bl=document.getElementById('btnLogout');    if(bl)  bl.style.display='flex';
       renderGroupBar(); renderHeader(); buildCritPanel(); renderGrid();
@@ -2146,6 +2176,7 @@ window.PIN = (function(){
     const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='none';
     const buk=document.getElementById('btnBulkUkd'); if(buk) buk.style.display='none';
     const bsl=document.getElementById('btnStudentList'); if(bsl) bsl.style.display='none';
+    const bst=document.getElementById('btnStats');    if(bst) bst.style.display='none';
     const bab=document.getElementById('btnAutoBest'); if(bab) bab.style.display='none';
     showToast('Oturum kapatıldı');
   }
@@ -2685,6 +2716,56 @@ window.autoCreateBestGroup = async () => {
   showToast(`${bestStudents.length} sporcu ile "${groupName}" grubu güncellendi ✓`);
 };
 
+async function logUniqueVisit() {
+    const today = todayStr();
+    const lastVisit = localStorage.getItem('lichessPanelLastVisit');
+    if (lastVisit === today) return; // Bugün zaten ziyaret edildi
+
+    localStorage.setItem('lichessPanelLastVisit', today);
+
+    try {
+        const statsRef = doc(db, 'panel', 'stats');
+        const statsSnap = await getDoc(statsRef);
+        const currentStats = statsSnap.exists() ? statsSnap.data() : {};
+        const todayCount = (currentStats[today] || 0) + 1;
+        
+        const updateData = {};
+        updateData[today] = todayCount;
+
+        await setDoc(statsRef, updateData, { merge: true });
+    } catch (e) {
+        console.warn("Ziyaretçi sayımı güncellenemedi:", e);
+    }
+}
+
+window.openStatsModal = async () => {
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  
+  try {
+    const statsRef = doc(db, 'panel', 'stats');
+    const statsSnap = await getDoc(statsRef);
+    const stats = statsSnap.exists() ? statsSnap.data() : {};
+
+    const today = todayStr();
+    const yesterday = dateStr(-1);
+    
+    const todayCount = stats[today] || 0;
+    const yesterdayCount = stats[yesterday] || 0;
+    
+    let weekCount = 0;
+    for(let i=0; i<7; i++) {
+        const d = dateStr(-i);
+        weekCount += (stats[d] || 0);
+    }
+
+    document.getElementById('statToday').textContent = todayCount;
+    document.getElementById('statYesterday').textContent = yesterdayCount;
+    document.getElementById('statWeek').textContent = weekCount;
+
+    document.getElementById('modalStats').style.display = 'flex';
+  } catch (e) { showToast('İstatistikler yüklenemedi: ' + e.message, true); console.error("İstatistik yüklenirken hata:", e); }
+};
+
 // Auto-refresh 10 dakikada bir (lichess rate limit için)
 setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 
@@ -2692,6 +2773,8 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 (async()=>{
   const splashStatus = document.getElementById('splashStatus');
   if(splashStatus) splashStatus.textContent = 'Veritabanına bağlanıyor...';
+
+  logUniqueVisit();
 
   // Once kullanici listesini yukle (PIN ekrani icin)
   try{
