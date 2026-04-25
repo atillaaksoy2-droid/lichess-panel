@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.3';
+const APP_VERSION = 'v0.4.4';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -264,7 +264,8 @@ const APP = {
   curFilters: new Set(),
   scorePeriod: 'week',
   refreshId: 0,
-  configUpdatedAt: 0
+  configUpdatedAt: 0,
+  backgroundRefresh: { running: false, loadedAt: 0 }
 };
 
 function normalizeStudentRecord(student){
@@ -326,6 +327,25 @@ function getStudentLevelInfo(u){
     }
   }
   return { level: 'Genel', group: activeGroup?.name || '' };
+}
+
+function collectBestCandidates(levelFilter=null){
+  const map = new Map();
+  APP.groups.forEach(g => {
+    if(isBestGroupName(g.name)) return;
+    const level = g.level || 'Genel';
+    if(levelFilter && level !== levelFilter) return;
+    getStudentList(g.id).forEach(s => {
+      const u = studentUsername(s);
+      if(u && !map.has(u)) map.set(u, { ...normalizeStudentRecord(s), level, groupName: g.name });
+    });
+  });
+  return map;
+}
+
+function hasFreshLiveData(username, maxAge=45*60*1000){
+  const d = APP.liveData[username];
+  return !!(d && !d.error && d.loadedAt && (Date.now() - d.loadedAt) < maxAge);
 }
 
 function getStudents(){ 
@@ -898,6 +918,35 @@ async function loadOneStudent(username,myId){
     } else {
       APP.liveData[username]={error:true,displayName:username};
     }
+  }
+}
+
+async function refreshAllStudentsInBackground(force=false){
+  if(APP.backgroundRefresh.running) return;
+  const candidates = [...collectBestCandidates().keys()];
+  const toRefresh = candidates.filter(u => force || !hasFreshLiveData(u));
+  if(toRefresh.length === 0) return;
+
+  APP.backgroundRefresh.running = true;
+  setSyncStatus('syncing', `Arka planda güncelleniyor 0/${toRefresh.length}`);
+  try{
+    for(let i=0; i<toRefresh.length; i++){
+      const u = toRefresh[i];
+      setSyncStatus('syncing', `Arka planda güncelleniyor ${i+1}/${toRefresh.length}`);
+      await loadOneStudent(u, 0);
+      if(APP.activeGid && getStudents().includes(u)){
+        updateOneCard(u, 0);
+        renderChamps();
+        renderScoreTable();
+      }
+      if(i < toRefresh.length - 1) await new Promise(r=>setTimeout(r,4000));
+    }
+    APP.backgroundRefresh.loadedAt = Date.now();
+  }catch(e){
+    console.warn('Arka plan güncelleme hatası:', e);
+  }finally{
+    APP.backgroundRefresh.running = false;
+    setSyncStatus('ok','Firebase bağlı ✓');
   }
 }
 
@@ -2070,49 +2119,33 @@ window.autoCreateBestGroup = async () => {
   }
   const selectedLevel = levelMap[normalizedLevel];
 
-  const myId = ++APP.refreshId;
-  setSyncStatus('syncing', 'Sporcular güncelleniyor…');
-  
   // 1. Tüm gruplardaki benzersiz sporcuları topla
-  const allStudentMap = new Map();
+  const allStudentMap = collectBestCandidates(selectedLevel);
   const period = 'week';
-  
-  APP.groups.forEach(g => {
-    if(isBestGroupName(g.name)) return;
-    if(selectedLevel && (g.level || 'Genel') !== selectedLevel) return;
-    const list = getStudentList(g.id);
-    list.forEach(s => {
-      const u = studentUsername(s);
-      if(u && !allStudentMap.has(u)) allStudentMap.set(u, { ...normalizeStudentRecord(s), level: g.level || 'Genel', groupName: g.name });
-    });
-  });
-
   const allUsers = [...allStudentMap.keys()];
+
   if(allUsers.length === 0) {
     showToast('Hesaplanacak sporcu bulunamadı', true);
     setSyncStatus('ok', 'Firebase bağlı ✓');
     return;
   }
 
-  setLoadStatus(`Haftanın en iyileri için güncelleniyor… 0/${allUsers.length}`);
-  for(let i=0; i<allUsers.length; i++){
-    if(myId!==APP.refreshId){ setLoadStatus(''); return; }
-    const u = allUsers[i];
-    setLoadStatus(`Haftanın en iyileri için güncelleniyor… ${i+1}/${allUsers.length}`);
-    await loadOneStudent(u, myId);
-    if(myId!==APP.refreshId){ setLoadStatus(''); return; }
-    if(i < allUsers.length - 1) await new Promise(r=>setTimeout(r,4000));
-  }
-  setLoadStatus('');
+  refreshAllStudentsInBackground(false);
 
   const allStudents = allUsers
     .filter(u => APP.liveData[u] && !APP.liveData[u].error)
     .map(u => ({ student: allStudentMap.get(u), pts: calcScore(u, period) }));
 
   if(allStudents.length === 0) {
-    showToast('Hesaplanacak sporcu bulunamadı', true);
+    showToast('Sporcu verileri arka planda hazırlanıyor, biraz sonra tekrar dene.', true);
     setSyncStatus('ok', 'Firebase bağlı ✓');
     return;
+  }
+
+  const missingCount = allUsers.length - allStudents.length;
+  const staleCount = allUsers.filter(u => !hasFreshLiveData(u)).length;
+  if(missingCount || staleCount){
+    showToast(`Liste mevcut verilerle hazırlandı; ${missingCount || staleCount} sporcu arka planda güncelleniyor.`);
   }
 
   // 2. Puana göre sırala ve ilk X kişiyi al
@@ -2200,6 +2233,7 @@ window.openStatsModal = async () => {
 
 // Auto-refresh 10 dakikada bir (lichess rate limit için)
 setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
+setInterval(()=>{ refreshAllStudentsInBackground(false); },30*60*1000);
 
 // ── BAŞLANGIÇ ────────────────────────────────────────
 (async()=>{
@@ -2249,6 +2283,7 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
   if(getStudents().length > 0){
     refreshAll();
   }
+  setTimeout(()=>refreshAllStudentsInBackground(false),5000);
 
   // Gerçek zamanlı dinleyiciyi SONRA başlat — fbLoad'dan hemen sonra
   // tetiklenmemesi için kısa bir gecikme ekliyoruz
