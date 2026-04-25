@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.5';
+const APP_VERSION = 'v0.4.6';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -1270,7 +1270,7 @@ function buildCard(username,d,rank){
   const bdgHtml=badges.map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
   const bd=scoreBreakdown(username);
   const levelInfo = getStudentLevelInfo(username);
-  const levelTag = `<div class="level-tag lvl-${levelSlug(levelInfo.level)}" title="${escHtml(levelInfo.group || levelInfo.level)}"><span class="level-piece">${levelPiece(levelInfo.level)}</span><span>${escHtml(levelInfo.level)}</span></div>`;
+  const levelTag = `<div class="level-tag lvl-${levelSlug(levelInfo.level)}" title="${escHtml(levelInfo.group || levelInfo.level)}"><span class="level-piece">${levelPiece(levelInfo.level)}</span></div>`;
   const levelAndBadges = levelTag + bdgHtml;
   return `<div class="s-card ${cardCls} ${total===0?'faded':''}" data-user="${escHtml(username)}">
     <div class="card-head">
@@ -1807,7 +1807,6 @@ async function renderChesscards(){
         </div>
         <div class="fc-level-mark lvl-${levelCls}" title="${escHtml(levelInfo.group || levelInfo.level)}">
           <span class="fc-level-piece">${levelPiece(levelInfo.level)}</span>
-          <span class="fc-level-text">${escHtml(levelInfo.level)}</span>
         </div>
         
         <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
