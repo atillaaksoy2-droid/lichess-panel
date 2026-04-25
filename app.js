@@ -1,10 +1,10 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const APP_VERSION = 'v0.4.3';
-// Firebase Storage kullanÄ±lmÄ±yor â€” fotoÄŸraflar Firestore'da saklanÄ±yor
+// Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
-// â”€â”€ FIREBASE YAPILANDIRMA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── FIREBASE YAPILANDIRMA ──────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDnlmt4l0o8dBZ4ygX0iiKmBpcgtKn9s1k",
   authDomain: "lichess-takip.firebaseapp.com",
@@ -16,21 +16,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-// â”€â”€ SYNC DURUM GÃ–STERGESI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SYNC DURUM GÖSTERGESI ────────────────────────────
 function setSyncStatus(state, msg){
   const dot=document.getElementById('syncDot'), txt=document.getElementById('syncStatus');
   dot.className='sync-dot '+state; txt.textContent=msg;
 }
 
-// â”€â”€ FIRESTORE OKUMA / YAZMA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Veri yapÄ±sÄ±:
-//   /panel/config  â†’ { groups, activeGid, criteria }
-//   /panel/activity â†’ { [username]: { [date]: { games, puzzles } } }
+// ── FIRESTORE OKUMA / YAZMA ──────────────────────────
+// Veri yapısı:
+//   /panel/config  → { groups, activeGid, criteria }
+//   /panel/activity → { [username]: { [date]: { games, puzzles } } }
 
 async function fbLoad(){
-  setSyncStatus('syncing','YÃ¼kleniyorâ€¦');
+  setSyncStatus('syncing','Yükleniyor…');
   try{
-    // APP.users yÃ¼klenmemiÅŸse son bir kez daha dene
+    // APP.users yüklenmemişse son bir kez daha dene
     if(!APP.users){
       try {
         const uSnap = await getDoc(doc(db,'panel','users'));
@@ -38,7 +38,7 @@ async function fbLoad(){
       } catch(e) { console.warn('fbLoad users fetch error:', e); }
     }
 
-    // EÄŸer bir kullanÄ±cÄ± seÃ§ilmemiÅŸse (izleme modu), uygun kullanÄ±cÄ±yÄ± seÃ§
+    // Eğer bir kullanıcı seçilmemişse (izleme modu), uygun kullanıcıyı seç
     if(!APP.currentUser) {
       const savedUser = localStorage.getItem('lastViewedCoach');
       if (APP.users) {
@@ -47,7 +47,7 @@ async function fbLoad(){
           if (savedUser && uids.includes(savedUser)) {
             APP.currentUser = savedUser;
           } else {
-            // Verisi olan ilk koÃ§u bulmaya Ã§alÄ±ÅŸ
+            // Verisi olan ilk koçu bulmaya çalış
             for (const uid of uids) {
               const checkSnap = await getDoc(doc(db, 'panel', 'config_' + uid));
               if (checkSnap.exists() && checkSnap.data().groups && checkSnap.data().groups.length > 0) {
@@ -59,22 +59,22 @@ async function fbLoad(){
           }
         }
       } else if (savedUser) {
-        // APP.users yÃ¼klenemese bile (offline/cache), local'den biliyorsak kullan
+        // APP.users yüklenemese bile (offline/cache), local'den biliyorsak kullan
         APP.currentUser = savedUser;
       }
     }
 
-    // SeÃ§ilen kullanÄ±cÄ±yÄ± her zaman kaydet
+    // Seçilen kullanıcıyı her zaman kaydet
     if(APP.currentUser) localStorage.setItem('lastViewedCoach', APP.currentUser);
 
-    // currentUser varsa ona Ã¶zel config yÃ¼kle, yoksa genel 'config' yÃ¼kle
+    // currentUser varsa ona özel config yükle, yoksa genel 'config' yükle
     const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
     let cfgSnap = await getDoc(doc(db,'panel',cfgKey));
     
-    // Fallback: KullanÄ±cÄ±ya Ã¶zel config yoksa ama kullanÄ±cÄ± varsa, varsayÄ±lan deÄŸerlerle devam et
+    // Fallback: Kullanıcıya özel config yoksa ama kullanıcı varsa, varsayılan değerlerle devam et
     const cfg = cfgSnap.exists() ? cfgSnap.data() : null;
 
-    // EÄžER hala boÅŸsa ve APP.currentUser varsa, belki de daha migrate edilmemiÅŸtir, 
+    // EĞER hala boşsa ve APP.currentUser varsa, belki de daha migrate edilmemiştir, 
     // legacy 'config'i kontrol etmeyi deneyebiliriz.
     let finalCfg = cfg;
     if (!finalCfg && APP.currentUser) {
@@ -96,40 +96,40 @@ async function fbLoad(){
       APP.groups = finalCfg.groups;
       APP.activeGid = null;
     } else {
-      // VarsayÄ±lan grup ayarlarÄ±
+      // Varsayılan grup ayarları
       const defaultGid = APP.currentUser ? 'g' + APP.currentUser : 'default';
       APP.groups = [{ id: defaultGid, name: 'A Grubu' }];
       APP.activeGid = null;
     }
 
-    // Ã–ÄŸrenci listelerini yÃ¼kle
+    // Öğrenci listelerini yükle
     const prefix = APP.currentUser ? APP.currentUser + '_' : '';
     await Promise.all(APP.groups.map(async g => {
       try{
         const key = 'students_' + prefix + g.id;
         let snap = await getDoc(doc(db,'panel',key));
         
-        // EÄŸer prefix varsa ama bulunamadÄ±ysa prefix'siz hali (eski veri) dene
+        // Eğer prefix varsa ama bulunamadıysa prefix'siz hali (eski veri) dene
         if(!snap.exists() && prefix){
           snap = await getDoc(doc(db,'panel','students_' + g.id));
         }
         
-        // HALA bulunamadÄ±ysa ve view-only moddaysak (prefix yoksa), 
-        // herhangi bir hocanÄ±n bu g.id'ye sahip listesi var mÄ± diye bakamayÄ±z (gÃ¼venlik/yapÄ± gereÄŸi)
-        // Ancak APP.studentLists'i her durumda bir dizi olarak baÅŸlatmalÄ±yÄ±z
+        // HALA bulunamadıysa ve view-only moddaysak (prefix yoksa), 
+        // herhangi bir hocanın bu g.id'ye sahip listesi var mı diye bakamayız (güvenlik/yapı gereği)
+        // Ancak APP.studentLists'i her durumda bir dizi olarak başlatmalıyız
         APP.studentLists[g.id] = normalizeStudentList(snap.exists() ? (snap.data().list || []) : (APP.studentLists[g.id] || []));
       } catch(e){
-        console.warn(`Grup ${g.id} yÃ¼klenemedi:`, e);
+        console.warn(`Grup ${g.id} yüklenemedi:`, e);
         APP.studentLists[g.id] = normalizeStudentList(APP.studentLists[g.id] || []);
       }
     }));
 
     APP.actLog = act;
-    setSyncStatus('ok','Firebase baÄŸlÄ± âœ“');
+    setSyncStatus('ok','Firebase bağlı ✓');
     return true;
   } catch(e){
-    console.error('Firebase yÃ¼kleme hatasÄ±:',e);
-    setSyncStatus('err','BaÄŸlantÄ± hatasÄ±');
+    console.error('Firebase yükleme hatası:',e);
+    setSyncStatus('err','Bağlantı hatası');
     return false;
   }
 }
@@ -143,7 +143,7 @@ async function fbSaveConfig(){
       criteria: APP.crit,
       updatedAt: APP.configUpdatedAt
     });
-  }catch(e){ console.warn('Config kayÄ±t hatasÄ±:',e); setSyncStatus('err','KayÄ±t hatasÄ±'); }
+  }catch(e){ console.warn('Config kayıt hatası:',e); setSyncStatus('err','Kayıt hatası'); }
 }
 
 async function fbSaveStudents(gid){
@@ -152,17 +152,17 @@ async function fbSaveStudents(gid){
     const list = normalizeStudentList(APP.studentLists[gid] || []);
     APP.studentLists[gid] = list;
     await setDoc(doc(db,'panel','students_'+prefix+gid),{ list, updatedAt: Date.now() });
-  }catch(e){ console.warn('Ã–ÄŸrenci kayÄ±t hatasÄ±:',e); }
+  }catch(e){ console.warn('Öğrenci kayıt hatası:',e); }
 }
 
 async function fbSaveActivity(){
   try{
     await setDoc(doc(db,'panel','activity'), APP.actLog);
-  }catch(e){ console.warn('Aktivite kayÄ±t hatasÄ±:',e); }
+  }catch(e){ console.warn('Aktivite kayıt hatası:',e); }
 }
 
-// GerÃ§ek zamanlÄ± dinleyici â€” baÅŸka cihazdan deÄŸiÅŸiklik olunca gÃ¼ncelle
-// students_ dokÃ¼manlari iÃ§in aktif dinleyicileri takip et
+// Gerçek zamanlı dinleyici — başka cihazdan değişiklik olunca güncelle
+// students_ dokümanlari için aktif dinleyicileri takip et
 const _studentsUnsubMap = {};
 
 function fbListenStudents(groups){
@@ -174,12 +174,12 @@ function fbListenStudents(groups){
     if(!neededKeys.has(key)){ _studentsUnsubMap[key](); delete _studentsUnsubMap[key]; }
   }
 
-  // Yeni gruplar iÃ§in dinleyici ekle
+  // Yeni gruplar için dinleyici ekle
   groups.forEach(g => {
     const key = 'students_' + prefix + g.id;
     if(_studentsUnsubMap[key]) return;
 
-    let _firstSnap = true; // fbLoad zaten yÃ¼kledi, ilk snapshot'Ä± atla
+    let _firstSnap = true; // fbLoad zaten yükledi, ilk snapshot'ı atla
     const unsub = onSnapshot(doc(db,'panel',key), snap => {
       if(_firstSnap){ _firstSnap = false; return; } // ilk tetiklenmeyi atla
       if(!snap.exists()) return;
@@ -197,7 +197,7 @@ function fbListenStudents(groups){
 
 function fbListen(){
   const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
-  let _cfgFirstSnap = true; // ilk snapshot fbLoad'dan gelen veriyle aynÄ±dÄ±r, atla
+  let _cfgFirstSnap = true; // ilk snapshot fbLoad'dan gelen veriyle aynıdır, atla
   onSnapshot(doc(db,'panel',cfgKey), snap=>{
     if(!snap.exists()) return;
     if(_cfgFirstSnap){ _cfgFirstSnap = false; return; } // ilk tetiklenmeyi atla
@@ -230,7 +230,7 @@ function fbListen(){
   onSnapshot(doc(db,'panel','activity'), snap=>{
     if(!snap.exists()) return;
     const newAct=snap.data();
-    // Mevcut ile birleÅŸtir (en bÃ¼yÃ¼k deÄŸeri koru)
+    // Mevcut ile birleştir (en büyük değeri koru)
     for(const [u,days] of Object.entries(newAct)){
       if(!APP.actLog[u]) APP.actLog[u]={};
       for(const [d,v] of Object.entries(days)){
@@ -243,7 +243,7 @@ function fbListen(){
   });
 }
 
-// â”€â”€ UYGULAMA DURUMU â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── UYGULAMA DURUMU ──────────────────────────────────
 const APP = {
   groups: [{id:'default',name:'A Grubu'}],
   activeGid: null,
@@ -304,7 +304,11 @@ function findStudent(u, gid=APP.activeGid){
 }
 
 function levelSlug(level){
-  return level === 'Ä°leri' ? 'ileri' : level === 'Orta' ? 'orta' : level === 'BaÅŸlangÄ±Ã§' ? 'baslangic' : 'genel';
+  return level === 'İleri' ? 'ileri' : level === 'Orta' ? 'orta' : level === 'Başlangıç' ? 'baslangic' : 'genel';
+}
+
+function isBestGroupName(name){
+  return name === "Haftanın En İyileri" || name.startsWith("Haftanın En İyileri - ");
 }
 
 function getStudentLevelInfo(u){
@@ -312,11 +316,11 @@ function getStudentLevelInfo(u){
   const activeStudent = findStudent(u);
   if(activeStudent?.level) return { level: activeStudent.level, group: activeStudent.groupName || activeGroup?.name || '' };
   if(activeStudent?.lvl) return { level: activeStudent.lvl, group: activeStudent.groupName || activeGroup?.name || '' };
-  if(activeGroup && activeGroup.name !== "Haftanın En İyileri" && !activeGroup.name.startsWith("Haftanın En İyileri - ") && activeGroup.name !== "HaftanÄ±n En Ä°yileri" && !activeGroup.name.startsWith("HaftanÄ±n En Ä°yileri - ")){
+  if(activeGroup && !isBestGroupName(activeGroup.name)){
     return { level: activeGroup.level || 'Genel', group: activeGroup.name };
   }
   for(const g of APP.groups){
-    if(g.name === "Haftanın En İyileri" || g.name.startsWith("Haftanın En İyileri - ") || g.name === "HaftanÄ±n En Ä°yileri" || g.name.startsWith("HaftanÄ±n En Ä°yileri - ")) continue;
+    if(isBestGroupName(g.name)) continue;
     if(getStudentList(g.id).some(student => student.u === u)){
       return { level: g.level || 'Genel', group: g.name };
     }
@@ -336,16 +340,16 @@ function getStudentDisplayName(u){
 function getStudentUkd(u){
   const s = findStudent(u);
   if (s) {
-    return { val: s.ukd || 'â€”', prev: s.pUkd || null };
+    return { val: s.ukd || '—', prev: s.pUkd || null };
   }
-  return { val: 'â€”', prev: null };
+  return { val: '—', prev: null };
 }
 function getStudentLic(u){
   const s = findStudent(u);
   return s ? (s.lic || '') : '';
 }
 function setStudents(arr){
-  if(!APP.activeGid){ showToast('Ã–nce bir grup seÃ§',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   // Mevcut isimleri koru
   const currentList = getStudentList();
   const newList = arr.map(raw => {
@@ -357,7 +361,7 @@ function setStudents(arr){
   fbSaveStudents(APP.activeGid);
 }
 
-// â”€â”€ TARÄ°H YARDIMCILARI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── TARİH YARDIMCILARI ───────────────────────────────
 function dateStr(off){
   const d=new Date(); d.setDate(d.getDate()+(off||0));
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -373,7 +377,7 @@ function daysBetween(a,b){
   return Math.round((p(a)-p(b))/86400000);
 }
 
-// â”€â”€ AKTÄ°VÄ°TE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── AKTİVİTE ─────────────────────────────────────────
 function logActivity(username, games, puzzles, wins){
   if(!APP.actLog[username]) APP.actLog[username]={};
   const key=todayStr(), prev=APP.actLog[username][key]||{games:0,puzzles:0,wins:0};
@@ -400,8 +404,8 @@ function get14Days(username){
   return out;
 }
 
-// â”€â”€ PUAN SÄ°STEMÄ° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// DÃ¶nem bazlÄ± istatistik Ã¶zeti (actLog'dan)
+// ── PUAN SİSTEMİ ─────────────────────────────────────
+// Dönem bazlı istatistik özeti (actLog'dan)
 function periodStats(username, period){
   const log = APP.actLog[username]||{};
   const d   = APP.liveData[username];
@@ -421,7 +425,7 @@ function periodStats(username, period){
     if(g>0) activeDays++;
   }
 
-  // BugÃ¼n actLog'da yoksa liveData'dan ekle
+  // Bugün actLog'da yoksa liveData'dan ekle
   if(!log[todayStr()] && d && !d.error){
     const todayTotal=(d.wins||0)+(d.losses||0)+(d.draws||0);
     if(todayTotal>0){ totalGames+=todayTotal; activeDays++; }
@@ -456,17 +460,17 @@ function scoreBreakdown(username){
   const d=APP.liveData[username]; if(!d||d.error) return '';
   const tot=(d.wins||0)+(d.losses||0)+(d.draws||0), puz=d.puzzlesSolved||0, streak=getStreak(username,'games');
   const parts=[];
-  if(tot>0) parts.push(`âš”${tot}`);
-  if(puz>0) parts.push(`ðŸ§©${puz}`);
-  if(streak>0) parts.push(`ðŸ”¥${streak}g`);
+  if(tot>0) parts.push(`⚔${tot}`);
+  if(puz>0) parts.push(`🧩${puz}`);
+  if(streak>0) parts.push(`🔥${streak}g`);
   return parts.join(' ');
 }
 
-// â”€â”€ GRUP YÃ–NETÄ°MÄ° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── GRUP YÖNETİMİ ────────────────────────────────────
 function renderGroupBar(){
   const bar=document.getElementById('groupBar');
-  // Seviyelere gÃ¶re grupla
-  const levels = ['Ä°leri', 'Orta', 'BaÅŸlangÄ±Ã§', 'Genel'];
+  // Seviyelere göre grupla
+  const levels = ['İleri', 'Orta', 'Başlangıç', 'Genel'];
   const grouped = {};
   APP.groups.forEach(g => {
     const l = g.level || 'Genel';
@@ -478,9 +482,9 @@ function renderGroupBar(){
   levels.forEach(lvl => {
     const groupsInLvl = grouped[lvl];
     if(groupsInLvl && groupsInLvl.length > 0) {
-      const lvlClass = lvl.toLowerCase().replace('i','i').replace('ÅŸ','s').replace('Ã§','c').replace('ÄŸ','g').replace('Ã¼','u').replace('Ã¶','o');
-      // TÃ¼rkÃ§e karakter dÃ¼zeltme (basitleÅŸtirilmiÅŸ)
-      const safeLvl = lvl === 'Ä°leri' ? 'ileri' : lvl === 'Orta' ? 'orta' : lvl === 'BaÅŸlangÄ±Ã§' ? 'baslangic' : 'genel';
+      const lvlClass = lvl.toLowerCase().replace('i','i').replace('ş','s').replace('ç','c').replace('ğ','g').replace('ü','u').replace('ö','o');
+      // Türkçe karakter düzeltme (basitleştirilmiş)
+      const safeLvl = lvl === 'İleri' ? 'ileri' : lvl === 'Orta' ? 'orta' : lvl === 'Başlangıç' ? 'baslangic' : 'genel';
       
       html += `<div class="group-level-section">
         <div class="group-level-tabs">`;
@@ -497,7 +501,7 @@ function renderGroupBar(){
     }
   });
 
-  bar.innerHTML = html + `<button class="new-group-btn edit-only" onclick="openNewGroupModal()" style="margin-top:10px;">ï¼‹ Yeni Grup</button>`;
+  bar.innerHTML = html + `<button class="new-group-btn edit-only" onclick="openNewGroupModal()" style="margin-top:10px;">＋ Yeni Grup</button>`;
   setTimeout(updateGroupScrollState, 0);
 }
 
@@ -527,19 +531,19 @@ window.switchGroup = async function switchGroup(id){
   APP.curFilters.clear();
   document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.remove('active'));
   renderGroupBar(); renderHeader();
-  // Ã–ÄŸrenci listesi bellekte yoksa Firebase'den Ã§ek
+  // Öğrenci listesi bellekte yoksa Firebase'den çek
   if(APP.studentLists[id] === undefined || APP.studentLists[id] === null){
-    setSyncStatus('syncing','Grup yÃ¼kleniyorâ€¦');
+    setSyncStatus('syncing','Grup yükleniyor…');
     try{
       const prefix2 = APP.currentUser ? APP.currentUser + '_' : '';
       const skey = 'students_' + prefix2 + id;
       let snap = await getDoc(doc(db,'panel',skey));
       if(!snap.exists() && prefix2) snap = await getDoc(doc(db,'panel','students_'+id));
       APP.studentLists[id] = normalizeStudentList(snap.exists() ? (snap.data().list||[]) : []);
-      setSyncStatus('ok','Firebase baÄŸlÄ± âœ“');
+      setSyncStatus('ok','Firebase bağlı ✓');
     }catch(e){
       APP.studentLists[id] = [];
-      setSyncStatus('err','Grup yÃ¼klenemedi');
+      setSyncStatus('err','Grup yüklenemedi');
     }
   }
   renderGroupBar();
@@ -550,7 +554,7 @@ window.switchGroup = async function switchGroup(id){
 
 window.openNewGroupModal=()=>{ document.getElementById('newGroupName').value=''; document.getElementById('modalNewGroup').style.display='flex'; setTimeout(()=>document.getElementById('newGroupName').focus(),50); };
 window.createGroup=()=>{
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const name=document.getElementById('newGroupName').value.trim(); if(!name) return;
   const level=document.getElementById('newGroupLevel').value;
   const g={id:'g'+Date.now(),name,level};
@@ -558,7 +562,7 @@ window.createGroup=()=>{
   APP.studentLists[g.id]=[];
   fbSaveConfig(); fbSaveStudents(g.id);
   closeModal('modalNewGroup'); renderGroupBar(); renderHeader(); renderGrid();
-  showToast(`"${name}" (${level}) grubu oluÅŸturuldu âœ“`);
+  showToast(`"${name}" (${level}) grubu oluşturuldu ✓`);
 };
 window.openRenameModal=()=>{
   const g=APP.groups.find(x=>x.id===APP.activeGid); if(!g) return;
@@ -568,16 +572,16 @@ window.openRenameModal=()=>{
   setTimeout(()=>document.getElementById('renameInput').focus(),50);
 };
 window.renameGroup=()=>{
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const name=document.getElementById('renameInput').value.trim(); if(!name) return;
   const level=document.getElementById('renameLevel').value;
   const g=APP.groups.find(x=>x.id===APP.activeGid); if(!g) return;
   g.name=name; g.level=level; fbSaveConfig(); closeModal('modalRename'); renderGroupBar(); renderHeader();
-  showToast(`Grup gÃ¼ncellendi âœ“`);
+  showToast(`Grup güncellendi ✓`);
 };
 window.confirmDeleteGroup=()=>{
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
-  if(!APP.activeGid){ showToast('Ã–nce bir grup seÃ§',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   if(APP.groups.length<=1){ showToast('Son grubu silemezsiniz!',true); return; }
   const g=APP.groups.find(x=>x.id===APP.activeGid);
   if(!confirm(`"${g?.name}" grubunu silmek istiyor musunuz?`)) return;
@@ -590,18 +594,18 @@ window.confirmDeleteGroup=()=>{
 window.closeModal=id=>document.getElementById(id).style.display='none';
 function renderHeader(){
   const g=APP.groups.find(x=>x.id===APP.activeGid);
-  const name = g ? g.name : 'â€”';
-  const safeLvl = g ? (g.level === 'Ä°leri' ? 'ileri' : g.level === 'Orta' ? 'orta' : g.level === 'BaÅŸlangÄ±Ã§' ? 'baslangic' : 'genel') : 'genel';
+  const name = g ? g.name : '—';
+  const safeLvl = g ? (g.level === 'İleri' ? 'ileri' : g.level === 'Orta' ? 'orta' : g.level === 'Başlangıç' ? 'baslangic' : 'genel') : 'genel';
   const levelIndicator = g ? `<span class="group-level-indicator bg-${safeLvl}" style="width:10px; height:10px; margin-right:8px; vertical-align:middle;"></span>` : '';
   
   document.getElementById('groupNameDisplay').innerHTML = levelIndicator + name;
-  document.title=(g?g.name+' â€” ':'')+'Lichess KoÃ§ Paneli';
+  document.title=(g?g.name+' — ':'')+'Lichess Koç Paneli';
 }
 
-// â”€â”€ Ã–ÄžRENCÄ° EKLE / Ã‡IKAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ÖĞRENCİ EKLE / ÇIKAR ─────────────────────────────
 window.addStudent=async()=>{
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
-  if(!APP.activeGid){ showToast('Ã–nce bir grup seÃ§',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
   const val=inp.value.trim(); errEl.textContent='';
   if(!val) return;
@@ -609,7 +613,7 @@ window.addStudent=async()=>{
   // Format: "user (Real Name) (UKD) (Lic)" veya sadece "user"
   let user = val, realName = null, ukd = null, lic = null;
   
-  // Parantez iÃ§indeki verileri yakala: user (Ä°sim) (UKD) (Lisans)
+  // Parantez içindeki verileri yakala: user (İsim) (UKD) (Lisans)
   const matches = [...val.matchAll(/\((.+?)\)/g)];
   if(matches.length > 0){
     user = val.split('(')[0].trim().toLowerCase();
@@ -621,11 +625,11 @@ window.addStudent=async()=>{
   }
   
   const students=getStudents();
-  if(students.includes(user)){ errEl.textContent='âš  Bu kullanÄ±cÄ± zaten listede.'; return; }
+  if(students.includes(user)){ errEl.textContent='⚠ Bu kullanıcı zaten listede.'; return; }
   inp.disabled=true;
   try{
     const res=await fetchWT(`https://lichess.org/api/user/${user}`,{},8000);
-    if(!res.ok){ errEl.textContent='âœ— KullanÄ±cÄ± bulunamadÄ±.'; return; }
+    if(!res.ok){ errEl.textContent='✗ Kullanıcı bulunamadı.'; return; }
     const data=await res.json();
     
     // Listeye ekle (obje olarak)
@@ -641,8 +645,8 @@ window.addStudent=async()=>{
     
     inp.value='';
     renderGroupBar(); renderGrid();
-    loadOneStudent(user,0); showToast(`${realName || data.username} eklendi âœ“`);
-  }catch(e){ errEl.textContent=e.name==='AbortError'?'âœ— Zaman aÅŸÄ±mÄ±.':'âœ— BaÄŸlantÄ± hatasÄ±.'; }
+    loadOneStudent(user,0); showToast(`${realName || data.username} eklendi ✓`);
+  }catch(e){ errEl.textContent=e.name==='AbortError'?'✗ Zaman aşımı.':'✗ Bağlantı hatası.'; }
   finally{ inp.disabled=false; inp.focus(); }
 };
 
@@ -656,16 +660,16 @@ window.retryStudent=async(username)=>{
 };
 
 function removeStudent(username){
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const currentList = getStudentList();
   const updated = currentList.filter(x => x.u !== username);
   APP.studentLists[APP.activeGid] = updated;
   fbSaveStudents(APP.activeGid);
   delete APP.liveData[username];
-  renderGroupBar(); renderGrid(); showToast(`${username} Ã§Ä±karÄ±ldÄ±`,true);
+  renderGroupBar(); renderGrid(); showToast(`${username} çıkarıldı`,true);
 }
 
-// â”€â”€ VERÄ° YÃœKLEME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── VERİ YÜKLEME ─────────────────────────────────────
 window.refreshAll=async(force=false)=>{
   const myId=++APP.refreshId;
   if(!APP.activeGid) return;
@@ -673,11 +677,11 @@ window.refreshAll=async(force=false)=>{
   if(students.length===0) return;
   const btn=document.getElementById('refreshBtn'); btn.classList.add('spinning');
   
-  // Ã–nce mevcut verilerle UI'Ä± gÃ¼ncelle
+  // Önce mevcut verilerle UI'ı güncelle
   renderGrid();
   if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
   
-  // Sadece eski veya eksik verileri gÃ¼ncelle
+  // Sadece eski veya eksik verileri güncelle
   const now = Date.now();
   const cacheLimit = 5 * 60 * 1000; // 5 dakika
   
@@ -694,22 +698,22 @@ window.refreshAll=async(force=false)=>{
     return;
   }
 
-  setLoadStatus(`YÃ¼kleniyorâ€¦ 0/${toRefresh.length}`);
+  setLoadStatus(`Yükleniyor… 0/${toRefresh.length}`);
   let done=0;
   for(const user of toRefresh){
     if(myId!==APP.refreshId) break;
     await loadOneStudent(user,myId);
     done++; if(myId!==APP.refreshId) break;
-    setLoadStatus(`YÃ¼kleniyorâ€¦ ${done}/${toRefresh.length}`);
+    setLoadStatus(`Yükleniyor… ${done}/${toRefresh.length}`);
     updateOneCard(user,myId);
     if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
     
-    // Lichess rate limit: Ã¶ÄŸrenciler arasÄ± 1.5sn bekle
+    // Lichess rate limit: öğrenciler arası 1.5sn bekle
     if(done<toRefresh.length) await new Promise(r=>setTimeout(r,4000));
   }
   if(myId===APP.refreshId){
     btn.classList.remove('spinning'); setLoadStatus('');
-    document.getElementById('lastUpdate').textContent='GÃ¼ncellendi: '+new Date().toLocaleTimeString('tr-TR');
+    document.getElementById('lastUpdate').textContent='Güncellendi: '+new Date().toLocaleTimeString('tr-TR');
     renderGrid(); renderChamps(); renderScoreTable();
     if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
   }
@@ -857,7 +861,7 @@ async function loadOneStudent(username,myId){
     const now=new Date(), todayMidnight=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
     const weekAgo = todayMidnight - 7 * 24 * 60 * 60 * 1000;
 
-    // 1. MaÃ§larÄ± Ã‡ek ve AyÄ±kla (ModÃ¼ler Fonksiyon)
+    // 1. Maçları Çek ve Ayıkla (Modüler Fonksiyon)
     const { wins, losses, draws, recent, topOpenings } = await fetchAndParseGames(username, weekAgo, todayMidnight);
     if(myId&&myId!==APP.refreshId) return;
 
@@ -866,7 +870,7 @@ async function loadOneStudent(username,myId){
     for(const k of ['bullet','blitz','rapid','classical']) if(perf[k]&&perf[k].games>0) ratings[k]={int:perf[k].rating,prog:perf[k].prog||0};
     let puzzleRating=perf.puzzle?perf.puzzle.rating:null;
 
-    // 3. Aktivite / Bulmaca Ã‡ek ve AyÄ±kla (ModÃ¼ler Fonksiyon)
+    // 3. Aktivite / Bulmaca Çek ve Ayıkla (Modüler Fonksiyon)
     let puzzlesSolved=0;
     try{
       puzzlesSolved = await fetchAndParseActivity(username);
@@ -877,19 +881,19 @@ async function loadOneStudent(username,myId){
     logActivity(username,wins+losses+draws,puzzlesSolved,wins);
   }catch(err){
     console.warn(`[${username}]:`,err.message);
-    // Ä°lk hata â€” 3 saniye bekleyip bir kez daha dene
+    // İlk hata — 3 saniye bekleyip bir kez daha dene
     if(!APP.liveData[username] || !APP.liveData[username].retried){
-      await new Promise(r=>setTimeout(r,8000)); // Rate limit iÃ§in bekleme
-      if(myId && myId!==APP.refreshId) return; // grup deÄŸiÅŸtiyse iptal
+      await new Promise(r=>setTimeout(r,8000)); // Rate limit için bekleme
+      if(myId && myId!==APP.refreshId) return; // grup değiştiyse iptal
       try{
         const retryRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},10000);
         if(retryRes.ok){
-          // Yeniden deneme baÅŸarÄ±lÄ± â€” loadOneStudent'Ä± tekrar Ã§aÄŸÄ±r ama retry flag'i ile
+          // Yeniden deneme başarılı — loadOneStudent'ı tekrar çağır ama retry flag'i ile
           APP.liveData[username]={retried:true,displayName:username};
           await loadOneStudent(username,myId);
           return;
         }
-      }catch(e2){ console.warn(`[${username}] yeniden deneme de baÅŸarÄ±sÄ±z:`,e2.message); }
+      }catch(e2){ console.warn(`[${username}] yeniden deneme de başarısız:`,e2.message); }
       APP.liveData[username]={error:true,displayName:username};
     } else {
       APP.liveData[username]={error:true,displayName:username};
@@ -915,31 +919,31 @@ function updateOneCard(username,myId){
   if(existing){ const tmp=document.createElement('div'); tmp.innerHTML=buildCard(username,d,rank); if(tmp.firstElementChild) existing.replaceWith(tmp.firstElementChild); }
 }
 
-// â”€â”€ ROZETLER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ROZETLER ─────────────────────────────────────────
 function getBadges(username,d){
   if(!d||d.error) return [];
   const badges=[], total=(d.wins||0)+(d.losses||0)+(d.draws||0), wr=total>0?Math.round((d.wins/total)*100):0;
   const puz=d.puzzlesSolved||0, gs=getStreak(username,'games'), ps=getStreak(username,'puzzles');
-  if(total>=APP.crit.minDailyGames) badges.push({cls:'b-active',icon:'âš¡',label:'Aktif',tip:`BugÃ¼n ${total} maÃ§`});
-  else if(total>0) badges.push({cls:'b-info',icon:'â–·',label:`${total} maÃ§`,tip:'BugÃ¼n maÃ§ yaptÄ±'});
-  else badges.push({cls:'b-warn',icon:'ðŸ’¤',label:'Pasif',tip:'BugÃ¼n maÃ§ yok'});
-  if(total>=3&&wr>=APP.crit.minWinRate) badges.push({cls:'b-gold',icon:'ðŸ†',label:`%${wr}`,tip:`%${APP.crit.minWinRate}+ kazanma`});
-  if(gs>=APP.crit.streakDays) badges.push({cls:'b-streak',icon:'ðŸ”¥',label:`${gs}g Seri`,tip:`${gs} gÃ¼n Ã¼st Ã¼ste`});
-  if(puz>=APP.crit.minPuzzleDaily) badges.push({cls:'b-puzzle',icon:'ðŸ§©',label:`${puz}`,tip:`${APP.crit.minPuzzleDaily}+ bulmaca`});
-  if(ps>=APP.crit.streakPuzzleDays) badges.push({cls:'b-pstreak',icon:'ðŸŽ¯',label:`${ps}gðŸ§©`,tip:`${ps} gÃ¼n bulmaca serisi`});
+  if(total>=APP.crit.minDailyGames) badges.push({cls:'b-active',icon:'⚡',label:'Aktif',tip:`Bugün ${total} maç`});
+  else if(total>0) badges.push({cls:'b-info',icon:'▷',label:`${total} maç`,tip:'Bugün maç yaptı'});
+  else badges.push({cls:'b-warn',icon:'💤',label:'Pasif',tip:'Bugün maç yok'});
+  if(total>=3&&wr>=APP.crit.minWinRate) badges.push({cls:'b-gold',icon:'🏆',label:`%${wr}`,tip:`%${APP.crit.minWinRate}+ kazanma`});
+  if(gs>=APP.crit.streakDays) badges.push({cls:'b-streak',icon:'🔥',label:`${gs}g Seri`,tip:`${gs} gün üst üste`});
+  if(puz>=APP.crit.minPuzzleDaily) badges.push({cls:'b-puzzle',icon:'🧩',label:`${puz}`,tip:`${APP.crit.minPuzzleDaily}+ bulmaca`});
+  if(ps>=APP.crit.streakPuzzleDays) badges.push({cls:'b-pstreak',icon:'🎯',label:`${ps}g🧩`,tip:`${ps} gün bulmaca serisi`});
   
   const weeklyScore = calcScore(username, 'week');
   const isBelow = weeklyScore < (APP.crit.minWeeklyScore || 0);
   if (isBelow) {
-    badges.push({cls:'b-warn',icon:'ðŸ”»',label:'Baraj AltÄ±',tip:`HaftalÄ±k barajÄ±n (${APP.crit.minWeeklyScore}) altÄ±nda`});
+    badges.push({cls:'b-warn',icon:'🔻',label:'Baraj Altı',tip:`Haftalık barajın (${APP.crit.minWeeklyScore}) altında`});
   } else {
-    badges.push({cls:'b-active',icon:'ðŸŒŸ',label:'Baraj ÃœstÃ¼',tip:`HaftalÄ±k barajÄ±n (${APP.crit.minWeeklyScore}) Ã¼zerinde`});
+    badges.push({cls:'b-active',icon:'🌟',label:'Baraj Üstü',tip:`Haftalık barajın (${APP.crit.minWeeklyScore}) üzerinde`});
   }
   
   return badges;
 }
 
-// â”€â”€ SIRALAMA / FÄ°LTRE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SIRALAMA / FİLTRE ────────────────────────────────
 function scoreForSort(u){
   const d=APP.liveData[u]; if(!d||d.error) return -9999;
   const tot=(d.wins||0)+(d.losses||0)+(d.draws||0), wr=tot>0?(d.wins/tot)*100:0;
@@ -967,20 +971,20 @@ window.setSort=k=>{ APP.curSort=k; document.querySelectorAll('.ctrl-btn[data-sor
 window.togFilter=k=>{ APP.curFilters.has(k)?APP.curFilters.delete(k):APP.curFilters.add(k); document.querySelectorAll('.ctrl-btn[data-filter]').forEach(b=>b.classList.toggle('active',APP.curFilters.has(b.dataset.filter))); renderGrid(); };
 window.setScorePeriod=p=>{ APP.scorePeriod=p; document.querySelectorAll('.score-tab').forEach(b=>b.classList.toggle('active',b.dataset.period===p)); renderScoreTable(); renderChamps(); };
 
-// â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── RENDER ───────────────────────────────────────────
 function renderGrid(){
   const grid=document.getElementById('cardsGrid');
   if(!APP.activeGid){
-    grid.innerHTML='<div class="empty"><div class="ei">â™Ÿ</div><h3>Grubunu seÃ§</h3><p>Ãœstteki grup sekmelerinden kendi grubunu seÃ§erek sporcularÄ± gÃ¶rÃ¼ntÃ¼le.</p></div>';
+    grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Grubunu seç</h3><p>Üstteki grup sekmelerinden kendi grubunu seçerek sporcuları görüntüle.</p></div>';
     return;
   }
   const students=getStudents();
-  if(students.length===0){ grid.innerHTML='<div class="empty"><div class="ei">â™Ÿ</div><h3>HenÃ¼z Ã¶ÄŸrenci yok</h3><p>YukarÄ±dan lichess kullanÄ±cÄ± adÄ± ekle.</p></div>'; return; }
+  if(students.length===0){ grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>'; return; }
   const allLoaded=students.every(u=>APP.liveData[u]);
   const sorted=allLoaded?[...students].sort((a,b)=>scoreForSort(b)-scoreForSort(a)):[...students];
   const rankMap=Object.fromEntries(sorted.map((u,i)=>[u,i+1]));
   const filtered=sorted.filter(passes);
-  if(filtered.length===0){ grid.innerHTML='<div class="empty"><div class="ei">ðŸ”</div><h3>Filtre eÅŸleÅŸmedi</h3></div>'; return; }
+  if(filtered.length===0){ grid.innerHTML='<div class="empty"><div class="ei">🔍</div><h3>Filtre eşleşmedi</h3></div>'; return; }
   const frag=document.createDocumentFragment();
   for(const u of filtered){
     const d=APP.liveData[u];
@@ -1002,7 +1006,7 @@ function renderGrid(){
       // Hata durumunda basit kart ekle
       const fb=document.createElement('div');
       fb.className='s-card faded'; fb.setAttribute('data-user',u);
-      fb.innerHTML='<div class="card-head" style="padding:12px 13px"><span style="font-size:12px;color:var(--text-muted)">'+escHtml(u)+' â€” yÃ¼klenemedi</span></div>';
+      fb.innerHTML='<div class="card-head" style="padding:12px 13px"><span style="font-size:12px;color:var(--text-muted)">'+escHtml(u)+' — yüklenemedi</span></div>';
       frag.appendChild(fb);
     }
   }
@@ -1013,57 +1017,57 @@ function renderChamps(){
   const students=getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
   if(students.length<2){ document.getElementById('champStrip').innerHTML=''; return; }
   const period = APP.scorePeriod||'week';
-  const periodLabel = period==='week' ? 'Bu Hafta' : '14 GÃ¼n';
+  const periodLabel = period==='week' ? 'Bu Hafta' : '14 Gün';
 
-  // Her Ã¶ÄŸrenci iÃ§in dÃ¶nem istatistiklerini hesapla
+  // Her öğrenci için dönem istatistiklerini hesapla
   const stats = Object.fromEntries(students.map(u=>[u, periodStats(u,period)]));
 
   const best = fn => students.reduce((b,u)=>fn(u)>fn(b)?u:b);
 
   const champs=[
     {
-      cls:'cc-score', label:'â­ En YÃ¼ksek Puan', medal:'ðŸ†',
+      cls:'cc-score', label:'⭐ En Yüksek Puan', medal:'🏆',
       user: best(u=>calcScore(u,period)),
       val:  u=>calcScore(u,period)+' puan',
       sub:  u=>periodLabel
     },
     {
-      cls:'cc-games', label:'âš” En Ã‡ok MaÃ§', medal:'ðŸŽ¯',
+      cls:'cc-games', label:'⚔ En Çok Maç', medal:'🎯',
       user: best(u=>stats[u].totalGames),
-      val:  u=>stats[u].totalGames+' maÃ§',
+      val:  u=>stats[u].totalGames+' maç',
       sub:  u=>periodLabel+' toplam'
     },
     {
-      cls:'cc-puzzle', label:'ðŸ§© En Ã‡ok Bulmaca', medal:'ðŸ§©',
+      cls:'cc-puzzle', label:'🧩 En Çok Bulmaca', medal:'🧩',
       user: best(u=>stats[u].totalPuzzles),
       val:  u=>stats[u].totalPuzzles+' bulmaca',
       sub:  u=>periodLabel+' toplam'
     },
     {
-      cls:'cc-win', label:'ðŸ“š En Ã‡ok Antrenman', medal:'ðŸ“š',
+      cls:'cc-win', label:'📚 En Çok Antrenman', medal:'📚',
       user: (()=>{
-        // MaÃ§ + bulmaca toplamÄ± en yÃ¼ksek
+        // Maç + bulmaca toplamı en yüksek
         const active=students.filter(u=>stats[u].totalGames>0||stats[u].totalPuzzles>0);
         if(active.length===0) return students[0];
         return active.reduce((b,u)=>(stats[u].totalGames+stats[u].totalPuzzles)>(stats[b].totalGames+stats[b].totalPuzzles)?u:b);
       })(),
       val:  u=>(stats[u].totalGames+stats[u].totalPuzzles)>0
               ? (stats[u].totalGames+stats[u].totalPuzzles)+' toplam aktivite'
-              : 'henÃ¼z aktivite yok',
-      sub:  u=>periodLabel+' maÃ§+bulmaca toplamÄ±'
+              : 'henüz aktivite yok',
+      sub:  u=>periodLabel+' maç+bulmaca toplamı'
     },
     {
-      cls:'cc-streak', label:'âš¡ En Aktif Oyuncu', medal:'âš¡',
+      cls:'cc-streak', label:'⚡ En Aktif Oyuncu', medal:'⚡',
       user: (()=>{
-        // En fazla aktif gÃ¼n olan oyuncu (activeDays)
+        // En fazla aktif gün olan oyuncu (activeDays)
         const active=students.filter(u=>stats[u].activeDays>0);
         if(active.length===0) return students[0];
         return active.reduce((b,u)=>stats[u].activeDays>stats[b].activeDays?u:b);
       })(),
       val:  u=>stats[u].activeDays>0
-              ? stats[u].activeDays+' aktif gÃ¼n'
-              : 'henÃ¼z maÃ§ yok',
-      sub:  u=>periodLabel+' iÃ§inde'
+              ? stats[u].activeDays+' aktif gün'
+              : 'henüz maç yok',
+      sub:  u=>periodLabel+' içinde'
     },
   ];
 
@@ -1080,11 +1084,11 @@ function renderChamps(){
 function renderScoreTable(){
   const students=getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
   if(!APP.activeGid){
-    document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Puan tablosu iÃ§in grup seÃ§in.</div>';
+    document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Puan tablosu için grup seçin.</div>';
     return;
   }
   if(students.length===0){
-    document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Veri bekleniyorâ€¦</div>';
+    document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Veri bekleniyor…</div>';
     return;
   }
   const period = APP.scorePeriod||'week';
@@ -1096,18 +1100,18 @@ function renderScoreTable(){
   document.getElementById('scoreRows').innerHTML=scored.map(({u,pts,st},i)=>{
     const rank=i+1, d=APP.liveData[u];
     const rCls = rank===1?'sr1':rank===2?'sr2':rank===3?'sr3':'';
-    const medal = rank===1?'ðŸ¥‡':rank===2?'ðŸ¥ˆ':rank===3?'ðŸ¥‰':rank;
+    const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
     const pct   = Math.round((pts/maxPts)*100);
     const isBelow = APP.scorePeriod==='week' && pts < (APP.crit.minWeeklyScore || 0);
     const barColor = isBelow ? 'var(--loss)' : 'var(--win)';
 
-    // Ä°statistik etiketleri
+    // İstatistik etiketleri
     const tags=[];
-    if(st.totalGames>0)   tags.push(`<span class="sc-tag sc-game">âš” ${st.totalGames} maÃ§</span>`);
+    if(st.totalGames>0)   tags.push(`<span class="sc-tag sc-game">⚔ ${st.totalGames} maç</span>`);
 
-    if(st.totalPuzzles>0) tags.push(`<span class="sc-tag sc-puz">ðŸ§© ${st.totalPuzzles} bulmaca</span>`);
-    if(st.streak>1)       tags.push(`<span class="sc-tag sc-str">ðŸ”¥ ${st.streak}g seri</span>`);
-    if(st.activeDays>0)   tags.push(`<span class="sc-tag sc-day">ðŸ“… ${st.activeDays} aktif gÃ¼n</span>`);
+    if(st.totalPuzzles>0) tags.push(`<span class="sc-tag sc-puz">🧩 ${st.totalPuzzles} bulmaca</span>`);
+    if(st.streak>1)       tags.push(`<span class="sc-tag sc-str">🔥 ${st.streak}g seri</span>`);
+    if(st.activeDays>0)   tags.push(`<span class="sc-tag sc-day">📅 ${st.activeDays} aktif gün</span>`);
 
     return `<div class="score-row ${rCls}">
       <div class="score-rank">${medal}</div>
@@ -1124,7 +1128,7 @@ function renderScoreTable(){
   }).join('');
 }
 
-// â”€â”€ KART OLUÅžTURUCULAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── KART OLUŞTURUCULAR ───────────────────────────────
 function skeletonCard(u){
   return `<div class="s-card" data-user="${escHtml(u)}">
     <div class="card-head"><div class="s-info">
@@ -1137,7 +1141,7 @@ function skeletonCard(u){
 }
 
 function buildCard(username,d,rank){
-  // Hata durumunda minimal kart gÃ¶ster
+  // Hata durumunda minimal kart göster
   if(d.error){
     return `<div class="s-card faded" data-user="${escHtml(username)}">
       <div class="card-head">
@@ -1146,13 +1150,13 @@ function buildCard(username,d,rank){
             <div class="avatar">${escHtml(username[0].toUpperCase())}</div>
             <div>
               <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(getStudentDisplayName(username))}</a>
-            <div class="s-sub" style="color:var(--loss)">âš  YÃ¼klenemedi
-              <button onclick="retryStudent('${escHtml(username)}')" style="margin-left:6px;background:rgba(224,90,90,.15);border:1px solid rgba(224,90,90,.3);color:var(--loss);border-radius:4px;padding:1px 8px;cursor:pointer;font-family:inherit;font-size:9px">â†º Tekrar Dene</button>
+            <div class="s-sub" style="color:var(--loss)">⚠ Yüklenemedi
+              <button onclick="retryStudent('${escHtml(username)}')" style="margin-left:6px;background:rgba(224,90,90,.15);border:1px solid rgba(224,90,90,.3);color:var(--loss);border-radius:4px;padding:1px 8px;cursor:pointer;font-family:inherit;font-size:9px">↺ Tekrar Dene</button>
             </div>
             </div>
           </div>
           <div class="card-actions">
-            <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Ã‡Ä±kar">âœ•</button>
+            <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Çıkar">✕</button>
           </div>
         </div>
       </div>
@@ -1164,21 +1168,21 @@ function buildCard(username,d,rank){
   const lossPct=100-winPct-drawPct;
   const badges=getBadges(username,d), score=calcScore(username,APP.scorePeriod||'week');
   const pSt=periodStats(username,APP.scorePeriod||'week');
-  const crown=rank===1?'ðŸ‘‘':rank===2?'ðŸ¥ˆ':rank===3?'ðŸ¥‰':'';
+  const crown=rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'';
   const cardCls=rank===1?'t1':rank===2?'t2':rank===3?'t3':'';
   const rHTML=['bullet','blitz','rapid','classical'].map(k=>{
     const r=d.ratings?.[k]; if(!r) return '';
-    const dif=r.prog||0,cc=dif>0?'up':dif<0?'dn':'eq',ct=dif>0?`â–²${dif}`:dif<0?`â–¼${Math.abs(dif)}`:'â€”';
+    const dif=r.prog||0,cc=dif>0?'up':dif<0?'dn':'eq',ct=dif>0?`▲${dif}`:dif<0?`▼${Math.abs(dif)}`:'—';
     return `<div class="r-item"><div class="r-type">${k==='bullet'?'BLT':k==='blitz'?'BLZ':k==='rapid'?'RPD':'CLS'}</div><div class="r-val">${r.int}</div><div class="r-chg ${cc}">${ct}</div></div>`;
   }).join('');
   const ukd = getStudentUkd(username);
-   let ukdDiffHTML = '<div class="r-chg eq">â€”</div>';
-   if(ukd.prev && ukd.val !== 'â€”') {
+   let ukdDiffHTML = '<div class="r-chg eq">—</div>';
+   if(ukd.prev && ukd.val !== '—') {
      const diff = parseInt(ukd.val) - parseInt(ukd.prev);
-     if(diff > 0) ukdDiffHTML = `<div class="r-chg up">â–²${diff}</div>`;
-     else if(diff < 0) ukdDiffHTML = `<div class="r-chg dn">â–¼${Math.abs(diff)}</div>`;
+     if(diff > 0) ukdDiffHTML = `<div class="r-chg up">▲${diff}</div>`;
+     else if(diff < 0) ukdDiffHTML = `<div class="r-chg dn">▼${Math.abs(diff)}</div>`;
    }
-   const ukdHTML = `<div class="r-item ukd-item" title="Ulusal Kuvvet Derecesi (Ã–nceki: ${ukd.prev || 'â€”'})"><div class="r-type">UKD</div><div class="r-val">${ukd.val}</div>${ukdDiffHTML}</div>`;
+   const ukdHTML = `<div class="r-item ukd-item" title="Ulusal Kuvvet Derecesi (Önceki: ${ukd.prev || '—'})"><div class="r-type">UKD</div><div class="r-val">${ukd.val}</div>${ukdDiffHTML}</div>`;
   
   let opHTML = '';
   if (d.topOpenings && (d.topOpenings.white?.length > 0 || d.topOpenings.black?.length > 0)) {
@@ -1187,11 +1191,11 @@ function buildCard(username,d,rank){
     opHTML = `
       <div class="wld-row" style="margin-bottom:0">
         <div class="wld-box" style="flex:1;text-align:left;padding:6px;border-color:rgba(200,168,75,.3);background:rgba(200,168,75,.04);grid-column:1/span 2">
-          <div class="wld-lbl" style="color:var(--text);margin-bottom:4px;font-size:9px">âšª Beyazla SÄ±k Oynananlar</div>
+          <div class="wld-lbl" style="color:var(--text);margin-bottom:4px;font-size:9px">⚪ Beyazla Sık Oynananlar</div>
           <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escHtml(wOp)}">${escHtml(wOp)}</div>
         </div>
         <div class="wld-box" style="flex:1;text-align:left;padding:6px;border-color:rgba(176,190,197,.3);background:rgba(176,190,197,.04);grid-column:1/span 2">
-          <div class="wld-lbl" style="color:var(--text);margin-bottom:4px;font-size:9px">âš« Siyahla SÄ±k Oynananlar</div>
+          <div class="wld-lbl" style="color:var(--text);margin-bottom:4px;font-size:9px">⚫ Siyahla Sık Oynananlar</div>
           <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escHtml(bOp)}">${escHtml(bOp)}</div>
         </div>
       </div>
@@ -1203,10 +1207,10 @@ function buildCard(username,d,rank){
     const isT=day.date===todayStr(), hg=day.games>=APP.crit.minDailyGames, hp=day.puzzles>=APP.crit.minPuzzleDaily;
     const ag=day.games>0, ap=day.puzzles>0;
     const cls=(hg&&hp)?'pb':hg?'pg':hp?'pp':(ag&&ap)?'pa-both':ag?'pa-game':ap?'pa-puzz':'';
-    return `<div class="pip ${cls}${isT?' today':''}" title="${day.date}: ${day.games} maÃ§, ${day.puzzles} bulmaca"></div>`;
+    return `<div class="pip ${cls}${isT?' today':''}" title="${day.date}: ${day.games} maç, ${day.puzzles} bulmaca"></div>`;
   }).join('');
   const gs=getStreak(username,'games'), ps=getStreak(username,'puzzles');
-  const heatLbl=gs>1?`ðŸ”¥ ${gs}g seri`:ps>1?`ðŸ§© ${ps}g seri`:'14 gÃ¼n';
+  const heatLbl=gs>1?`🔥 ${gs}g seri`:ps>1?`🧩 ${ps}g seri`:'14 gün';
   const bdgHtml=badges.map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
   const bd=scoreBreakdown(username);
   const levelInfo = getStudentLevelInfo(username);
@@ -1219,14 +1223,14 @@ function buildCard(username,d,rank){
           <div class="avatar">${escHtml(username[0].toUpperCase())}${crown?`<span class="rank-crown">${crown}</span>`:''}</div>
           <div>
             <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(getStudentDisplayName(username))}</a>
-            <div class="s-sub">${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> Â· `:''}${d.online?'Ã‡evrimiÃ§i':'Ã‡evrimdÄ±ÅŸÄ±'}
-              <div class="day-tag">ðŸŽ¯ ${APP.scorePeriod==='week'?'HaftalÄ±k':'14 GÃ¼nlÃ¼k'}: ${pSt.totalGames} maÃ§</div><div class="score-tag">â­ ${score} puan</div>
+            <div class="s-sub">${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
+              <div class="day-tag">🎯 ${APP.scorePeriod==='week'?'Haftalık':'14 Günlük'}: ${pSt.totalGames} maç</div><div class="score-tag">⭐ ${score} puan</div>
             </div>
           </div>
         </div>
         <div class="card-actions">
-          <div class="s-dot ${d.online?'on':''}" title="${d.online?'Ã‡evrimiÃ§i':'Ã‡evrimdÄ±ÅŸÄ±'}"></div>
-          <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Ã‡Ä±kar">âœ•</button>
+          <div class="s-dot ${d.online?'on':''}" title="${d.online?'Çevrimiçi':'Çevrimdışı'}"></div>
+          <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Çıkar">✕</button>
         </div>
       </div>
       <div class="card-badges">${levelAndBadges}</div>
@@ -1234,57 +1238,57 @@ function buildCard(username,d,rank){
     </div>
     <div class="ratings-row">${rHTML}${ukdHTML}</div>
     <div class="stats">
-      <div class="s-title">${APP.scorePeriod==='week'?'Bu HaftalÄ±k':'14 GÃ¼nlÃ¼k'} MaÃ§lar</div>
+      <div class="s-title">${APP.scorePeriod==='week'?'Bu Haftalık':'14 Günlük'} Maçlar</div>
       <div class="wld-row">
-        <div class="wld-box wb"><div class="wld-lbl">MaÃ§</div><div class="wld-val">${pSt.totalGames||0}</div></div>
+        <div class="wld-box wb"><div class="wld-lbl">Maç</div><div class="wld-val">${pSt.totalGames||0}</div></div>
         <div class="wld-box lb2"><div class="wld-lbl">Bulmaca</div><div class="wld-val">${pSt.totalPuzzles||0}</div></div>
-        <div class="wld-box db"><div class="wld-lbl">Aktif GÃ¼n</div><div class="wld-val">${pSt.activeDays||0}</div></div>
+        <div class="wld-box db"><div class="wld-lbl">Aktif Gün</div><div class="wld-val">${pSt.activeDays||0}</div></div>
       </div>
       
       <div class="puz-row">
-        <div class="puz-left"><span style="font-size:14px">ðŸ§©</span><div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">Bulmacalar</div><div class="puz-lbl">bugÃ¼n Ã§Ã¶zÃ¼len</div></div></div>
+        <div class="puz-left"><span style="font-size:14px">🧩</span><div><div style="font-size:11px;font-weight:600;color:var(--puzzle)">Bulmacalar</div><div class="puz-lbl">bugün çözülen</div></div></div>
         <div class="puz-cnt">${d.puzzlesSolved??0}</div>
-        <div class="puz-rat"><div>Puan</div><span>${d.puzzleRating??'â€”'}</span></div>
+        <div class="puz-rat"><div>Puan</div><span>${d.puzzleRating??'—'}</span></div>
       </div>
       <div class="train-score-row">
         <div>
-          <div style="font-size:11px;font-weight:600;color:var(--puzzle)">â­ Antrenman PuanÄ±</div>
-          <div class="puz-lbl">${APP.scorePeriod==='week'?'Bu Hafta':'14 GÃ¼n'}: ${pSt.totalGames} maÃ§ Â· ${pSt.totalPuzzles} bulmaca</div>
+          <div style="font-size:11px;font-weight:600;color:var(--puzzle)">⭐ Antrenman Puanı</div>
+          <div class="puz-lbl">${APP.scorePeriod==='week'?'Bu Hafta':'14 Gün'}: ${pSt.totalGames} maç · ${pSt.totalPuzzles} bulmaca</div>
         </div>
         <div class="train-pts">${score}</div>
-        <div class="train-breakdown">${bd||'â€”'}</div>
+        <div class="train-breakdown">${bd||'—'}</div>
       </div>
-      ${opHTML?`<div class="s-title" style="margin-top:5px">Favori AÃ§Ä±lÄ±ÅŸlar (Son 7 GÃ¼n)</div>${opHTML}`:''}
+      ${opHTML?`<div class="s-title" style="margin-top:5px">Favori Açılışlar (Son 7 Gün)</div>${opHTML}`:''}
     </div>
   </div>`;
 }
 
-// â”€â”€ KRÄ°TER PANELÄ° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-window.toggleCrit=()=>{ const b=document.getElementById('critBody'),a=document.getElementById('critArrow'); b.classList.toggle('open'); a.textContent=b.classList.contains('open')?'â–²':'â–¼'; };
+// ── KRİTER PANELİ ────────────────────────────────────
+window.toggleCrit=()=>{ const b=document.getElementById('critBody'),a=document.getElementById('critArrow'); b.classList.toggle('open'); a.textContent=b.classList.contains('open')?'▲':'▼'; };
 function buildCritPanel(){
   const isAdmin = PIN.getIsAdmin();
   const defs=[
-    {key:'minWeeklyScore',  b:{cls:'b-warn',icon:'ðŸ›‘',lbl:'Baraj'},   name:'HaftalÄ±k Alt Baraj',  rule:'HaftalÄ±k antrenman baraj puanÄ±'},
-    {key:'minDailyGames',   b:{cls:'b-active',icon:'âš¡',lbl:'Aktif'},        name:'Aktif Oyuncu',       rule:'GÃ¼nlÃ¼k min. maÃ§ sayÄ±sÄ±'},
-    {key:'minWinRate',      b:{cls:'b-gold',  icon:'ðŸ†',lbl:'%Kazanma'},     name:'YÃ¼ksek Kazanma',     rule:'Min. kazanma oranÄ± (%)'},
-    {key:'streakDays',      b:{cls:'b-streak',icon:'ðŸ”¥',lbl:'Seri'},         name:'MaÃ§ Serisi (gÃ¼n)',   rule:'Ãœst Ã¼ste kaÃ§ gÃ¼n?'},
-    {key:'minPuzzleDaily',  b:{cls:'b-puzzle',icon:'ðŸ§©',lbl:'Bulmaca'},      name:'GÃ¼nlÃ¼k Bulmaca',     rule:'GÃ¼nlÃ¼k min. bulmaca'},
-    {key:'streakPuzzleDays',b:{cls:'b-pstreak',icon:'ðŸŽ¯',lbl:'Bulmaca Seri'},name:'Bulmaca Serisi',     rule:'Ãœst Ã¼ste kaÃ§ gÃ¼n?'},
-    {key:'ptWin',           b:{cls:'b-gold',  icon:'â­',lbl:'Kazanma pt'},   name:'Kazanma PuanÄ±',      rule:'Her kazanÄ±lan maÃ§ iÃ§in'},
-    {key:'ptPlay',          b:{cls:'b-info',  icon:'â­',lbl:'Oynama pt'},    name:'Oynama PuanÄ±',       rule:'Her oynanan maÃ§ iÃ§in'},
-    {key:'ptPuzzle',        b:{cls:'b-puzzle',icon:'â­',lbl:'Bulmaca pt'},   name:'Bulmaca PuanÄ±',      rule:'Her bulmaca iÃ§in'},
-    {key:'ptDailyBonus',    b:{cls:'b-active',icon:'â­',lbl:'GÃ¼nlÃ¼k bonus'}, name:'GÃ¼nlÃ¼k MaÃ§ Bonusu',  rule:'GÃ¼nlÃ¼k kriteri karÅŸÄ±lama'},
-    {key:'ptPuzzleBonus',   b:{cls:'b-puzzle',icon:'â­',lbl:'Bulmaca bonus'},name:'Bulmaca Bonusu',     rule:'Bulmaca kriteri karÅŸÄ±lama'},
-    {key:'ptStreak',        b:{cls:'b-streak',icon:'â­',lbl:'Seri bonus'},   name:'Seri GÃ¼nlÃ¼k Bonus',  rule:'Aktif seri baÅŸÄ±na puan'},
+    {key:'minWeeklyScore',  b:{cls:'b-warn',icon:'🛑',lbl:'Baraj'},   name:'Haftalık Alt Baraj',  rule:'Haftalık antrenman baraj puanı'},
+    {key:'minDailyGames',   b:{cls:'b-active',icon:'⚡',lbl:'Aktif'},        name:'Aktif Oyuncu',       rule:'Günlük min. maç sayısı'},
+    {key:'minWinRate',      b:{cls:'b-gold',  icon:'🏆',lbl:'%Kazanma'},     name:'Yüksek Kazanma',     rule:'Min. kazanma oranı (%)'},
+    {key:'streakDays',      b:{cls:'b-streak',icon:'🔥',lbl:'Seri'},         name:'Maç Serisi (gün)',   rule:'Üst üste kaç gün?'},
+    {key:'minPuzzleDaily',  b:{cls:'b-puzzle',icon:'🧩',lbl:'Bulmaca'},      name:'Günlük Bulmaca',     rule:'Günlük min. bulmaca'},
+    {key:'streakPuzzleDays',b:{cls:'b-pstreak',icon:'🎯',lbl:'Bulmaca Seri'},name:'Bulmaca Serisi',     rule:'Üst üste kaç gün?'},
+    {key:'ptWin',           b:{cls:'b-gold',  icon:'⭐',lbl:'Kazanma pt'},   name:'Kazanma Puanı',      rule:'Her kazanılan maç için'},
+    {key:'ptPlay',          b:{cls:'b-info',  icon:'⭐',lbl:'Oynama pt'},    name:'Oynama Puanı',       rule:'Her oynanan maç için'},
+    {key:'ptPuzzle',        b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca pt'},   name:'Bulmaca Puanı',      rule:'Her bulmaca için'},
+    {key:'ptDailyBonus',    b:{cls:'b-active',icon:'⭐',lbl:'Günlük bonus'}, name:'Günlük Maç Bonusu',  rule:'Günlük kriteri karşılama'},
+    {key:'ptPuzzleBonus',   b:{cls:'b-puzzle',icon:'⭐',lbl:'Bulmaca bonus'},name:'Bulmaca Bonusu',     rule:'Bulmaca kriteri karşılama'},
+    {key:'ptStreak',        b:{cls:'b-streak',icon:'⭐',lbl:'Seri bonus'},   name:'Seri Günlük Bonus',  rule:'Aktif seri başına puan'},
   ];
-  // Bullet toggle ayrÄ± render
+  // Bullet toggle ayrı render
   const chk = APP.crit.countBullet ? 'checked' : '';
-  const lbl = APP.crit.countBullet ? 'Dahil' : 'HariÃ§';
+  const lbl = APP.crit.countBullet ? 'Dahil' : 'Hariç';
   const dis = isAdmin ? '' : 'disabled';
   const bulletHTML = '<div class="crit-item" style="grid-column:1/-1;background:rgba(224,90,90,.06);border-color:rgba(224,90,90,.2)">'
-    + '<span class="badge b-warn">ðŸ”´ Bullet</span>'
-    + '<div class="crit-desc"><div class="crit-name">Bullet MaÃ§larÄ± Say</div>'
-    + '<div class="crit-rule">MaÃ§ sayÄ±sÄ±, puan ve Ä±sÄ± haritasÄ±na dahil et</div></div>'
+    + '<span class="badge b-warn">🔴 Bullet</span>'
+    + '<div class="crit-desc"><div class="crit-name">Bullet Maçları Say</div>'
+    + '<div class="crit-rule">Maç sayısı, puan ve ısı haritasına dahil et</div></div>'
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text-muted)">'
     + '<input type="checkbox" id="bulletToggle" '+chk+' '+dis+' onchange="toggleBullet(this.checked)"'
     + ' style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"> '+lbl
@@ -1297,7 +1301,7 @@ function buildCritPanel(){
     </div>`).join('');
 }
 window.updateCrit=async(key,val)=>{ 
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); buildCritPanel(); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); buildCritPanel(); return; }
   APP.crit[key]=Math.max(0,parseFloat(val)||0); await fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); 
 };
 window.setClubLogo=()=>{
@@ -1309,7 +1313,7 @@ window.setClubLogo=()=>{
     reader.onload=ev=>{
       APP.clubLogoUrl=ev.target.result;
       localStorage.setItem('chess_club_logo',ev.target.result);
-      showToast('KulÃ¼p logosu kaydedildi âœ“');
+      showToast('Kulüp logosu kaydedildi ✓');
       if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
     };
     reader.readAsDataURL(file);
@@ -1318,18 +1322,18 @@ window.setClubLogo=()=>{
 };
 
 window.toggleBullet=async(checked)=>{
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); buildCritPanel(); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); buildCritPanel(); return; }
   APP.crit.countBullet=checked?1:0;
-  // Checkbox label gÃ¼ncelle
+  // Checkbox label güncelle
   const lbl=document.getElementById('bulletToggle');
-  if(lbl&&lbl.parentElement) lbl.parentElement.lastChild.textContent=' '+(checked?'Dahil':'HariÃ§');
+  if(lbl&&lbl.parentElement) lbl.parentElement.lastChild.textContent=' '+(checked?'Dahil':'Hariç');
   await fbSaveConfig();
-  showToast('Bullet maÃ§lar '+(checked?'dahil edildi':'hariÃ§ tutuldu'));
-  // Veriyi yeniden yÃ¼kle (bullet durumu deÄŸiÅŸti)
+  showToast('Bullet maçlar '+(checked?'dahil edildi':'hariç tutuldu'));
+  // Veriyi yeniden yükle (bullet durumu değişti)
   if(getStudents().length>0) refreshAll();
 };
 
-// â”€â”€ YARDIMCILAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── YARDIMCILAR ──────────────────────────────────────
 async function fetchWT(url, opts={}, ms=10000, retries=2){
   for (let i = 0; i <= retries; i++) {
     const ctrl = new AbortController();
@@ -1352,7 +1356,7 @@ async function fetchWT(url, opts={}, ms=10000, retries=2){
 }
 function fmtTime(date){
   const diff=Math.floor((Date.now()-date.getTime())/60000);
-  if(diff<1) return 'az Ã¶nce'; if(diff<60) return diff+'dk'; if(diff<1440) return Math.floor(diff/60)+'sa'; return Math.floor(diff/1440)+'g';
+  if(diff<1) return 'az önce'; if(diff<60) return diff+'dk'; if(diff<1440) return Math.floor(diff/60)+'sa'; return Math.floor(diff/1440)+'g';
 }
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function setLoadStatus(msg){ const el=document.getElementById('loadStatus'); if(msg){el.textContent=msg;el.classList.add('show');}else{el.textContent='';el.classList.remove('show');} }
@@ -1380,7 +1384,7 @@ window.addEventListener('resize', updateGroupScrollState);
 
 
 
-// â”€â”€ PIN SÄ°STEMÄ° (module scope dÄ±ÅŸÄ±nda window.PIN olarak) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PIN SİSTEMİ (module scope dışında window.PIN olarak) ──────────────────
 window.PIN = (function(){
   const DEFAULT = '1234';
   function hash(p){ let h=5381; for(let i=0;i<p.length;i++) h=((h<<5)+h)+p.charCodeAt(i)>>>0; return h.toString(16); }
@@ -1409,20 +1413,20 @@ window.PIN = (function(){
   }
 
   function getStoredHash(){
-    // Geriye dÃ¶nÃ¼k uyumluluk â€” yeni sistemde kullanÄ±lmaz
+    // Geriye dönük uyumluluk — yeni sistemde kullanılmaz
     if(window.APP && APP.crit && APP.crit._pinHash) return APP.crit._pinHash;
     return hash(DEFAULT);
   }
 
 
   async function addUser(){
-    if(!isAdmin){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli', true); return; }
-    const name = prompt('Yeni hocanÄ±n adÄ± (Ã¶rn: Ahmet Hoca):');
+    if(!isAdmin){ showToast('Bu işlem için yönetici girişi gerekli', true); return; }
+    const name = prompt('Yeni hocanın adı (örn: Ahmet Hoca):');
     if(!name || !name.trim()) return;
     const pin = prompt('Yeni 4 haneli PIN:');
-    if(!pin || !/^\d{4}$/.test(pin)){ showToast('GeÃ§ersiz PIN â€” 4 rakam olmalÄ±', true); return; }
+    if(!pin || !/^\d{4}$/.test(pin)){ showToast('Geçersiz PIN — 4 rakam olmalı', true); return; }
     const pin2 = prompt('PIN tekrar:');
-    if(pin !== pin2){ showToast('PIN eÅŸleÅŸmedi', true); return; }
+    if(pin !== pin2){ showToast('PIN eşleşmedi', true); return; }
 
     const uid = 'u' + Date.now();
     const newHash = hash(pin);
@@ -1433,11 +1437,11 @@ window.PIN = (function(){
       const allUsers = usersSnap.exists() ? usersSnap.data() : {};
       allUsers[uid] = { name: name.trim(), pinHash: newHash };
 
-      // users dokÃ¼manÄ±nÄ± gÃ¼ncelle
+      // users dokümanını güncelle
       await setDoc(doc(db, 'panel', 'users'), allUsers);
       APP.users = allUsers;
 
-      // Yeni hoca iÃ§in boÅŸ config oluÅŸtur
+      // Yeni hoca için boş config oluştur
       const defaultGid = 'g' + uid;
       await setDoc(doc(db, 'panel', 'config_' + uid), {
         groups: [{ id: defaultGid, name: 'A Grubu' }],
@@ -1457,15 +1461,15 @@ window.PIN = (function(){
         updatedAt: Date.now()
       });
 
-      // BoÅŸ Ã¶ÄŸrenci listesi oluÅŸtur
+      // Boş öğrenci listesi oluştur
       await setDoc(doc(db, 'panel', 'students_' + uid + '_' + defaultGid), {
         list: [],
         updatedAt: Date.now()
       });
 
-      showToast(name.trim() + ' eklendi âœ“');
+      showToast(name.trim() + ' eklendi ✓');
     } catch(e) {
-      console.error('Hoca ekleme hatasÄ±:', e);
+      console.error('Hoca ekleme hatası:', e);
       showToast('Hata: ' + e.message, true);
     }
   }
@@ -1473,7 +1477,7 @@ window.PIN = (function(){
 
   async function checkPin(){
     if(buf.length<4) return;
-    // Firebase'den taze users listesini Ã§ek
+    // Firebase'den taze users listesini çek
     try{
       const snap=await getDoc(doc(db,'panel','users'));
       if(snap.exists()) APP.users=snap.data();
@@ -1483,16 +1487,16 @@ window.PIN = (function(){
     for(const [uid,u] of Object.entries(users)){
       if(hash(buf)===u.pinHash){ matchUid=uid; matchUser=u; break; }
     }
-    // Geriye dÃ¶nÃ¼k uyumluluk
+    // Geriye dönük uyumluluk
     if(!matchUid && Object.keys(users).length===0 && hash(buf)===getStoredHash()){
-      matchUid='legacy'; matchUser={name:'YÃ¶netici'};
+      matchUid='legacy'; matchUser={name:'Yönetici'};
     }
     if(matchUid){
-      // Legacy â†’ users dokÃ¼manÄ±na taÅŸÄ±
+      // Legacy → users dokümanına taşı
       if(matchUid==='legacy'){
         try{
           const uid='u'+Date.now();
-          const nu={}; nu[uid]={name:'YÃ¶netici',pinHash:hash(buf)};
+          const nu={}; nu[uid]={name:'Yönetici',pinHash:hash(buf)};
           await setDoc(doc(db, 'panel', 'users'), nu);
           APP.users=nu; APP.currentUser=uid; matchUid=uid;
         }catch(e){ APP.currentUser=null; }
@@ -1506,7 +1510,7 @@ window.PIN = (function(){
       document.getElementById('pinOverlay').style.display='none';
       document.body.classList.remove('readonly');
       const ind=document.getElementById('adminInd');
-      if(ind){ ind.classList.add('show'); ind.textContent='ðŸ‘¤ '+escHtml(matchUser.name); }
+      if(ind){ ind.classList.add('show'); ind.textContent='👤 '+escHtml(matchUser.name); }
       const al=document.getElementById('btnAdminLogin'); if(al) al.style.display='none';
       const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='flex';
       const bau=document.getElementById('btnAddUser');  if(bau) bau.style.display='flex';
@@ -1520,7 +1524,7 @@ window.PIN = (function(){
       if(getStudents().length>0) refreshAll();
       renderChamps(); renderScoreTable();
     } else {
-      setErr('HatalÄ± PIN'); shake(); buf=''; updateDots();
+      setErr('Hatalı PIN'); shake(); buf=''; updateDots();
     }
   }
 
@@ -1541,14 +1545,14 @@ window.PIN = (function(){
     document.getElementById('pinOverlay').style.display='none';
     document.body.classList.add('readonly');
     const ind=document.getElementById('adminInd'); if(ind) ind.classList.remove('show');
-    // TÃ¼m gruplarÄ±n verilerini yÃ¼kle (hangi kullanÄ±cÄ±ya ait olduÄŸu bilinmiyor,
-    // gÃ¶rÃ¼ntÃ¼leme modunda ilk kullanÄ±cÄ±nÄ±n verilerini gÃ¶ster)
+    // Tüm grupların verilerini yükle (hangi kullanıcıya ait olduğu bilinmiyor,
+    // görüntüleme modunda ilk kullanıcının verilerini göster)
     (async()=>{
-      // users listesinden ilk kullanÄ±cÄ±yÄ± bul â€” currentUser olarak ayarla (sadece okuma)
+      // users listesinden ilk kullanıcıyı bul — currentUser olarak ayarla (sadece okuma)
       const users=APP.users||{};
       const uids=Object.keys(users);
       if(uids.length>0){
-        APP.currentUser=uids[0]; // gÃ¶rÃ¼ntÃ¼leme modunda ilk kullanÄ±cÄ±nÄ±n verisi
+        APP.currentUser=uids[0]; // görüntüleme modunda ilk kullanıcının verisi
       }
       await fbLoad();
       renderGroupBar(); renderHeader(); buildCritPanel(); renderGrid();
@@ -1570,17 +1574,17 @@ window.PIN = (function(){
     const bsl=document.getElementById('btnStudentList'); if(bsl) bsl.style.display='none';
     const bst=document.getElementById('btnStats');    if(bst) bst.style.display='none';
     const bab=document.getElementById('btnAutoBest'); if(bab) bab.style.display='none';
-    showToast('Oturum kapatÄ±ldÄ±');
+    showToast('Oturum kapatıldı');
   }
 
   async function change(){
-    if(!isAdmin){ showToast('Ã–nce yÃ¶netici giriÅŸi yapÄ±n',true); return; }
+    if(!isAdmin){ showToast('Önce yönetici girişi yapın',true); return; }
     const p1=prompt('Yeni 4 haneli PIN:');
-    if(!p1||!/^\d{4}$/.test(p1)){ showToast('GeÃ§ersiz PIN â€” 4 rakam olmalÄ±',true); return; }
+    if(!p1||!/^\d{4}$/.test(p1)){ showToast('Geçersiz PIN — 4 rakam olmalı',true); return; }
     const p2=prompt('PIN tekrar:');
-    if(p1!==p2){ showToast('PIN eÅŸleÅŸmedi',true); return; }
+    if(p1!==p2){ showToast('PIN eşleşmedi',true); return; }
     const newHash=hash(p1);
-    // PIN'i users dokÃ¼manÄ±nda sakla (criteria'da deÄŸil)
+    // PIN'i users dokümanında sakla (criteria'da değil)
     try{
       // Mevcut users listesini Firebase'den oku
       const usersSnap=await getDoc(doc(db,'panel','users'));
@@ -1590,11 +1594,11 @@ window.PIN = (function(){
       allUsers[uid].pinHash=newHash;
       // Firebase'e yaz ve bekle
       await setDoc(doc(db,'panel','users'),allUsers);
-      // Bellekte gÃ¼ncelle
+      // Bellekte güncelle
       APP.users=allUsers;
-      showToast('PIN gÃ¼ncellendi âœ“');
+      showToast('PIN güncellendi ✓');
     }catch(e){
-      showToast('PIN kayÄ±t hatasÄ±: '+e.message,true);
+      showToast('PIN kayıt hatası: '+e.message,true);
     }
   }
 
@@ -1615,11 +1619,11 @@ window.closeLogin = () => {
 };
 
 
-// â”€â”€ FUTCARD SÄ°STEMÄ° â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// FotoÄŸraflar Firestore'da base64 olarak saklanÄ±r (/panel/photos dokÃ¼manÄ±)
-// Her cihaz direkt Firestore'dan okur â€” IndexedDB/Storage/pv mantÄ±ÄŸÄ± yok.
+// ── FUTCARD SİSTEMİ ─────────────────────────────────────────────────────────
+// Fotoğraflar Firestore'da base64 olarak saklanır (/panel/photos dokümanı)
+// Her cihaz direkt Firestore'dan okur — IndexedDB/Storage/pv mantığı yok.
 
-// FotoÄŸraf veritabanÄ±nÄ± bellekte tut (sayfa iÃ§i Ã¶nbellek)
+// Fotoğraf veritabanını bellekte tut (sayfa içi önbellek)
 let _photoCache = {}; // { username: base64dataUrl }
 let _photoCacheLoaded = false;
 
@@ -1629,7 +1633,7 @@ async function fcLoadAllPhotos(){
     _photoCache = {};
     snap.forEach(docSnap => { _photoCache[docSnap.id] = docSnap.data().data; });
     _photoCacheLoaded = true;
-    // GerÃ§ek zamanlÄ± dinle â€” baÅŸka cihazdan fotoÄŸraf eklenince gÃ¼ncelle
+    // Gerçek zamanlı dinle — başka cihazdan fotoğraf eklenince güncelle
     onSnapshot(collection(db,'photos'), snap => {
       _photoCache = {};
       snap.forEach(docSnap => { _photoCache[docSnap.id] = docSnap.data().data; });
@@ -1638,18 +1642,18 @@ async function fcLoadAllPhotos(){
       }
     });
   } catch(e){
-    console.warn('FotoÄŸraflar yÃ¼klenemedi:', e);
+    console.warn('Fotoğraflar yüklenemedi:', e);
     _photoCache = {};
     _photoCacheLoaded = true;
   }
 }
 
 function fcGetPhoto(username){
-  // Senkron â€” bellekteki Ã¶nbellekten dÃ¶ner
+  // Senkron — bellekteki önbellekten döner
   return _photoCache[username] || null;
 }
 
-// FotoÄŸraf alanÄ± iÃ§in kart arka plan renkleri
+// Fotoğraf alanı için kart arka plan renkleri
 const FC_BG_COLORS = {
   'fc-gold':   '#3a2800',
   'fc-silver': '#252b3a',
@@ -1657,10 +1661,10 @@ const FC_BG_COLORS = {
   'fc-normal': '#152030'
 };
 
-// FotoÄŸrafÄ± canvas ile hazÄ±rla:
-// - Kart rengini arka plana Ã§iz (ÅŸeffaf PNG sorunu yok)
-// - FotoÄŸrafÄ± oranÄ±nÄ± koruyarak ortala
-// - Sabit 400x440px (PNG'de 2000x2200 @ 5x) Ã§Ä±ktÄ±
+// Fotoğrafı canvas ile hazırla:
+// - Kart rengini arka plana çiz (şeffaf PNG sorunu yok)
+// - Fotoğrafı oranını koruyarak ortala
+// - Sabit 400x440px (PNG'de 2000x2200 @ 5x) çıktı
 window.fcPreparePhoto = function(dataUrl) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1668,44 +1672,44 @@ window.fcPreparePhoto = function(dataUrl) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Kart boyutuna uygun ve Firebase 1MB dokÃ¼man limitini aÅŸmayacak ÅŸekilde boyutu optimize edelim
+      // Kart boyutuna uygun ve Firebase 1MB doküman limitini aşmayacak şekilde boyutu optimize edelim
       const targetWidth = 240; 
       const scale = targetWidth / img.width;
       canvas.width = targetWidth;
       canvas.height = img.height * scale;
 
-      // KANVASIN TAMAMEN ÅžEFFAF OLDUÄžUNDAN EMÄ°N OLALIM
+      // KANVASIN TAMAMEN ŞEFFAF OLDUĞUNDAN EMİN OLALIM
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // FotoÄŸrafÄ± Ã§iz (Arka plan eklemeden)
+      // Fotoğrafı çiz (Arka plan eklemeden)
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-      // WEBP OLARAK KAYDET (ÅžeffaflÄ±ÄŸÄ± korur, PNG'den Ã§ok daha az yer kaplar)
-      // VarsayÄ±lan kalite (0.85) ile boyut ciddi oranda dÃ¼ÅŸer
+      // WEBP OLARAK KAYDET (Şeffaflığı korur, PNG'den çok daha az yer kaplar)
+      // Varsayılan kalite (0.85) ile boyut ciddi oranda düşer
       resolve(canvas.toDataURL('image/webp', 0.85));
     };
     img.src = dataUrl;
   });
 };
 async function fcSaveAllPhotos(){
-  // ArtÄ±k kullanÄ±lmÄ±yor, her fotoÄŸraf ayrÄ± kaydediliyor.
+  // Artık kullanılmıyor, her fotoğraf ayrı kaydediliyor.
 }
 
 window.fcDeletePhoto = async function(username){
   if(!PIN.getIsAdmin()){ showToast('Yetkiniz yok', true); return; }
-  if(!confirm(`"${username}" iÃ§in fotoÄŸrafÄ± silmek istediÄŸinize emin misiniz?`)) return;
+  if(!confirm(`"${username}" için fotoğrafı silmek istediğinize emin misiniz?`)) return;
   try {
     delete _photoCache[username];
     await deleteDoc(doc(db,'photos',username));
     renderChesscards();
-    showToast('FotoÄŸraf silindi âœ“');
+    showToast('Fotoğraf silindi ✓');
   } catch(e){
-    console.error('FotoÄŸraf silme hatasÄ±:', e);
+    console.error('Fotoğraf silme hatası:', e);
     showToast('Hata: ' + e.message, true);
   }
 }
 
-// GÃ¶rÃ¼nÃ¼m geÃ§iÅŸi
+// Görünüm geçişi
 window.switchView = function(view){
   document.querySelectorAll('.view-tab').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   document.getElementById('viewPanel').style.display   = view==='panel'  ?'' :'none';
@@ -1713,12 +1717,12 @@ window.switchView = function(view){
   if(view==='chesscard') renderChesscards();
 };
 
-// Futcard Ä±zgarasÄ±nÄ± oluÅŸtur
+// Futcard ızgarasını oluştur
 async function renderChesscards(){
   const students = getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
   const grid = document.getElementById('chesscardGrid');
   if(students.length===0){
-    grid.innerHTML='<div class="empty"><div class="ei">ðŸƒ</div><h3>HenÃ¼z Ã¶ÄŸrenci yok</h3><p>Panel gÃ¶rÃ¼nÃ¼mÃ¼nden Ã¶ÄŸrenci ekle.</p></div>';
+    grid.innerHTML='<div class="empty"><div class="ei">🃏</div><h3>Henüz öğrenci yok</h3><p>Panel görünümünden öğrenci ekle.</p></div>';
     return;
   }
   const period = APP.scorePeriod||'week';
@@ -1746,7 +1750,7 @@ async function renderChesscards(){
         
         <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
           <div class="fc-photo-container" id="fc-photo-${idx}">
-            <div class="fc-photo-placeholder">ðŸ‘¤</div>
+            <div class="fc-photo-placeholder">👤</div>
           </div>
           <div id="fc-delete-${idx}"></div>
         </div>
@@ -1755,7 +1759,7 @@ async function renderChesscards(){
 
         <div class="fc-stats">
           <div class="fc-stat">
-            <span class="fc-stat-label">MAÃ‡</span>
+            <span class="fc-stat-label">MAÇ</span>
             <span class="fc-stat-val">${st.totalGames}</span>
           </div>
           <div class="fc-stat">
@@ -1769,7 +1773,7 @@ async function renderChesscards(){
         </div>
 
         <div class="fc-screen-only">
-            <button class="fc-dl-btn" onclick="event.stopPropagation();downloadCard('${escHtml(u)}')">â¬‡</button>
+            <button class="fc-dl-btn" onclick="event.stopPropagation();downloadCard('${escHtml(u)}')">⬇</button>
         </div>
       </div>`;
     
@@ -1781,36 +1785,36 @@ async function renderChesscards(){
     if(container && photoDataUrl){
       container.innerHTML = `<img class="fc-photo" src="${photoDataUrl}">`;
       if(PIN.getIsAdmin() && deleteContainer){
-        deleteContainer.innerHTML = `<button class="fc-delete-btn" onclick="event.stopPropagation();fcDeletePhoto('${escHtml(u)}')" title="Sil">âœ•</button>`;
+        deleteContainer.innerHTML = `<button class="fc-delete-btn" onclick="event.stopPropagation();fcDeletePhoto('${escHtml(u)}')" title="Sil">✕</button>`;
       }
     }
   });
 }
  
-// FotoÄŸraf tÄ±klama â€” yÃ¶netici modunda yÃ¼kleme aÃ§
+// Fotoğraf tıklama — yönetici modunda yükleme aç
 window.fcPhotoClick = function(username){
-  if(!PIN.getIsAdmin()){ showToast('YÃ¶netici giriÅŸi gerekli', true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Yönetici girişi gerekli', true); return; }
   const input = document.getElementById('fcPhotoInput');
   input.onchange = async(e)=>{
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
     reader.onload = async(ev)=>{
-      setSyncStatus('syncing', 'HazÄ±rlanÄ±yorâ€¦');
+      setSyncStatus('syncing', 'Hazırlanıyor…');
       
-      // 1. FotoÄŸrafÄ± ÅŸeffaf PNG olarak hazÄ±rla
+      // 1. Fotoğrafı şeffaf PNG olarak hazırla
       const prepared = await fcPreparePhoto(ev.target.result);
       
-      // 2. Ã–nce yerel belleÄŸe yaz (UI anÄ±nda gÃ¼ncellensin)
+      // 2. Önce yerel belleğe yaz (UI anında güncellensin)
       _photoCache[username] = prepared;
       renderChesscards(); 
       
       // 3. Firebase'e kaydet
       try {
         await setDoc(doc(db,'photos',username), { data: prepared });
-        showToast('FotoÄŸraf baÅŸarÄ±yla kaydedildi âœ“');
-        setSyncStatus('ok', 'Firebase gÃ¼ncellendi âœ“');
+        showToast('Fotoğraf başarıyla kaydedildi ✓');
+        setSyncStatus('ok', 'Firebase güncellendi ✓');
       } catch(err) {
-        showToast('KayÄ±t hatasÄ±: ' + err.message, true);
+        showToast('Kayıt hatası: ' + err.message, true);
       }
     };
     reader.readAsDataURL(file);
@@ -1821,7 +1825,7 @@ window.fcPhotoClick = function(username){
 // Tek kart PNG indir
 window.downloadCard = async function(username){
   const card = document.querySelector(`.chesscard[data-user="${CSS.escape(username)}"]`);
-  if(!card){ showToast('Kart bulunamadÄ±',true); return; }
+  if(!card){ showToast('Kart bulunamadı',true); return; }
   try{
     if(!window.html2canvas){
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
@@ -1830,9 +1834,9 @@ window.downloadCard = async function(username){
     const TARGET_W = 1000;
     const TARGET_H = 1550;
 
-    // Kart stilini geÃ§ici olarak sabit boyuta getir
+    // Kart stilini geçici olarak sabit boyuta getir
     const originalStyle = card.style.cssText;
-    const RENDER_W = 200; // ekrandaki kart geniÅŸliÄŸi
+    const RENDER_W = 200; // ekrandaki kart genişliği
     const RENDER_H = Math.round(RENDER_W * TARGET_H / TARGET_W); // 310px
 
     const hideEls = card.querySelectorAll('.fc-screen-only, .fc-delete-btn');
@@ -1844,7 +1848,7 @@ window.downloadCard = async function(username){
     card.style.height     = RENDER_H + 'px';
     card.style.overflow   = 'hidden';
 
-    // img etiketlerinin yÃ¼klenmesini bekle
+    // img etiketlerinin yüklenmesini bekle
     const imgs = card.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img =>
       img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
@@ -1869,28 +1873,28 @@ window.downloadCard = async function(username){
       }
     });
 
-    // Orijinal stilleri geri yÃ¼kle
+    // Orijinal stilleri geri yükle
     card.style.cssText = originalStyle;
     hideEls.forEach(el=>{ el.style.visibility=''; });
 
-    // Sabit 1000x1550 canvas'a Ã§iz (captured zaten 1000x310 ~ ama biz tam 1550 istiyoruz)
-    // captured: 1000 x (TARGET_W/RENDER_W * RENDER_H) = 1000 x 1550 â€” zaten doÄŸru boyut
+    // Sabit 1000x1550 canvas'a çiz (captured zaten 1000x310 ~ ama biz tam 1550 istiyoruz)
+    // captured: 1000 x (TARGET_W/RENDER_W * RENDER_H) = 1000 x 1550 — zaten doğru boyut
     const link = document.createElement('a');
     link.download = `chesscard-${username}.png`;
     link.href = captured.toDataURL('image/png');
     link.click();
-    showToast(`${username} kartÄ± indirildi âœ“`);
-  }catch(e){ showToast('Ä°ndirme hatasÄ±: '+e.message,true); console.error(e); }
+    showToast(`${username} kartı indirildi ✓`);
+  }catch(e){ showToast('İndirme hatası: '+e.message,true); console.error(e); }
 };
 
-// TÃ¼m kartlarÄ± indir
+// Tüm kartları indir
 window.downloadAllCards = async function(){
   const students = getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
   if(students.length===0) return;
   if(!window.html2canvas){
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
   }
-  showToast('Kartlar hazÄ±rlanÄ±yorâ€¦');
+  showToast('Kartlar hazırlanıyor…');
   for(const u of students){
     await downloadCard(u);
     await new Promise(r=>setTimeout(r,300));
@@ -1905,15 +1909,15 @@ function loadScript(src){
 }
 
 window.openBulkUkdModal = () => {
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
-  if(!APP.activeGid){ showToast('Ã–nce bir grup seÃ§',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   document.getElementById('bulkUkdInput').value = '';
   document.getElementById('modalBulkUkd').style.display = 'flex';
   setTimeout(() => document.getElementById('bulkUkdInput').focus(), 50);
 };
 
 window.processBulkUkd = async () => {
-  if(!APP.activeGid){ showToast('Ã–nce bir grup seÃ§',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   const input = document.getElementById('bulkUkdInput').value;
   if(!input.trim()) return;
   
@@ -1922,15 +1926,15 @@ window.processBulkUkd = async () => {
   
   const lines = input.split('\n');
   
-  // Ekstra gÃ¼Ã§lÃ¼ normalizasyon (TÃ¼m TÃ¼rkÃ§e karakterleri Ä°ngilizce karÅŸÄ±lÄ±ÄŸÄ±na Ã§evirir)
+  // Ekstra güçlü normalizasyon (Tüm Türkçe karakterleri İngilizce karşılığına çevirir)
   const ultraNorm = (s) => {
     if(!s) return '';
     return s.toString().toUpperCase()
-      .replace(/Ä°/g, 'I').replace(/Åž/g, 'S').replace(/Ã‡/g, 'C')
-      .replace(/Äž/g, 'G').replace(/Ãœ/g, 'U').replace(/Ã–/g, 'O')
-      .replace(/I/g, 'I').replace(/Ä±/g, 'I')
-      .replace(/[^A-Z0-9\s]/g, ' ') // Harf ve rakam dÄ±ÅŸÄ±ndakileri boÅŸluk yap
-      .replace(/\s+/g, ' ') // Fazla boÅŸluklarÄ± temizle
+      .replace(/İ/g, 'I').replace(/Ş/g, 'S').replace(/Ç/g, 'C')
+      .replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ö/g, 'O')
+      .replace(/I/g, 'I').replace(/ı/g, 'I')
+      .replace(/[^A-Z0-9\s]/g, ' ') // Harf ve rakam dışındakileri boşluk yap
+      .replace(/\s+/g, ' ') // Fazla boşlukları temizle
       .trim();
   };
 
@@ -1944,25 +1948,25 @@ window.processBulkUkd = async () => {
     
     if(!nameToMatch) return sObj;
     
-    // Ä°smi parÃ§alara ayÄ±r ve ultra-normalize et
+    // İsmi parçalara ayır ve ultra-normalize et
     const normParts = ultraNorm(nameToMatch).split(' ').filter(p => p.length >= 2);
     if(normParts.length === 0) return sObj;
     
     for(const line of lines) {
       const normLine = ultraNorm(line);
       
-      // SatÄ±rda ismin TÃœM parÃ§alarÄ± geÃ§iyor mu?
+      // Satırda ismin TÜM parçaları geçiyor mu?
       const allPartsMatch = normParts.every(part => normLine.includes(part));
       
       if(allPartsMatch) {
-        // SatÄ±rdaki tÃ¼m sayÄ±larÄ± bul (UKD aralÄ±ÄŸÄ±: 100-2999)
+        // Satırdaki tüm sayıları bul (UKD aralığı: 100-2999)
         const matches = line.match(/\b(\d{3,4})\b/g);
         if(matches && matches.length > 0) {
-          // SatÄ±rdaki en bÃ¼yÃ¼k sayÄ±yÄ± UKD kabul et (sÄ±ra no, yaÅŸ gibi deÄŸerlerden daha bÃ¼yÃ¼ktÃ¼r)
+          // Satırdaki en büyük sayıyı UKD kabul et (sıra no, yaş gibi değerlerden daha büyüktür)
           const possibleScores = matches.map(Number).filter(n => n >= 100 && n <= 2999);
           if(possibleScores.length > 0) {
             const newUkd = Math.max(...possibleScores).toString();
-            // Puan deÄŸiÅŸtiyse eskisini kaydet
+            // Puan değiştiyse eskisini kaydet
             if(sObj.ukd && sObj.ukd !== newUkd) {
               sObj.pUkd = sObj.ukd;
             }
@@ -1982,11 +1986,11 @@ window.processBulkUkd = async () => {
   closeModal('modalBulkUkd');
   renderGrid();
   renderChesscards();
-  showToast(`${updateCount} Ã¶ÄŸrencinin UKD puanÄ± gÃ¼ncellendi âœ“`);
+  showToast(`${updateCount} öğrencinin UKD puanı güncellendi ✓`);
 };
 
 window.openStudentListModal = () => {
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const body = document.getElementById('allStudentBody');
   body.innerHTML = '';
   
@@ -1999,13 +2003,13 @@ window.openStudentListModal = () => {
         groupName: g.name,
         username: sObj.u,
         realName: sObj.n || (APP.liveData[sObj.u]?.displayName || sObj.u),
-        ukd: sObj.ukd || 'â€”',
-        lic: sObj.lic || 'â€”'
+        ukd: sObj.ukd || '—',
+        lic: sObj.lic || '—'
       });
     });
   });
 
-  // Ä°sme gÃ¶re sÄ±rala
+  // İsme göre sırala
   allStudents.sort((a,b) => a.realName.localeCompare(b.realName, 'tr-TR'));
 
   allStudents.forEach(s => {
@@ -2026,7 +2030,7 @@ window.openStudentListModal = () => {
 
 window.copyStudentList = () => {
   const table = document.getElementById('allStudentTable');
-  let text = "Grup\tAd Soyad\tLichess AdÄ±\tUKD\tLisans No\n";
+  let text = "Grup\tAd Soyad\tLichess Adı\tUKD\tLisans No\n";
   const rows = table.querySelectorAll('tbody tr');
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
@@ -2034,51 +2038,48 @@ window.copyStudentList = () => {
   });
 
   navigator.clipboard.writeText(text).then(() => {
-    showToast('Liste panoya kopyalandÄ± âœ“');
+    showToast('Liste panoya kopyalandı ✓');
   }).catch(() => {
-    showToast('Kopyalama baÅŸarÄ±sÄ±z', true);
+    showToast('Kopyalama başarısız', true);
   });
 };
 
 window.autoCreateBestGroup = async () => {
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   
-  const countStr = prompt("HaftanÄ±n en iyileri grubuna kaÃ§ sporcu eklensin?", "10");
+  const countStr = prompt("Haftanın en iyileri grubuna kaç sporcu eklensin?", "10");
   const count = parseInt(countStr);
   if(isNaN(count) || count <= 0) return;
 
-  const levelInput = prompt("Hangi seviye iÃ§in hesaplansÄ±n? (TÃ¼mÃ¼, Genel, BaÅŸlangÄ±Ã§, Orta, Ä°leri)", "TÃ¼mÃ¼");
+  const levelInput = prompt("Hangi seviye için hesaplansın? (Tümü, Genel, Başlangıç, Orta, İleri)", "Tümü");
   if(levelInput === null) return;
   const normalizedLevel = levelInput.trim().toLocaleLowerCase('tr-TR');
   const levelMap = {
-    'tÃ¼mÃ¼': null,
+    'tümü': null,
     'tumu': null,
     'hepsi': null,
     'genel': 'Genel',
-    'baÅŸlangÄ±Ã§': 'BaÅŸlangÄ±Ã§',
-    'baslangic': 'BaÅŸlangÄ±Ã§',
+    'başlangıç': 'Başlangıç',
+    'baslangic': 'Başlangıç',
     'orta': 'Orta',
-    'ileri': 'Ä°leri'
+    'ileri': 'İleri'
   };
   if(!(normalizedLevel in levelMap)){
-    showToast('Seviye TÃ¼mÃ¼, Genel, BaÅŸlangÄ±Ã§, Orta veya Ä°leri olmalÄ±', true);
+    showToast('Seviye Tümü, Genel, Başlangıç, Orta veya İleri olmalı', true);
     return;
   }
   const selectedLevel = levelMap[normalizedLevel];
 
   const myId = ++APP.refreshId;
-  setSyncStatus('syncing', 'Sporcular gÃ¼ncelleniyorâ€¦');
+  setSyncStatus('syncing', 'Sporcular güncelleniyor…');
   
-  // 1. TÃ¼m gruplardaki benzersiz sporcularÄ± topla
+  // 1. Tüm gruplardaki benzersiz sporcuları topla
   const allStudentMap = new Map();
   const period = 'week';
   
   APP.groups.forEach(g => {
-    if(g.name === "Haftanın En İyileri") return;
-    if(g.name.startsWith("Haftanın En İyileri - ")) return;
-    if(g.name.startsWith("HaftanÃ„Â±n En Ã„Â°yileri - ")) return;
+    if(isBestGroupName(g.name)) return;
     if(selectedLevel && (g.level || 'Genel') !== selectedLevel) return;
-    if(g.name === "HaftanÄ±n En Ä°yileri") return;
     const list = getStudentList(g.id);
     list.forEach(s => {
       const u = studentUsername(s);
@@ -2088,16 +2089,16 @@ window.autoCreateBestGroup = async () => {
 
   const allUsers = [...allStudentMap.keys()];
   if(allUsers.length === 0) {
-    showToast('Hesaplanacak sporcu bulunamadÄ±', true);
-    setSyncStatus('ok', 'Firebase baÄŸlÄ± âœ“');
+    showToast('Hesaplanacak sporcu bulunamadı', true);
+    setSyncStatus('ok', 'Firebase bağlı ✓');
     return;
   }
 
-  setLoadStatus(`HaftanÄ±n en iyileri iÃ§in gÃ¼ncelleniyorâ€¦ 0/${allUsers.length}`);
+  setLoadStatus(`Haftanın en iyileri için güncelleniyor… 0/${allUsers.length}`);
   for(let i=0; i<allUsers.length; i++){
     if(myId!==APP.refreshId){ setLoadStatus(''); return; }
     const u = allUsers[i];
-    setLoadStatus(`HaftanÄ±n en iyileri iÃ§in gÃ¼ncelleniyorâ€¦ ${i+1}/${allUsers.length}`);
+    setLoadStatus(`Haftanın en iyileri için güncelleniyor… ${i+1}/${allUsers.length}`);
     await loadOneStudent(u, myId);
     if(myId!==APP.refreshId){ setLoadStatus(''); return; }
     if(i < allUsers.length - 1) await new Promise(r=>setTimeout(r,4000));
@@ -2109,18 +2110,17 @@ window.autoCreateBestGroup = async () => {
     .map(u => ({ student: allStudentMap.get(u), pts: calcScore(u, period) }));
 
   if(allStudents.length === 0) {
-    showToast('Hesaplanacak sporcu bulunamadÄ±', true);
-    setSyncStatus('ok', 'Firebase baÄŸlÄ± âœ“');
+    showToast('Hesaplanacak sporcu bulunamadı', true);
+    setSyncStatus('ok', 'Firebase bağlı ✓');
     return;
   }
 
-  // 2. Puana gÃ¶re sÄ±rala ve ilk X kiÅŸiyi al
+  // 2. Puana göre sırala ve ilk X kişiyi al
   allStudents.sort((a,b) => b.pts - a.pts);
   const bestStudents = allStudents.slice(0, count).map(s => s.student);
 
-  // 3. "HaftanÄ±n En Ä°yileri" grubunu bul veya oluÅŸtur
-  let groupName = "Haftanın En İyileri";
-  groupName = selectedLevel ? `Haftanın En İyileri - ${selectedLevel}` : groupName;
+  // 3. "Haftanın En İyileri" grubunu bul veya oluştur
+  const groupName = selectedLevel ? `Haftanın En İyileri - ${selectedLevel}` : "Haftanın En İyileri";
   let targetGroup = APP.groups.find(g => g.name === groupName);
   
   if(!targetGroup) {
@@ -2131,7 +2131,7 @@ window.autoCreateBestGroup = async () => {
     targetGroup.level = selectedLevel || targetGroup.level || 'Genel';
   }
 
-  // 4. Ã–ÄŸrenci listesini gÃ¼ncelle ve kaydet
+  // 4. Öğrenci listesini güncelle ve kaydet
   APP.studentLists[targetGroup.id] = normalizeStudentList(bestStudents);
   APP.activeGid = targetGroup.id;
 
@@ -2144,14 +2144,14 @@ window.autoCreateBestGroup = async () => {
   renderChamps();
   renderScoreTable();
   
-  setSyncStatus('ok', 'Firebase baÄŸlÄ± âœ“');
-  showToast(`${bestStudents.length} sporcu ile "${groupName}" grubu gÃ¼ncellendi âœ“`);
+  setSyncStatus('ok', 'Firebase bağlı ✓');
+  showToast(`${bestStudents.length} sporcu ile "${groupName}" grubu güncellendi ✓`);
 };
 
 async function logUniqueVisit() {
     const today = todayStr();
     const lastVisit = localStorage.getItem('lichessPanelLastVisit');
-    if (lastVisit === today) return; // BugÃ¼n zaten ziyaret edildi
+    if (lastVisit === today) return; // Bugün zaten ziyaret edildi
 
     localStorage.setItem('lichessPanelLastVisit', today);
 
@@ -2166,12 +2166,12 @@ async function logUniqueVisit() {
 
         await setDoc(statsRef, updateData, { merge: true });
     } catch (e) {
-        console.warn("ZiyaretÃ§i sayÄ±mÄ± gÃ¼ncellenemedi:", e);
+        console.warn("Ziyaretçi sayımı güncellenemedi:", e);
     }
 }
 
 window.openStatsModal = async () => {
-  if(!PIN.getIsAdmin()){ showToast('Bu iÅŸlem iÃ§in yÃ¶netici giriÅŸi gerekli',true); return; }
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   
   try {
     const statsRef = doc(db, 'panel', 'stats');
@@ -2195,19 +2195,19 @@ window.openStatsModal = async () => {
     document.getElementById('statWeek').textContent = weekCount;
 
     document.getElementById('modalStats').style.display = 'flex';
-  } catch (e) { showToast('Ä°statistikler yÃ¼klenemedi: ' + e.message, true); console.error("Ä°statistik yÃ¼klenirken hata:", e); }
+  } catch (e) { showToast('İstatistikler yüklenemedi: ' + e.message, true); console.error("İstatistik yüklenirken hata:", e); }
 };
 
-// Auto-refresh 10 dakikada bir (lichess rate limit iÃ§in)
+// Auto-refresh 10 dakikada bir (lichess rate limit için)
 setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 
-// â”€â”€ BAÅžLANGIÃ‡ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── BAŞLANGIÇ ────────────────────────────────────────
 (async()=>{
   const versionBadge = document.getElementById('versionBadge');
   if(versionBadge) versionBadge.textContent = APP_VERSION;
 
   const splashStatus = document.getElementById('splashStatus');
-  if(splashStatus) splashStatus.textContent = 'VeritabanÄ±na baÄŸlanÄ±yor...';
+  if(splashStatus) splashStatus.textContent = 'Veritabanına bağlanıyor...';
 
   logUniqueVisit();
 
@@ -2217,18 +2217,18 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
     if(usersSnap.exists()) APP.users=usersSnap.data();
   }catch(e){ console.warn('Kullanici listesi yuklenemedi',e); }
 
-  // Genel veriyi yukle (goruntuleme modu icin) â€” tamamen bitmesini bekle
+  // Genel veriyi yukle (goruntuleme modu icin) — tamamen bitmesini bekle
   await fbLoad();
   
-  // ArayÃ¼zÃ¼ oluÅŸtur
+  // Arayüzü oluştur
   document.body.classList.add('readonly');
   buildCritPanel(); renderGroupBar(); renderHeader();
 
-  // Sporcu varsa Ä±zgarayÄ± hemen gÃ¶ster (Skeleton'lar belirecektir)
+  // Sporcu varsa ızgarayı hemen göster (Skeleton'lar belirecektir)
   renderGrid();
   renderChamps(); renderScoreTable();
 
-  // YÃ¼kleme tamamlandÄ±, arayÃ¼z hazÄ±r, splash ekranÄ±nÄ± gizle!
+  // Yükleme tamamlandı, arayüz hazır, splash ekranını gizle!
   const splash = document.getElementById('splashScreen');
   if(splash) {
     splash.style.opacity = '0';
@@ -2238,20 +2238,20 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
     }, 600);
   }
 
-  // FotoÄŸraflarÄ± arka planda yÃ¼kle
+  // Fotoğrafları arka planda yükle
   fcLoadAllPhotos().then(() => {
     if(document.getElementById('viewChesscard').style.display !== 'none'){
       renderChesscards();
     }
   });
 
-  // Lichess verilerini arka planda gÃ¼ncelle (AWAIT ETMÄ°YORUZ)
+  // Lichess verilerini arka planda güncelle (AWAIT ETMİYORUZ)
   if(getStudents().length > 0){
     refreshAll();
   }
 
-  // GerÃ§ek zamanlÄ± dinleyiciyi SONRA baÅŸlat â€” fbLoad'dan hemen sonra
-  // tetiklenmemesi iÃ§in kÄ±sa bir gecikme ekliyoruz
+  // Gerçek zamanlı dinleyiciyi SONRA başlat — fbLoad'dan hemen sonra
+  // tetiklenmemesi için kısa bir gecikme ekliyoruz
   setTimeout(()=>{ fbListen(); }, 800);
 
   if(typeof PIN!=='undefined'&&PIN.init) PIN.init();
