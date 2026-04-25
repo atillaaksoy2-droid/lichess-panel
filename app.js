@@ -486,7 +486,10 @@ window.scrollGroupBar=function(dir){
   const bar=document.getElementById('groupBar');
   if(!bar) return;
   const amount=Math.max(220, Math.round(bar.clientWidth*.65));
-  bar.scrollBy({left:dir*amount, behavior:'smooth'});
+  const max=bar.scrollWidth-bar.clientWidth;
+  const next=Math.max(0, Math.min(max, bar.scrollLeft + dir*amount));
+  bar.scrollTo({left:next, behavior:'smooth'});
+  setTimeout(updateGroupScrollState, 220);
 };
 
 window.switchGroup = async function switchGroup(id){

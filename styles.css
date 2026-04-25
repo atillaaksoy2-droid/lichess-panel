@@ -27,20 +27,18 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 }
 
 /* GRUP SEKMELERI */
-.group-nav{position:relative;display:flex;align-items:stretch;border-bottom:1px solid var(--border);margin-left:-24px;margin-right:-24px;padding:0 40px 0 24px;background:linear-gradient(180deg,rgba(19,22,30,.28),transparent)}
-.group-nav::before,.group-nav::after{content:'';position:absolute;top:0;bottom:1px;width:38px;z-index:2;pointer-events:none;opacity:0;transition:opacity .2s}
-.group-nav::before{left:0;background:linear-gradient(90deg,var(--bg),rgba(13,15,20,0))}
-.group-nav::after{right:0;background:linear-gradient(270deg,var(--bg),rgba(13,15,20,0))}
+.group-nav{position:relative;display:flex;align-items:flex-end;border-bottom:1px solid var(--border);margin-left:-24px;margin-right:-24px;padding:0 8px;background:linear-gradient(180deg,rgba(19,22,30,.28),transparent)}
+.group-nav::before,.group-nav::after{content:'';position:absolute;top:0;bottom:1px;width:28px;z-index:2;pointer-events:none;opacity:0;transition:opacity .2s}
+.group-nav::before{left:36px;background:linear-gradient(90deg,var(--bg),rgba(13,15,20,0))}
+.group-nav::after{right:36px;background:linear-gradient(270deg,var(--bg),rgba(13,15,20,0))}
 .group-nav.can-left::before,.group-nav.can-right::after{opacity:1}
 .group-bar{display:flex;align-items:flex-end;flex-wrap:nowrap;gap:12px;padding-top:20px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--accent) var(--surface2);padding-bottom:8px;flex:1;min-width:0}
 .group-bar::-webkit-scrollbar{height:8px}
 .group-bar::-webkit-scrollbar-track{background:var(--surface2);border-radius:999px}
 .group-bar::-webkit-scrollbar-thumb{background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:999px;border:2px solid var(--surface2)}
-.group-scroll-btn{position:absolute;top:22px;z-index:4;width:28px;height:28px;border:1px solid rgba(200,168,75,.35);border-radius:7px;background:var(--surface);color:var(--accent2);font-size:20px;line-height:1;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.28);transition:opacity .2s,transform .15s,border-color .2s}
-.group-scroll-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
-.group-scroll-left{left:8px}
-.group-scroll-right{right:8px}
-.group-nav.can-left .group-scroll-left,.group-nav.can-right .group-scroll-right{display:flex}
+.group-scroll-btn{width:30px;height:34px;margin-bottom:8px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text-muted);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.32;visibility:hidden;flex:0 0 30px;transition:opacity .2s,transform .15s,border-color .2s,color .2s}
+.group-scroll-btn:hover{border-color:var(--accent);color:var(--accent2);transform:translateY(-1px)}
+.group-nav.can-left .group-scroll-left,.group-nav.can-right .group-scroll-right{opacity:1;visibility:visible}
 .group-level-section{display:flex;align-items:flex-end;gap:0;position:relative}
 .group-level-tabs{display:flex;align-items:flex-end;gap:0}
 .group-tab{display:flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
