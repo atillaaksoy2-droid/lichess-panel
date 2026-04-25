@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.4';
+const APP_VERSION = 'v0.4.5';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -306,6 +306,13 @@ function findStudent(u, gid=APP.activeGid){
 
 function levelSlug(level){
   return level === 'İleri' ? 'ileri' : level === 'Orta' ? 'orta' : level === 'Başlangıç' ? 'baslangic' : 'genel';
+}
+
+function levelPiece(level){
+  if(level === 'Başlangıç') return '♟';
+  if(level === 'Orta') return '♞';
+  if(level === 'İleri') return '♛';
+  return '♜';
 }
 
 function isBestGroupName(name){
@@ -1263,7 +1270,7 @@ function buildCard(username,d,rank){
   const bdgHtml=badges.map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
   const bd=scoreBreakdown(username);
   const levelInfo = getStudentLevelInfo(username);
-  const levelTag = `<div class="level-tag lvl-${levelSlug(levelInfo.level)}" title="${escHtml(levelInfo.group || levelInfo.level)}">${escHtml(levelInfo.level)}</div>`;
+  const levelTag = `<div class="level-tag lvl-${levelSlug(levelInfo.level)}" title="${escHtml(levelInfo.group || levelInfo.level)}"><span class="level-piece">${levelPiece(levelInfo.level)}</span><span>${escHtml(levelInfo.level)}</span></div>`;
   const levelAndBadges = levelTag + bdgHtml;
   return `<div class="s-card ${cardCls} ${total===0?'faded':''}" data-user="${escHtml(username)}">
     <div class="card-head">
@@ -1785,6 +1792,8 @@ async function renderChesscards(){
     const rank = idx+1;
     const fcCls = rank===1?'fc-gold':rank===2?'fc-silver':rank===3?'fc-bronze':'fc-normal';
     const ukd = getStudentUkd(u);
+    const levelInfo = getStudentLevelInfo(u);
+    const levelCls = levelSlug(levelInfo.level);
 
     const card = document.createElement('div');
     card.className = `chesscard ${fcCls}`;
@@ -1795,6 +1804,10 @@ async function renderChesscards(){
         <div class="fc-top">
           <div class="fc-score">${pts}</div>
           <div class="fc-rank-badge">#${rank}</div>
+        </div>
+        <div class="fc-level-mark lvl-${levelCls}" title="${escHtml(levelInfo.group || levelInfo.level)}">
+          <span class="fc-level-piece">${levelPiece(levelInfo.level)}</span>
+          <span class="fc-level-text">${escHtml(levelInfo.level)}</span>
         </div>
         
         <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
