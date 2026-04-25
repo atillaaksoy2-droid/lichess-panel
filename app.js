@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.1';
+const APP_VERSION = 'v0.4.2';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -2017,28 +2017,43 @@ window.autoCreateBestGroup = async () => {
   const count = parseInt(countStr);
   if(isNaN(count) || count <= 0) return;
 
-  setSyncStatus('syncing', 'Hesaplanıyor…');
+  const myId = ++APP.refreshId;
+  setSyncStatus('syncing', 'Sporcular güncelleniyor…');
   
-  // 1. Tüm sporcuları topla ve puanlarını hesapla
-  let allStudents = [];
+  // 1. Tüm gruplardaki benzersiz sporcuları topla
+  const allStudentMap = new Map();
   const period = 'week';
   
-  // Grupları gezerek tüm benzersiz sporcuları al
-  const processedUsers = new Set();
   APP.groups.forEach(g => {
+    if(g.name === "Haftanın En İyileri") return;
     const list = getStudentList(g.id);
     list.forEach(s => {
       const u = studentUsername(s);
-      if(!processedUsers.has(u)) {
-        const pts = calcScore(u, period);
-        // Sadece verisi olan sporcuları ekle
-        if(APP.liveData[u] && !APP.liveData[u].error) {
-          allStudents.push({ student: normalizeStudentRecord(s), pts });
-          processedUsers.add(u);
-        }
-      }
+      if(u && !allStudentMap.has(u)) allStudentMap.set(u, normalizeStudentRecord(s));
     });
   });
+
+  const allUsers = [...allStudentMap.keys()];
+  if(allUsers.length === 0) {
+    showToast('Hesaplanacak sporcu bulunamadı', true);
+    setSyncStatus('ok', 'Firebase bağlı ✓');
+    return;
+  }
+
+  setLoadStatus(`Haftanın en iyileri için güncelleniyor… 0/${allUsers.length}`);
+  for(let i=0; i<allUsers.length; i++){
+    if(myId!==APP.refreshId){ setLoadStatus(''); return; }
+    const u = allUsers[i];
+    setLoadStatus(`Haftanın en iyileri için güncelleniyor… ${i+1}/${allUsers.length}`);
+    await loadOneStudent(u, myId);
+    if(myId!==APP.refreshId){ setLoadStatus(''); return; }
+    if(i < allUsers.length - 1) await new Promise(r=>setTimeout(r,4000));
+  }
+  setLoadStatus('');
+
+  const allStudents = allUsers
+    .filter(u => APP.liveData[u] && !APP.liveData[u].error)
+    .map(u => ({ student: allStudentMap.get(u), pts: calcScore(u, period) }));
 
   if(allStudents.length === 0) {
     showToast('Hesaplanacak sporcu bulunamadı', true);
