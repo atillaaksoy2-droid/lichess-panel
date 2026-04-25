@@ -1,0 +1,454 @@
+:root{
+  --bg:#0d0f14;--surface:#13161e;--surface2:#1a1e2a;--border:#252a38;
+  --accent:#c8a84b;--accent2:#e8c86e;--text:#e8e4d8;--text-muted:#7a7a8a;
+  --win:#4caf7d;--loss:#e05a5a;--draw:#7a8aaa;--puzzle:#9b7fe8;
+  --glow:rgba(200,168,75,.15);--gold:#f5c842;--silver:#b0bec5;--bronze:#cd7f32;--fire:#ff7043;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body.readonly .edit-only{display:none!important}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,168,75,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(200,168,75,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px 80px}
+
+/* SYNC BANNER */
+.sync-banner{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-muted);margin-left:-24px;margin-right:-24px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0}
+.sync-dot.syncing{background:var(--accent);animation:pulse 1s infinite}
+.sync-dot.ok{background:var(--win)}
+.sync-dot.err{background:var(--loss)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* SEVIYE RENKLERI */
+:root {
+  --lvl-ileri: #f5c842;
+  --lvl-orta: #3498db;
+  --lvl-baslangic: #2ecc71;
+  --lvl-genel: #95a5a6;
+}
+
+/* GRUP SEKMELERI */
+.group-bar{display:flex;align-items:flex-end;flex-wrap:nowrap;gap:12px;border-bottom:1px solid var(--border);padding-top:20px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;padding-bottom:1px}
+.group-bar::-webkit-scrollbar{height:4px;display:none}
+@media(hover: hover){.group-bar::-webkit-scrollbar{display:block}}
+.group-bar::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.group-level-section{display:flex;align-items:flex-end;gap:0;position:relative}
+.group-level-tabs{display:flex;align-items:flex-end;gap:0}
+.group-tab{display:flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px}
+.group-tab:hover{color:var(--text);border-color:var(--border);background:var(--surface)}
+
+/* Seviye Bazlı Aktif Sekme Renkleri */
+.group-tab.active.lvl-ileri { color: var(--lvl-ileri); border-color: var(--border); background: var(--surface); border-bottom-color: var(--surface); border-top: 2px solid var(--lvl-ileri); }
+.group-tab.active.lvl-orta { color: var(--lvl-orta); border-color: var(--border); background: var(--surface); border-bottom-color: var(--surface); border-top: 2px solid var(--lvl-orta); }
+.group-tab.active.lvl-baslangic { color: var(--lvl-baslangic); border-color: var(--border); background: var(--surface); border-bottom-color: var(--surface); border-top: 2px solid var(--lvl-baslangic); }
+.group-tab.active.lvl-genel { color: var(--text); border-color: var(--border); background: var(--surface); border-bottom-color: var(--surface); border-top: 2px solid var(--lvl-genel); }
+
+.tab-count{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 6px;color:var(--text-muted)}
+.group-tab.active .tab-count{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:inherit}
+
+.group-level-indicator { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.bg-ileri { background: var(--lvl-ileri); box-shadow: 0 0 8px var(--lvl-ileri); }
+.bg-orta { background: var(--lvl-orta); box-shadow: 0 0 8px var(--lvl-orta); }
+.bg-baslangic { background: var(--lvl-baslangic); box-shadow: 0 0 8px var(--lvl-baslangic); }
+.bg-genel { background: var(--lvl-genel); }
+
+.new-group-btn{display:flex;align-items:center;gap:5px;padding:8px 14px;border:1px dashed var(--border);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-muted);background:transparent;white-space:nowrap;transition:all .15s;position:relative;top:1px;margin-bottom:0}
+.new-group-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+/* HEADER */
+header{padding:16px 24px;border-bottom:1px solid var(--border);margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:var(--surface);margin-left:-24px;margin-right:-24px}
+.logo-area{display:flex;align-items:center;gap:12px}
+.chess-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 16px var(--glow)}
+h1{font-family:'Playfair Display',serif;font-size:21px;font-weight:900;color:var(--accent2);letter-spacing:-.5px;line-height:1.1}
+h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+.header-right{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.group-name-display{font-size:13px;font-weight:600;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer;transition:border-color .2s}
+.group-name-display:hover{border-color:var(--accent);color:var(--accent)}
+.icon-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:6px 11px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;display:flex;align-items:center;gap:5px;transition:all .2s}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.icon-btn.spinning svg{animation:spin 1s linear infinite}
+.icon-btn.danger:hover{border-color:var(--loss);color:var(--loss)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.last-update{font-size:10px;color:var(--text-muted)}
+
+/* ADD ROW */
+.add-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px}
+.add-row label{font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+.add-row input{flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:7px;font-family:inherit;font-size:13px;outline:none;transition:border-color .2s}
+.add-row input:focus{border-color:var(--accent)}
+.add-row input::placeholder{color:var(--text-muted)}
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;padding:8px 15px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:12px;transition:opacity .2s,transform .1s;white-space:nowrap}
+.add-btn:hover{opacity:.9}.add-btn:active{transform:scale(.97)}
+.err{width:100%;color:var(--loss);font-size:11px;padding-top:2px}
+
+/* KRİTER */
+.criteria-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.criteria-toggle{width:100%;background:none;border:none;color:var(--text-muted);padding:11px 16px;text-align:left;cursor:pointer;font-family:inherit;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;transition:color .2s}
+.criteria-toggle:hover{color:var(--accent)}
+.criteria-body{padding:0 16px 14px;display:none}
+.criteria-body.open{display:block}
+.criteria-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:7px;margin-top:4px}
+.crit-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:8px}
+.crit-desc{flex:1}
+.crit-name{font-size:11px;font-weight:600;color:var(--text);margin-bottom:1px}
+.crit-rule{font-size:9px;color:var(--text-muted)}
+.crit-input{width:48px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:5px;font-family:inherit;font-size:12px;text-align:center;outline:none}
+.crit-input:focus{border-color:var(--accent)}
+.pip-legend{display:flex;gap:9px;align-items:center;font-size:9px;color:var(--text-muted);margin-top:9px;padding-top:9px;border-top:1px solid var(--border);flex-wrap:wrap}
+.pip-li{display:flex;align-items:center;gap:3px}
+.pip-dot{width:8px;height:8px;border-radius:2px}
+
+/* ŞAMPİYON KARTLARI */
+.champ-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:16px}
+.champ-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;position:relative;overflow:hidden;transition:border-color .2s}
+.champ-card:hover{border-color:rgba(200,168,75,.3)}
+.champ-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.champ-card.cc-score::before{background:var(--accent)}
+.champ-card.cc-games::before{background:var(--win)}
+.champ-card.cc-puzzle::before{background:var(--puzzle)}
+.champ-card.cc-win::before{background:var(--gold)}
+.champ-card.cc-streak::before{background:var(--fire)}
+.champ-label{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+.champ-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.champ-val{font-size:11px;color:var(--text-muted)}
+.champ-val strong{color:var(--accent2)}
+.champ-medal{position:absolute;top:10px;right:12px;font-size:18px;opacity:.8}
+
+/* PUAN TABLOSU */
+.score-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.score-title{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.score-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.score-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.score-tab{background:var(--bg);border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:10px;transition:all .2s}
+.score-tab.active{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.07)}
+.score-rows{display:flex;flex-direction:column;gap:3px}
+.score-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);transition:border-color .15s}
+.score-row:hover{border-color:rgba(200,168,75,.25)}
+.score-info{flex:1;min-width:0}
+.score-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.sc-tag{font-size:9px;padding:1px 6px;border-radius:3px;white-space:nowrap;font-weight:600}
+.sc-tag.sc-game{background:rgba(76,175,125,.12);color:var(--win);border:1px solid rgba(76,175,125,.2)}
+.sc-tag.sc-win{background:rgba(245,200,66,.12);color:var(--gold);border:1px solid rgba(245,200,66,.2)}
+.sc-tag.sc-puz{background:rgba(155,127,232,.12);color:var(--puzzle);border:1px solid rgba(155,127,232,.2)}
+.sc-tag.sc-str{background:rgba(255,112,67,.12);color:var(--fire);border:1px solid rgba(255,112,67,.2)}
+.sc-tag.sc-day{background:rgba(200,168,75,.1);color:var(--accent);border:1px solid rgba(200,168,75,.2)}
+.score-pts-wrap{text-align:right;flex-shrink:0}
+.score-pts-lbl{font-size:9px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase}
+.score-row.sr1{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.03)}
+.score-row.sr2{border-color:rgba(176,190,197,.3)}
+.score-row.sr3{border-color:rgba(205,127,50,.3)}
+.score-rank{width:22px;text-align:center;font-size:13px;font-weight:700;font-family:'Playfair Display',serif}
+.score-row.sr1 .score-rank{color:var(--gold)}.score-row.sr2 .score-rank{color:var(--silver)}.score-row.sr3 .score-rank{color:var(--bronze)}
+.score-name{flex:1;font-size:12px;font-weight:600;color:var(--text)}
+.score-pts{font-size:13px;font-weight:700;color:var(--accent2);font-family:'Playfair Display',serif;min-width:46px;text-align:right}
+.score-breakdown{font-size:9px;color:var(--text-muted);text-align:right}
+.score-bar-wrap{width:70px}
+.score-bar-bg{height:4px;background:var(--border);border-radius:10px;overflow:hidden}
+.score-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:10px}
+.score-badge{display:flex;gap:3px;flex-wrap:wrap;flex:1}
+
+/* KONTROLLER */
+.controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.ctrl-label{font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
+.ctrl-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:11px;transition:all .2s}
+.ctrl-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.07)}
+.ctrl-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ctrl-div{width:1px;height:18px;background:var(--border)}
+
+/* ROZETLER */
+.badge{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:600;letter-spacing:.3px;white-space:nowrap;line-height:1.6;cursor:default}
+.badge.b-active{background:rgba(76,175,125,.15);color:var(--win);border:1px solid rgba(76,175,125,.3)}
+.badge.b-gold{background:rgba(245,200,66,.18);color:var(--gold);border:1px solid rgba(245,200,66,.3)}
+.badge.b-streak{background:rgba(255,112,67,.15);color:var(--fire);border:1px solid rgba(255,112,67,.3)}
+.badge.b-puzzle{background:rgba(155,127,232,.15);color:var(--puzzle);border:1px solid rgba(155,127,232,.3)}
+.badge.b-pstreak{background:rgba(155,127,232,.12);color:var(--puzzle);border:1px solid rgba(155,127,232,.25)}
+.badge.b-warn{background:rgba(224,90,90,.12);color:var(--loss);border:1px solid rgba(224,90,90,.25)}
+.badge.b-info{background:rgba(200,168,75,.12);color:var(--accent);border:1px solid rgba(200,168,75,.25)}
+
+/* KART IZGARA */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:13px}
+.s-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;position:relative;transition:border-color .2s}
+.s-card:hover{border-color:rgba(200,168,75,.22)}
+.s-card.t1{border-color:rgba(245,200,66,.45);box-shadow:0 0 14px rgba(245,200,66,.06)}
+.s-card.t2{border-color:rgba(176,190,197,.35)}
+.s-card.t3{border-color:rgba(205,127,50,.35)}
+.s-card.faded{opacity:.58}
+.card-head{padding:11px 13px 9px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px}
+.s-info{display:flex;align-items:center;gap:8px}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--surface),var(--border));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-family:'Playfair Display',serif;font-weight:700;color:var(--accent);border:1px solid var(--border);flex-shrink:0;position:relative}
+.rank-crown{position:absolute;top:-6px;right:-4px;font-size:10px;line-height:1}
+.s-name{font-size:13px;font-weight:600;color:var(--text);text-decoration:none}
+.s-name:hover{color:var(--accent2)}
+.s-sub{font-size:9px;color:var(--text-muted);margin-top:1px}
+.card-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--border)}
+.s-dot.on{background:var(--win);box-shadow:0 0 5px var(--win)}
+.rm-btn{background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:2px 4px;border-radius:3px;font-size:11px;transition:color .2s}
+.rm-btn:hover{color:var(--loss)}
+.day-tag{display:inline-flex;align-items:center;gap:3px;background:rgba(200,168,75,.09);border:1px solid rgba(200,168,75,.18);color:var(--accent);border-radius:3px;padding:1px 5px;font-size:9px;margin-top:2px}
+.score-tag{display:inline-flex;align-items:center;gap:2px;background:rgba(155,127,232,.1);border:1px solid rgba(155,127,232,.25);color:var(--puzzle);border-radius:3px;padding:1px 5px;font-size:9px;margin-top:2px;margin-left:3px}
+.card-badges{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px}
+.heat-row{display:flex;gap:2px;align-items:center}
+.pip{width:9px;height:9px;border-radius:2px;background:var(--border)}
+.pip.pg{background:var(--win)}.pip.pp{background:var(--puzzle)}.pip.pb{background:var(--accent)}
+.pip.pa-game{background:rgba(76,175,125,.35)}.pip.pa-puzz{background:rgba(155,127,232,.35)}.pip.pa-both{background:rgba(200,168,75,.35)}
+.pip.today{outline:2px solid rgba(255,255,255,.28);outline-offset:1px}
+.heat-lbl{font-size:9px;color:var(--text-muted);margin-left:5px}
+.ratings-row{display:flex;border-bottom:1px solid var(--border)}
+.r-item{flex:1;padding:6px 2px;text-align:center;border-right:1px solid var(--border)}
+.r-item.ukd-item{background:rgba(200,168,75,.05);border-left:1px solid var(--border)}
+.r-type{font-size:8px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:1px}
+.r-val{font-size:12px;font-weight:600;color:var(--text)}
+.r-chg{font-size:9px;margin-top:1px}
+.r-chg.up{color:var(--win)}.r-chg.dn{color:var(--loss)}.r-chg.eq{color:var(--text-muted)}
+.stats{padding:10px 13px}
+.s-title{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.s-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.wld-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:6px}
+.wld-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 4px;text-align:center}
+.wld-lbl{font-size:8px;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.wld-box.wb .wld-lbl{color:var(--win)}.wld-box.lb2 .wld-lbl{color:var(--loss)}.wld-box.db .wld-lbl{color:var(--draw)}
+.wld-val{font-size:18px;font-family:'Playfair Display',serif;font-weight:700}
+.wld-box.wb .wld-val{color:var(--win)}.wld-box.lb2 .wld-val{color:var(--loss)}.wld-box.db .wld-val{color:var(--draw)}
+.wr-wrap{margin-bottom:6px}
+.wr-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-bottom:2px}
+.wr-bar{height:4px;background:var(--bg);border-radius:10px;overflow:hidden;display:flex}
+.bw{background:var(--win);border-radius:10px 0 0 10px}.bd{background:var(--draw)}.bl{background:var(--loss);border-radius:0 10px 10px 0}
+.puz-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin-bottom:6px}
+.puz-left{display:flex;align-items:center;gap:5px}
+.puz-lbl{font-size:9px;color:var(--text-muted)}
+.puz-cnt{font-size:16px;font-family:'Playfair Display',serif;font-weight:700;color:var(--puzzle)}
+.puz-rat{font-size:9px;color:var(--text-muted);text-align:right}
+.puz-rat span{display:block;font-size:13px;font-weight:600;color:var(--puzzle)}
+.train-score-row{display:flex;align-items:center;justify-content:space-between;background:rgba(155,127,232,.06);border:1px solid rgba(155,127,232,.2);border-radius:6px;padding:6px 10px;margin-bottom:6px}
+.train-pts{font-size:18px;font-family:'Playfair Display',serif;font-weight:700;color:var(--puzzle)}
+.train-breakdown{font-size:9px;color:var(--text-muted);text-align:right;line-height:1.6}
+.recent{margin-top:2px}
+.g-row{display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid rgba(37,42,56,.5);font-size:10px}
+.g-row:last-child{border-bottom:none}
+.g-res{width:16px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
+.g-res.W{background:rgba(76,175,125,.2);color:var(--win)}.g-res.L{background:rgba(224,90,90,.2);color:var(--loss)}.g-res.D{background:rgba(122,138,170,.2);color:var(--draw)}
+.g-opp{color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-spd{color:var(--text-muted);font-size:9px}.g-t{color:var(--text-muted);font-size:9px;white-space:nowrap}
+.skel{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shim 1.5s infinite;border-radius:4px}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.load-ov{position:absolute;inset:0;background:rgba(13,15,20,.6);display:flex;align-items:center;justify-content:center;border-radius:11px;z-index:10}
+.spinner{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.empty{grid-column:1/-1;text-align:center;padding:55px 20px;color:var(--text-muted)}
+.empty .ei{font-size:44px;margin-bottom:14px;opacity:.22}
+.empty h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--text);margin-bottom:4px}
+.empty p{font-size:11px;line-height:1.7}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;min-width:300px;max-width:400px;width:90%}
+.modal h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--accent2);margin-bottom:14px}
+.modal label{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px}
+.modal input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:7px;font-family:inherit;font-size:13px;outline:none;transition:border-color .2s;margin-bottom:11px}
+.modal input:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:7px;justify-content:flex-end;margin-top:3px}
+.modal-cancel{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:7px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12px;transition:all .2s}
+.modal-cancel:hover{border-color:var(--loss);color:var(--loss)}
+.modal-ok{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0d0f14;padding:7px 16px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;font-size:12px;transition:opacity .2s}
+.modal-ok:hover{opacity:.9}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--text);padding:9px 14px;border-radius:8px;font-size:11px;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:260px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-left-color:var(--loss)}
+.load-status{font-size:11px;color:var(--text-muted);padding:6px 0;text-align:center;display:none}
+.load-status.show{display:block}
+
+@media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:17px}.controls{gap:4px}.champ-strip{grid-template-columns:1fr 1fr}}
+
+/* ── PIN SİSTEMİ ── */
+.pin-overlay{position:fixed;inset:0;background:rgba(13,15,20,.97);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.pin-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 30px;width:300px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.pin-chess{font-size:38px;margin-bottom:14px}
+.pin-title{font-family:'Playfair Display',serif;font-size:19px;color:var(--accent2);margin-bottom:4px}
+.pin-sub{font-size:11px;color:var(--text-muted);margin-bottom:22px;line-height:1.6}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:18px}
+.pin-dot{width:13px;height:13px;border-radius:50%;background:var(--border);transition:background .12s,transform .12s}
+.pin-dot.filled{background:var(--accent);transform:scale(1.15)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 auto 4px}
+.pin-key{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;padding:13px;border-radius:8px;cursor:pointer;transition:all .12s;user-select:none;line-height:1}
+.pin-key:hover{background:var(--border);border-color:var(--accent);color:var(--accent2)}
+.pin-key:active{transform:scale(.92)}
+.pin-key.pin-del{font-size:16px;color:var(--text-muted)}
+.pin-key.pin-empty{visibility:hidden;pointer-events:none}
+.pin-err{min-height:16px;color:var(--loss);font-size:11px;margin-top:10px}
+.pin-view-btn{margin-top:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:10px 16px;border-radius:8px;width:100%;transition:all .15s;display:block;text-align:center}
+.pin-view-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,168,75,.08)}
+.pin-shake{animation:pinShake .3s ease}
+@keyframes pinShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.admin-indicator{display:none;align-items:center;gap:5px;background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);color:var(--accent);border-radius:5px;padding:4px 10px;font-size:10px;letter-spacing:.5px}
+.admin-indicator.show{display:flex}
+
+
+/* ── GÖRÜNÜM SEKMELERİ ── */
+.view-tabs{display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.view-tab{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:6px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all .15s}
+.view-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0d0f14;border-color:transparent}
+.view-tab:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+
+.chesscard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;padding:4px}
+
+/* ── YENİ NESİL REKTANGÜLER CHESSCARD (GÜNCEL) ── */
+.chesscard {
+  width: 230px;
+  height: 330px;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  background: #111;
+  transition: transform .3s ease;
+  border: 4px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.chesscard:hover { transform: translateY(-5px); }
+
+/* Arka Plan Hareketli Dokular */
+.chesscard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAWCAYAAADafVyIAAAAV0lEQVR4AWPg5uaexcDI8B9Ec3JyFhDCpKpnACmGYWI0kKqe9j4AAi0gBtPEaCBZPYggF1NsAYXBR9gCShPAwPuAkgRA30imJR4tKkaLitGiYrSoIAIDAKy7LKCTTHSAAAAAAElFTkSuQmCC'),
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,0.15) 0%, transparent 60%);
+  opacity: 0.4;
+  z-index: 0;
+}
+
+/* Renk Temaları */
+.chesscard.fc-gold { 
+  background: linear-gradient(165deg, #4d3d0d 0%, #d4a83a 40%, #8a6d29 100%); 
+  border-color: #f5c842;
+}
+.chesscard.fc-silver { 
+  background: linear-gradient(165deg, #2c3e50 0%, #bdc3c7 40%, #7f8c8d 100%); 
+  border-color: #b0bec5;
+}
+.chesscard.fc-bronze { 
+  background: linear-gradient(165deg, #3d1c02 0%, #a0522d 40%, #5d2906 100%); 
+  border-color: #cd7f32;
+}
+.chesscard.fc-normal { 
+  background: linear-gradient(165deg, #0f2027 0%, #203a43 40%, #2c5364 100%); 
+  border-color: #3498db;
+}
+
+.chesscard-inner { position: relative; z-index: 5; height: 100%; }
+
+/* Fotoğraf Alanı - Bütünleşik */
+.fc-photo-wrap {
+  position: absolute;
+  top: 45px;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.fc-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom;
+  -webkit-mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+  filter: drop-shadow(0 10px 15px rgba(0,0,0,0.6));
+}
+
+.fc-top {
+  position: relative;
+  z-index: 10;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.fc-score {
+  font-size: 40px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+  font-family: 'Playfair Display', serif;
+}
+
+.fc-rank-badge {
+  background: rgba(0,0,0,0.5);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #fff;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.fc-name {
+  position: absolute;
+  top: 220px;
+  width: 100%;
+  z-index: 10;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.fc-stats {
+  position: absolute;
+  bottom: 12px;
+  left: 10px;
+  right: 10px;
+  z-index: 10;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 6px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.fc-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+.fc-stat:last-child { border-right: none; }
+.fc-stat-label { font-size: 7px; color: #ccc; text-transform: uppercase; }
+.fc-stat-val { font-size: 13px; font-weight: 700; color: #fff; }
+
+.fc-footer {
+  position: absolute;
+  bottom: 60px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  opacity: 0.6;
+}
+.fc-dl-btn {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    z-index: 20;
+}
+/* Büyük kart modal */
+.fc-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.fc-modal{position:relative}
+.fc-modal-close{position:absolute;top:-36px;right:0;background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;opacity:.7}
+.fc-modal-close:hover{opacity:1}
+
+@keyframes splashFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes splashPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
