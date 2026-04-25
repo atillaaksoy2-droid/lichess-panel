@@ -470,7 +470,24 @@ function renderGroupBar(){
   });
 
   bar.innerHTML = html + `<button class="new-group-btn edit-only" onclick="openNewGroupModal()" style="margin-top:10px;">＋ Yeni Grup</button>`;
+  setTimeout(updateGroupScrollState, 0);
 }
+
+function updateGroupScrollState(){
+  const bar=document.getElementById('groupBar');
+  const nav=bar?.closest('.group-nav');
+  if(!bar||!nav) return;
+  const max=bar.scrollWidth-bar.clientWidth;
+  nav.classList.toggle('can-left', bar.scrollLeft>4);
+  nav.classList.toggle('can-right', max>4 && bar.scrollLeft<max-4);
+}
+
+window.scrollGroupBar=function(dir){
+  const bar=document.getElementById('groupBar');
+  if(!bar) return;
+  const amount=Math.max(220, Math.round(bar.clientWidth*.65));
+  bar.scrollBy({left:dir*amount, behavior:'smooth'});
+};
 
 window.switchGroup = async function switchGroup(id){
   if(id===APP.activeGid) return;
@@ -1301,6 +1318,20 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('.rm-btn');
   if(b){ const u=b.dataset.rmuser; if(u) removeStudent(u); }
 });
+
+document.addEventListener('wheel',e=>{
+  const bar=e.target.closest?.('#groupBar');
+  if(!bar || bar.scrollWidth<=bar.clientWidth || Math.abs(e.deltaY)<=Math.abs(e.deltaX)) return;
+  e.preventDefault();
+  bar.scrollLeft += e.deltaY;
+  updateGroupScrollState();
+}, {passive:false});
+
+document.addEventListener('scroll',e=>{
+  if(e.target?.id==='groupBar') updateGroupScrollState();
+}, true);
+
+window.addEventListener('resize', updateGroupScrollState);
 
 
 

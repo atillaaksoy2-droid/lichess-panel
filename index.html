@@ -59,7 +59,11 @@
   <span id="syncStatus">Firebase bağlanıyor…</span>
 </div>
 <div class="wrap">
-  <div class="group-bar" id="groupBar"></div>
+  <div class="group-nav">
+    <button class="group-scroll-btn group-scroll-left" id="groupScrollLeft" onclick="scrollGroupBar(-1)" title="Önceki gruplar">‹</button>
+    <div class="group-bar" id="groupBar"></div>
+    <button class="group-scroll-btn group-scroll-right" id="groupScrollRight" onclick="scrollGroupBar(1)" title="Sonraki gruplar">›</button>
+  </div>
   <header>
     <div class="logo-area">
       <div class="chess-icon" style="width:64px; height:64px; padding:2px; background:var(--surface2); border: 2px solid var(--accent); border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
