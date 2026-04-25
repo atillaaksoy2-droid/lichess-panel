@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.0';
+const APP_VERSION = 'v0.4.1';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -93,14 +93,12 @@ async function fbLoad(){
 
     if(finalCfg && finalCfg.groups && finalCfg.groups.length > 0){
       APP.groups = finalCfg.groups;
-      if(!finalCfg.groups.find(g => g.id === APP.activeGid)){
-        APP.activeGid = finalCfg.groups[0].id;
-      }
+      APP.activeGid = null;
     } else {
       // Varsayılan grup ayarları
       const defaultGid = APP.currentUser ? 'g' + APP.currentUser : 'default';
       APP.groups = [{ id: defaultGid, name: 'A Grubu' }];
-      APP.activeGid = defaultGid;
+      APP.activeGid = null;
     }
 
     // Öğrenci listelerini yükle
@@ -243,7 +241,7 @@ function fbListen(){
 // ── UYGULAMA DURUMU ──────────────────────────────────
 const APP = {
   groups: [{id:'default',name:'A Grubu'}],
-  activeGid: 'default',
+  activeGid: null,
   studentLists: {},  // { [gid]: [{ u, n?, ukd?, lic? }, ...] }
   actLog: {},
   activityCache: {},
@@ -285,6 +283,7 @@ function normalizeStudentList(list){
 }
 
 function getStudentList(gid=APP.activeGid){
+  if(!gid) return [];
   const list = normalizeStudentList(APP.studentLists[gid] || []);
   APP.studentLists[gid] = list;
   return list;
@@ -319,6 +318,7 @@ function getStudentLic(u){
   return s ? (s.lic || '') : '';
 }
 function setStudents(arr){
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   // Mevcut isimleri koru
   const currentList = getStudentList();
   const newList = arr.map(raw => {
@@ -550,12 +550,13 @@ window.renameGroup=()=>{
 };
 window.confirmDeleteGroup=()=>{
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   if(APP.groups.length<=1){ showToast('Son grubu silemezsiniz!',true); return; }
   const g=APP.groups.find(x=>x.id===APP.activeGid);
   if(!confirm(`"${g?.name}" grubunu silmek istiyor musunuz?`)) return;
   APP.groups=APP.groups.filter(x=>x.id!==APP.activeGid);
   delete APP.studentLists[APP.activeGid];
-  APP.activeGid=APP.groups[0].id;
+  APP.activeGid=null;
   fbSaveConfig(); renderGroupBar(); renderHeader(); renderGrid();
   showToast('Grup silindi',true);
 };
@@ -573,6 +574,7 @@ function renderHeader(){
 // ── ÖĞRENCİ EKLE / ÇIKAR ─────────────────────────────
 window.addStudent=async()=>{
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
   const val=inp.value.trim(); errEl.textContent='';
   if(!val) return;
@@ -639,6 +641,7 @@ function removeStudent(username){
 // ── VERİ YÜKLEME ─────────────────────────────────────
 window.refreshAll=async(force=false)=>{
   const myId=++APP.refreshId;
+  if(!APP.activeGid) return;
   const students=getStudents();
   if(students.length===0) return;
   const btn=document.getElementById('refreshBtn'); btn.classList.add('spinning');
@@ -940,6 +943,10 @@ window.setScorePeriod=p=>{ APP.scorePeriod=p; document.querySelectorAll('.score-
 // ── RENDER ───────────────────────────────────────────
 function renderGrid(){
   const grid=document.getElementById('cardsGrid');
+  if(!APP.activeGid){
+    grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Grubunu seç</h3><p>Üstteki grup sekmelerinden kendi grubunu seçerek sporcuları görüntüle.</p></div>';
+    return;
+  }
   const students=getStudents();
   if(students.length===0){ grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>'; return; }
   const allLoaded=students.every(u=>APP.liveData[u]);
@@ -1045,6 +1052,10 @@ function renderChamps(){
 
 function renderScoreTable(){
   const students=getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
+  if(!APP.activeGid){
+    document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Puan tablosu için grup seçin.</div>';
+    return;
+  }
   if(students.length===0){
     document.getElementById('scoreRows').innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-size:11px">Veri bekleniyor…</div>';
     return;
@@ -1865,12 +1876,14 @@ function loadScript(src){
 
 window.openBulkUkdModal = () => {
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   document.getElementById('bulkUkdInput').value = '';
   document.getElementById('modalBulkUkd').style.display = 'flex';
   setTimeout(() => document.getElementById('bulkUkdInput').focus(), 50);
 };
 
 window.processBulkUkd = async () => {
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
   const input = document.getElementById('bulkUkdInput').value;
   if(!input.trim()) return;
   
