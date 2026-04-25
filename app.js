@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const APP_VERSION = 'v0.4.0';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -2118,6 +2119,9 @@ setInterval(()=>{ if(getStudents().length>0) refreshAll(); },10*60*1000);
 
 // ── BAŞLANGIÇ ────────────────────────────────────────
 (async()=>{
+  const versionBadge = document.getElementById('versionBadge');
+  if(versionBadge) versionBadge.textContent = APP_VERSION;
+
   const splashStatus = document.getElementById('splashStatus');
   if(splashStatus) splashStatus.textContent = 'Veritabanına bağlanıyor...';
 
