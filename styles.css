@@ -403,26 +403,25 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 
 .fc-level-mark {
   position: absolute;
-  top: 58px;
-  left: 12px;
+  top: 13px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 12;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  width: 34px;
   height: 34px;
   padding: 0;
-  border-radius: 6px;
-  background: rgba(0,0,0,.42);
-  border: 1px solid rgba(255,255,255,.16);
+  background: transparent;
+  border: 0;
   color: var(--lvl-genel);
-  backdrop-filter: blur(5px);
-  text-shadow: 0 0 10px currentColor;
+  text-shadow: 0 0 9px currentColor, 0 2px 5px rgba(0,0,0,.75);
 }
-.fc-level-piece{font-size:26px;line-height:1}
-.fc-level-mark.lvl-baslangic{color:var(--lvl-baslangic);border-color:rgba(46,204,113,.35)}
-.fc-level-mark.lvl-orta{color:var(--lvl-orta);border-color:rgba(52,152,219,.35)}
-.fc-level-mark.lvl-ileri{color:var(--lvl-ileri);border-color:rgba(245,200,66,.38)}
+.fc-level-piece{font-size:28px;line-height:1}
+.fc-level-mark.lvl-baslangic{color:var(--lvl-baslangic)}
+.fc-level-mark.lvl-orta{color:var(--lvl-orta)}
+.fc-level-mark.lvl-ileri{color:var(--lvl-ileri)}
 .fc-level-mark.lvl-genel{color:var(--lvl-genel)}
 
 .fc-name {
