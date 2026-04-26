@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lichess Koç Paneli</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.4.7">
+<link rel="stylesheet" href="styles.css?v=0.4.9">
 </head>
 <body>
 
@@ -117,6 +117,17 @@
   </div>
 
   <div class="champ-strip" id="champStrip"></div>
+
+  <div class="history-section" id="bestHistorySection" style="display:none">
+    <div class="history-head">
+      <div>
+        <div class="history-title">🏆 Haftalık Şampiyonlar Arşivi</div>
+        <div class="history-sub" id="bestHistorySummary">Henüz kayıt yok</div>
+      </div>
+      <select class="history-select" id="bestHistorySelect" onchange="renderBestHistoryDetail(this.value)"></select>
+    </div>
+    <div class="history-detail" id="bestHistoryDetail"></div>
+  </div>
 
   <div class="score-section">
     <div class="score-title">🏆 Antrenman Puan Tablosu</div>
@@ -279,9 +290,9 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.7</div>
+<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.9</div>
 
 <!-- FIREBASE SDK -->
-<script type="module" src="app.js?v=0.4.7"></script>
+<script type="module" src="app.js?v=0.4.9"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.7';
+const APP_VERSION = 'v0.4.9';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -101,6 +101,7 @@ async function fbLoad(){
       APP.groups = [{ id: defaultGid, name: 'A Grubu' }];
       APP.activeGid = null;
     }
+    APP.bestHistory = normalizeBestHistory(finalCfg?.bestHistory || []);
 
     // Öğrenci listelerini yükle
     const prefix = APP.currentUser ? APP.currentUser + '_' : '';
@@ -141,6 +142,7 @@ async function fbSaveConfig(){
     await setDoc(doc(db,'panel',saveKey),{
       groups: APP.groups,
       criteria: APP.crit,
+      bestHistory: APP.bestHistory || [],
       updatedAt: APP.configUpdatedAt
     });
   }catch(e){ console.warn('Config kayıt hatası:',e); setSyncStatus('err','Kayıt hatası'); }
@@ -208,6 +210,7 @@ function fbListen(){
     if(changed || remoteRefresh){
       APP.groups    = d.groups;
       APP.crit      = {...APP.crit,...(d.criteria||{})};
+      APP.bestHistory = normalizeBestHistory(d.bestHistory || []);
       APP.configUpdatedAt = remoteUpdatedAt;
       Promise.all(APP.groups.map(async g=>{
         try{
@@ -217,11 +220,12 @@ function fbListen(){
         }catch(e){ console.warn('fbListen grup yuklenemedi:',g.id); }
       })).then(()=>{ 
         renderGroupBar(); 
+        renderBestHistory();
         renderGrid(); 
         if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
         fbListenStudents(APP.groups);
       });
-      renderHeader(); buildCritPanel();
+      renderHeader(); buildCritPanel(); renderBestHistory();
       setSyncStatus('ok','Baska cihazdan guncelleme alindi');
       setTimeout(()=>setSyncStatus('ok','Firebase bagli \u2713'),3000);
     }
@@ -238,7 +242,7 @@ function fbListen(){
         APP.actLog[u][d]={games:Math.max(p.games,v.games||0),puzzles:Math.max(p.puzzles,v.puzzles||0)};
       }
     }
-    renderGrid(); renderChamps(); renderScoreTable();
+    renderGrid(); renderChamps(); renderScoreTable(); renderBestHistory();
     if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
   });
 }
@@ -252,6 +256,7 @@ const APP = {
   activityCache: {},
   liveData: {},
   stats: {}, // { [date]: count }
+  bestHistory: [],
   crit: {
     minDailyGames:3, minWinRate:50, streakDays:3,
     minPuzzleDaily:5, streakPuzzleDays:3,
@@ -402,6 +407,56 @@ function weekStart(){
 function daysBetween(a,b){
   const p=s=>{ const[y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
   return Math.round((p(a)-p(b))/86400000);
+}
+function addDaysStr(date, add){
+  const [y,m,d]=date.split('-').map(Number);
+  const dt=new Date(y,m-1,d);
+  dt.setDate(dt.getDate()+add);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+function formatShortDate(date){
+  const [y,m,d]=date.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('tr-TR',{day:'numeric',month:'short'});
+}
+function formatWeekRange(start,end){
+  if(!start || !end) return '';
+  return `${formatShortDate(start)} - ${formatShortDate(end)}`;
+}
+function normalizeBestHistory(history){
+  return (Array.isArray(history) ? history : [])
+    .filter(h => h && h.id && Array.isArray(h.items))
+    .map(h => ({
+      ...h,
+      items: h.items.map((item,i)=>({
+        rank: item.rank || i+1,
+        username: String(item.username || item.u || '').toLowerCase(),
+        name: item.name || item.displayName || item.username || item.u || '',
+        pts: Math.round(Number(item.pts || 0)),
+        games: Number(item.games || 0),
+        puzzles: Number(item.puzzles || 0),
+        activeDays: Number(item.activeDays || 0),
+        streak: Number(item.streak || 0),
+        level: item.level || h.level || 'Genel',
+        groupName: item.groupName || ''
+      })).filter(item=>item.username)
+    }))
+    .sort((a,b)=>(b.weekStart || '').localeCompare(a.weekStart || ''))
+    .slice(0,52);
+}
+function getBestHistoryStats(username){
+  const u=String(username||'').toLowerCase();
+  const hits=(APP.bestHistory||[])
+    .flatMap(h => (h.items||[]).filter(item=>item.username===u).map(item=>({history:h,item})))
+    .sort((a,b)=>(b.history.weekStart||'').localeCompare(a.history.weekStart||''));
+  if(!hits.length) return null;
+  const leaderHits = hits.filter(h => (h.item.rank || 99) === 1);
+  return {
+    count: hits.length,
+    last: hits[0].history,
+    bestRank: Math.min(...hits.map(h=>h.item.rank || 99)),
+    leaderCount: leaderHits.length,
+    lastLeader: leaderHits[0]?.history || null
+  };
 }
 
 // ── AKTİVİTE ─────────────────────────────────────────
@@ -987,7 +1042,26 @@ function getBadges(username,d){
   if(gs>=APP.crit.streakDays) badges.push({cls:'b-streak',icon:'🔥',label:`${gs}g Seri`,tip:`${gs} gün üst üste`});
   if(puz>=APP.crit.minPuzzleDaily) badges.push({cls:'b-puzzle',icon:'🧩',label:`${puz}`,tip:`${APP.crit.minPuzzleDaily}+ bulmaca`});
   if(ps>=APP.crit.streakPuzzleDays) badges.push({cls:'b-pstreak',icon:'🎯',label:`${ps}g🧩`,tip:`${ps} gün bulmaca serisi`});
-  
+  const bestStats = getBestHistoryStats(username);
+  if(bestStats){
+    const lastRange = formatWeekRange(bestStats.last.weekStart, bestStats.last.weekEnd);
+    badges.push({
+      cls:'b-gold',
+      icon:'🏆',
+      label:`${bestStats.count}x En İyi`,
+      tip:`Haftanın en iyileri: ${bestStats.count} kez · En iyi derece #${bestStats.bestRank} · Son: ${lastRange}`
+    });
+    if(bestStats.leaderCount > 0){
+      const lastLeaderRange = formatWeekRange(bestStats.lastLeader.weekStart, bestStats.lastLeader.weekEnd);
+      badges.push({
+        cls:'b-gold',
+        icon:'👑',
+        label:`${bestStats.leaderCount}x Lider`,
+        tip:`Haftanın lideri: ${bestStats.leaderCount} kez · Son liderlik: ${lastLeaderRange}`
+      });
+    }
+  }
+
   const weeklyScore = calcScore(username, 'week');
   const isBelow = weeklyScore < (APP.crit.minWeeklyScore || 0);
   if (isBelow) {
@@ -1136,6 +1210,54 @@ function renderChamps(){
       <div class="champ-medal">${c.medal}</div>
     </div>`).join('');
 }
+
+function renderBestHistory(selectedId){
+  const section=document.getElementById('bestHistorySection');
+  const select=document.getElementById('bestHistorySelect');
+  const summary=document.getElementById('bestHistorySummary');
+  if(!section || !select || !summary) return;
+  const history=normalizeBestHistory(APP.bestHistory || []);
+  APP.bestHistory = history;
+  if(history.length===0){
+    section.style.display='none';
+    return;
+  }
+  section.style.display='';
+  summary.textContent = `${history.length} hafta kaydedildi`;
+  const currentId = selectedId || select.value || history[0].id;
+  select.innerHTML = history.map(h=>{
+    const level = h.levelLabel || h.level || 'Tümü';
+    const label = `${formatWeekRange(h.weekStart,h.weekEnd)} · ${level} · ${h.items.length} sporcu`;
+    return `<option value="${escHtml(h.id)}" ${h.id===currentId?'selected':''}>${escHtml(label)}</option>`;
+  }).join('');
+  renderBestHistoryDetail(select.value || currentId);
+}
+
+window.renderBestHistoryDetail = function(id){
+  const detail=document.getElementById('bestHistoryDetail');
+  if(!detail) return;
+  const history=(APP.bestHistory || []).find(h=>h.id===id) || APP.bestHistory?.[0];
+  if(!history){
+    detail.innerHTML='<div class="history-empty">Henüz kayıt yok.</div>';
+    return;
+  }
+  detail.innerHTML = (history.items || []).map(item=>{
+    const meta=[
+      item.username ? '@'+item.username : '',
+      item.games ? item.games+' maç' : '',
+      item.puzzles ? item.puzzles+' bulmaca' : '',
+      item.activeDays ? item.activeDays+' aktif gün' : ''
+    ].filter(Boolean).join(' · ');
+    return `<div class="history-row">
+      <div class="history-rank">#${item.rank}</div>
+      <div>
+        <div class="history-name">${escHtml(item.name || item.username)}</div>
+        <div class="history-meta">${escHtml(meta || formatWeekRange(history.weekStart, history.weekEnd))}</div>
+      </div>
+      <div class="history-pts">${item.pts}<div class="score-pts-lbl">puan</div></div>
+    </div>`;
+  }).join('');
+};
 
 function renderScoreTable(){
   const students=getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
@@ -1576,7 +1698,7 @@ window.PIN = (function(){
       const bst=document.getElementById('btnStats');    if(bst) bst.style.display='flex';
       const bab=document.getElementById('btnAutoBest'); if(bab) bab.style.display='flex';
       const bl=document.getElementById('btnLogout');    if(bl)  bl.style.display='flex';
-      renderGroupBar(); renderHeader(); buildCritPanel(); renderGrid();
+      renderGroupBar(); renderHeader(); buildCritPanel(); renderBestHistory(); renderGrid();
       if(getStudents().length>0) refreshAll();
       renderChamps(); renderScoreTable();
     } else {
@@ -1611,7 +1733,7 @@ window.PIN = (function(){
         APP.currentUser=uids[0]; // görüntüleme modunda ilk kullanıcının verisi
       }
       await fbLoad();
-      renderGroupBar(); renderHeader(); buildCritPanel(); renderGrid();
+      renderGroupBar(); renderHeader(); buildCritPanel(); renderBestHistory(); renderGrid();
       if(getStudents().length>0) refreshAll();
       renderChamps(); renderScoreTable();
     })();
@@ -2162,7 +2284,8 @@ window.autoCreateBestGroup = async () => {
 
   // 2. Puana göre sırala ve ilk X kişiyi al
   allStudents.sort((a,b) => b.pts - a.pts);
-  const bestStudents = allStudents.slice(0, count).map(s => s.student);
+  const selectedBest = allStudents.slice(0, count);
+  const bestStudents = selectedBest.map(s => s.student);
 
   // 3. "Haftanın En İyileri" grubunu bul veya oluştur
   const groupName = selectedLevel ? `Haftanın En İyileri - ${selectedLevel}` : "Haftanın En İyileri";
@@ -2180,11 +2303,47 @@ window.autoCreateBestGroup = async () => {
   APP.studentLists[targetGroup.id] = normalizeStudentList(bestStudents);
   APP.activeGid = targetGroup.id;
 
+  const weekStartDate = weekStart();
+  const weekEndDate = addDaysStr(weekStartDate, 6);
+  const levelLabel = selectedLevel || 'Tümü';
+  const historyId = `${weekStartDate}_${selectedLevel || 'all'}`;
+  const historyEntry = {
+    id: historyId,
+    weekStart: weekStartDate,
+    weekEnd: weekEndDate,
+    level: selectedLevel || 'Genel',
+    levelLabel,
+    groupName,
+    count: bestStudents.length,
+    createdAt: Date.now(),
+    items: selectedBest.map((s,i)=>{
+      const u = studentUsername(s.student);
+      const st = periodStats(u, period);
+      return {
+        rank: i+1,
+        username: u,
+        name: s.student.n || APP.liveData[u]?.displayName || u,
+        pts: s.pts,
+        games: st.totalGames,
+        puzzles: st.totalPuzzles,
+        activeDays: st.activeDays,
+        streak: st.streak,
+        level: s.student.level || s.student.lvl || selectedLevel || 'Genel',
+        groupName: s.student.groupName || ''
+      };
+    })
+  };
+  APP.bestHistory = normalizeBestHistory([
+    historyEntry,
+    ...(APP.bestHistory || []).filter(h => h.id !== historyId)
+  ]);
+
   await fbSaveConfig();
   await fbSaveStudents(targetGroup.id);
 
   renderGroupBar();
   renderHeader();
+  renderBestHistory(historyId);
   renderGrid();
   renderChamps();
   renderScoreTable();
@@ -2268,11 +2427,11 @@ setInterval(()=>{ refreshAllStudentsInBackground(false); },30*60*1000);
   
   // Arayüzü oluştur
   document.body.classList.add('readonly');
-  buildCritPanel(); renderGroupBar(); renderHeader();
+  buildCritPanel(); renderGroupBar(); renderHeader(); renderBestHistory();
 
   // Sporcu varsa ızgarayı hemen göster (Skeleton'lar belirecektir)
   renderGrid();
-  renderChamps(); renderScoreTable();
+  renderChamps(); renderScoreTable(); renderBestHistory();
 
   // Yükleme tamamlandı, arayüz hazır, splash ekranını gizle!
   const splash = document.getElementById('splashScreen');
