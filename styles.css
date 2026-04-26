@@ -186,6 +186,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .badge.b-pstreak{background:rgba(155,127,232,.12);color:var(--puzzle);border:1px solid rgba(155,127,232,.25)}
 .badge.b-warn{background:rgba(224,90,90,.12);color:var(--loss);border:1px solid rgba(224,90,90,.25)}
 .badge.b-info{background:rgba(200,168,75,.12);color:var(--accent);border:1px solid rgba(200,168,75,.25)}
+.badge.b-behavior{background:rgba(52,152,219,.12);color:#8fd3ff;border:1px solid rgba(52,152,219,.28)}
 
 /* KART IZGARA */
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:13px}
@@ -217,6 +218,8 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .level-tag.lvl-baslangic{color:var(--lvl-baslangic);border-color:rgba(46,204,113,.28);background:rgba(46,204,113,.08)}
 .level-tag.lvl-genel{color:var(--lvl-genel)}
 .card-badges{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px}
+.behavior-badges{display:flex;gap:3px;flex-wrap:wrap;margin:-1px 0 5px}
+.behavior-edit-btn{color:var(--accent)}
 .heat-row{display:flex;gap:2px;align-items:center}
 .pip{width:9px;height:9px;border-radius:2px;background:var(--border)}
 .pip.pg{background:var(--win)}.pip.pp{background:var(--puzzle)}.pip.pb{background:var(--accent)}
@@ -268,6 +271,15 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .empty h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--text);margin-bottom:4px}
 .empty p{font-size:11px;line-height:1.7}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.behavior-modal{max-width:540px}
+.behavior-modal-sub{font-size:12px;color:var(--accent2);margin:-5px 0 12px;font-weight:600}
+.behavior-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.behavior-check{display:flex;align-items:flex-start;gap:9px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;cursor:pointer;transition:border-color .2s,background .2s}
+.behavior-check:hover{border-color:rgba(200,168,75,.35)}
+.behavior-check input{margin-top:4px;accent-color:var(--accent)}
+.behavior-check-icon{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:rgba(52,152,219,.12);border:1px solid rgba(52,152,219,.28);color:#8fd3ff;font-size:11px;font-weight:700;flex-shrink:0}
+.behavior-check b{display:block;font-size:12px;color:var(--text);margin-bottom:2px}
+.behavior-check small{display:block;font-size:10px;line-height:1.45;color:var(--text-muted)}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;min-width:300px;max-width:400px;width:90%}
 .modal h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--accent2);margin-bottom:14px}
 .modal label{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px}
@@ -286,7 +298,7 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
 .load-status{font-size:11px;color:var(--text-muted);padding:6px 0;text-align:center;display:none}
 .load-status.show{display:block}
 
-@media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:17px}.controls{gap:4px}.champ-strip{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.cards-grid{grid-template-columns:1fr}h1{font-size:17px}.controls{gap:4px}.champ-strip{grid-template-columns:1fr 1fr}.behavior-check-grid{grid-template-columns:1fr}}
 
 /* ── PIN SİSTEMİ ── */
 .pin-overlay{position:fixed;inset:0;background:rgba(13,15,20,.97);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
@@ -452,6 +464,34 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
   text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
+.fc-behavior-badges {
+  position: absolute;
+  top: 246px;
+  left: 10px;
+  right: 10px;
+  z-index: 11;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-height: 35px;
+  overflow: hidden;
+}
+.fc-behavior-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.46);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  box-shadow: 0 2px 7px rgba(0,0,0,.35);
+}
+
 .fc-stats {
   position: absolute;
   bottom: 12px;
@@ -502,7 +542,11 @@ h1 span{display:block;font-size:10px;font-family:'IBM Plex Mono',monospace;font-
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-10px); }
   }
-  @keyframes splashPulse {
+@keyframes splashPulse {
     0%, 100% { opacity: 0.6; }
     50% { opacity: 1; }
   }
+
+@media(max-width:600px){
+  .behavior-check-grid{grid-template-columns:1fr}
+}

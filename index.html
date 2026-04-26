@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lichess Koç Paneli</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.4.10">
+<link rel="stylesheet" href="styles.css?v=0.4.11">
 </head>
 <body>
 
@@ -289,10 +289,22 @@
     </div>
   </div>
 </div>
+<div class="modal-bg" id="modalBehaviorBadges" style="display:none" onclick="if(event.target===this)closeModal('modalBehaviorBadges')">
+  <div class="modal behavior-modal">
+    <h3>Davranış Rozetleri</h3>
+    <div class="behavior-modal-sub" id="behaviorBadgeTitle">—</div>
+    <input type="hidden" id="behaviorBadgeUser">
+    <div class="behavior-check-grid" id="behaviorBadgeGrid"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('modalBehaviorBadges')">İptal</button>
+      <button class="modal-ok" onclick="saveBehaviorBadges()">Kaydet</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.10</div>
+<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.11</div>
 
 <!-- FIREBASE SDK -->
-<script type="module" src="app.js?v=0.4.10"></script>
+<script type="module" src="app.js?v=0.4.11"></script>
 </body>
 </html>

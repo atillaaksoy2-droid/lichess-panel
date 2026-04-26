@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.10';
+const APP_VERSION = 'v0.4.11';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -273,12 +273,26 @@ const APP = {
   backgroundRefresh: { running: false, loadedAt: 0 }
 };
 
+const BEHAVIOR_BADGES = [
+  { key:'notation', icon:'N', label:'Notasyon', tip:'Turnuvalarda düzenli, anlaşılır notasyon tutar' },
+  { key:'analysis', icon:'A', label:'Analiz', tip:'Turnuva maçlarını Lichess çalışmalarına analiz için kaydeder' },
+  { key:'time', icon:'Z', label:'Zaman', tip:'Maçlarda süresini dengeli kullanır' },
+  { key:'opening', icon:'O', label:'Açılış', tip:'Beyaz ve siyah taşlarla repertuar belirlemiş ve uygular' },
+  { key:'endgame', icon:'S', label:'Oyun Sonu', tip:'Temel piyon ve kale oyun sonu kurallarını bilir' },
+  { key:'fighter', icon:'M', label:'Mücadeleci', tip:'Moral bozmadan mücadele edebilir' },
+  { key:'hunter', icon:'V', label:'Avcı', tip:'Kendisinden 200+ puanlı rakipten puan almıştır' }
+];
+const BEHAVIOR_BADGE_MAP = Object.fromEntries(BEHAVIOR_BADGES.map(b => [b.key, b]));
+
 function normalizeStudentRecord(student){
   if(typeof student === 'string') return { u: student.trim().toLowerCase() };
   if(student && typeof student === 'object'){
     const u = String(student.u || student.username || '').trim().toLowerCase();
     if(!u) return null;
     const out = { ...student, u };
+    out.behaviorBadges = Array.isArray(out.behaviorBadges)
+      ? [...new Set(out.behaviorBadges)].filter(key => BEHAVIOR_BADGE_MAP[key])
+      : [];
     delete out.username;
     return out;
   }
@@ -379,6 +393,20 @@ function getStudentUkd(u){
 function getStudentLic(u){
   const s = findStudent(u);
   return s ? (s.lic || '') : '';
+}
+function getStudentBehaviorBadges(u){
+  const s = findStudent(u);
+  if(!s || !Array.isArray(s.behaviorBadges)) return [];
+  return s.behaviorBadges.filter(key => BEHAVIOR_BADGE_MAP[key]);
+}
+function behaviorBadgesHtml(u, compact=false){
+  const keys = getStudentBehaviorBadges(u);
+  if(keys.length === 0) return '';
+  return keys.map(key => {
+    const b = BEHAVIOR_BADGE_MAP[key];
+    const label = compact ? b.icon : b.label;
+    return `<span class="${compact?'fc-behavior-badge':'badge b-behavior'}" title="${escHtml(b.tip)}">${escHtml(label)}</span>`;
+  }).join('');
 }
 function setStudents(arr){
   if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
@@ -760,6 +788,42 @@ function removeStudent(username){
   delete APP.liveData[username];
   renderGroupBar(); renderGrid(); showToast(`${username} çıkarıldı`,true);
 }
+
+window.openBehaviorBadgesModal = function(username){
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli', true); return; }
+  const student = findStudent(username);
+  if(!student){ showToast('Sporcu bulunamadı', true); return; }
+  const selected = new Set(getStudentBehaviorBadges(username));
+  document.getElementById('behaviorBadgeUser').value = username;
+  document.getElementById('behaviorBadgeTitle').textContent = getStudentDisplayName(username);
+  document.getElementById('behaviorBadgeGrid').innerHTML = BEHAVIOR_BADGES.map(b => `
+    <label class="behavior-check">
+      <input type="checkbox" value="${escHtml(b.key)}" ${selected.has(b.key)?'checked':''}>
+      <span class="behavior-check-icon">${escHtml(b.icon)}</span>
+      <span>
+        <b>${escHtml(b.label)}</b>
+        <small>${escHtml(b.tip)}</small>
+      </span>
+    </label>
+  `).join('');
+  document.getElementById('modalBehaviorBadges').style.display = 'flex';
+};
+
+window.saveBehaviorBadges = async function(){
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli', true); return; }
+  const username = document.getElementById('behaviorBadgeUser').value;
+  const selected = [...document.querySelectorAll('#behaviorBadgeGrid input:checked')].map(i => i.value);
+  const list = getStudentList().map(student => {
+    if(student.u !== username) return student;
+    return normalizeStudentRecord({ ...student, behaviorBadges: selected });
+  });
+  APP.studentLists[APP.activeGid] = normalizeStudentList(list);
+  await fbSaveStudents(APP.activeGid);
+  closeModal('modalBehaviorBadges');
+  renderGrid();
+  if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
+  showToast('Davranış rozetleri kaydedildi ✓');
+};
 
 // ── VERİ YÜKLEME ─────────────────────────────────────
 window.refreshAll=async(force=false)=>{
@@ -1400,6 +1464,7 @@ function buildCard(username,d,rank){
   const gs=getStreak(username,'games'), ps=getStreak(username,'puzzles');
   const heatLbl=gs>1?`🔥 ${gs}g seri`:ps>1?`🧩 ${ps}g seri`:'14 gün';
   const bdgHtml=badges.map(b=>`<span class="badge ${b.cls}" title="${b.tip}">${b.icon} ${b.label}</span>`).join('');
+  const behaviorHtml = behaviorBadgesHtml(username);
   const bd=scoreBreakdown(username);
   const levelInfo = getStudentLevelInfo(username);
   const levelTag = `<div class="level-tag lvl-${levelSlug(levelInfo.level)}" title="${escHtml(levelInfo.group || levelInfo.level)}"><span class="level-piece">${levelPiece(levelInfo.level)}</span></div>`;
@@ -1418,10 +1483,12 @@ function buildCard(username,d,rank){
         </div>
         <div class="card-actions">
           <div class="s-dot ${d.online?'on':''}" title="${d.online?'Çevrimiçi':'Çevrimdışı'}"></div>
+          <button class="rm-btn behavior-edit-btn edit-only" data-badgesuser="${escHtml(username)}" title="Davranış rozetleri">🏅</button>
           <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Çıkar">✕</button>
         </div>
       </div>
       <div class="card-badges">${levelAndBadges}</div>
+      ${behaviorHtml?`<div class="behavior-badges">${behaviorHtml}</div>`:''}
       <div class="heat-row">${pipHtml}<span class="heat-lbl">${heatLbl}</span></div>
     </div>
     <div class="ratings-row">${rHTML}${ukdHTML}</div>
@@ -1552,6 +1619,8 @@ function showToast(msg,isErr=false){ const t=document.getElementById('toast'); t
 
 // Event delegation
 document.addEventListener('click',e=>{
+  const eb=e.target.closest('.behavior-edit-btn');
+  if(eb){ const u=eb.dataset.badgesuser; if(u) openBehaviorBadgesModal(u); }
   const b=e.target.closest('.rm-btn');
   if(b){ const u=b.dataset.rmuser; if(u) removeStudent(u); }
 });
@@ -1926,6 +1995,7 @@ async function renderChesscards(){
     const ukd = getStudentUkd(u);
     const levelInfo = getStudentLevelInfo(u);
     const levelCls = levelSlug(levelInfo.level);
+    const behaviorFcHtml = behaviorBadgesHtml(u, true);
 
     const card = document.createElement('div');
     card.className = `chesscard ${fcCls}`;
@@ -1949,6 +2019,7 @@ async function renderChesscards(){
         </div>
 
         <div class="fc-name">${escHtml(getStudentDisplayName(u))}</div>
+        ${behaviorFcHtml?`<div class="fc-behavior-badges">${behaviorFcHtml}</div>`:''}
 
         <div class="fc-stats">
           <div class="fc-stat">
