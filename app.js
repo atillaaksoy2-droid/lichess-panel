@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
+import { getFirestore, doc, getDoc, getDocFromServer, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.13';
+const APP_VERSION = 'v0.4.14';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -22,6 +22,43 @@ function setSyncStatus(state, msg){
   dot.className='sync-dot '+state; txt.textContent=msg;
 }
 
+async function getFreshDoc(ref){
+  try{
+    return await getDocFromServer(ref);
+  }catch(e){
+    console.warn('Sunucudan okuma basarisiz, cache deneniyor:', e);
+    return await getDoc(ref);
+  }
+}
+
+async function selectViewerUser(users){
+  const uids = Object.keys(users || {});
+  if(uids.length === 0) return null;
+
+  const params = new URLSearchParams(location.search);
+  const requested = params.get('coach') || params.get('user') || params.get('uid');
+  if(requested && uids.includes(requested)) return requested;
+
+  let best = null;
+  for(const uid of uids){
+    try{
+      const snap = await getFreshDoc(doc(db, 'panel', 'config_' + uid));
+      if(!snap.exists()) continue;
+      const data = snap.data();
+      if(!data.groups || data.groups.length === 0) continue;
+      const score = data.updatedAt || 0;
+      if(!best || score > best.score) best = { uid, score };
+    }catch(e){
+      console.warn('Koc verisi secilemedi:', uid, e);
+    }
+  }
+
+  if(best) return best.uid;
+  const savedUser = localStorage.getItem('lastViewedCoach');
+  if(savedUser && uids.includes(savedUser)) return savedUser;
+  return uids[0];
+}
+
 // ── FIRESTORE OKUMA / YAZMA ──────────────────────────
 // Veri yapısı:
 //   /panel/config  → { groups, activeGid, criteria }
@@ -33,7 +70,7 @@ async function fbLoad(){
     // APP.users yüklenmemişse son bir kez daha dene
     if(!APP.users){
       try {
-        const uSnap = await getDoc(doc(db,'panel','users'));
+        const uSnap = await getFreshDoc(doc(db,'panel','users'));
         if(uSnap.exists()) APP.users = uSnap.data();
       } catch(e) { console.warn('fbLoad users fetch error:', e); }
     }
@@ -65,11 +102,15 @@ async function fbLoad(){
     }
 
     // Seçilen kullanıcıyı her zaman kaydet
+    if(!APP.currentUserName && APP.users){
+      const viewerUser = await selectViewerUser(APP.users);
+      if(viewerUser) APP.currentUser = viewerUser;
+    }
     if(APP.currentUser) localStorage.setItem('lastViewedCoach', APP.currentUser);
 
     // currentUser varsa ona özel config yükle, yoksa genel 'config' yükle
     const cfgKey = APP.currentUser ? 'config_' + APP.currentUser : 'config';
-    let cfgSnap = await getDoc(doc(db,'panel',cfgKey));
+    let cfgSnap = await getFreshDoc(doc(db,'panel',cfgKey));
     
     // Fallback: Kullanıcıya özel config yoksa ama kullanıcı varsa, varsayılan değerlerle devam et
     const cfg = cfgSnap.exists() ? cfgSnap.data() : null;
@@ -78,13 +119,13 @@ async function fbLoad(){
     // legacy 'config'i kontrol etmeyi deneyebiliriz.
     let finalCfg = cfg;
     if (!finalCfg && APP.currentUser) {
-      const legacySnap = await getDoc(doc(db,'panel','config'));
+      const legacySnap = await getFreshDoc(doc(db,'panel','config'));
       if (legacySnap.exists() && legacySnap.data().groups && legacySnap.data().groups.length > 0) {
         finalCfg = legacySnap.data();
       }
     }
 
-    const actSnap = await getDoc(doc(db,'panel','activity'));
+    const actSnap = await getFreshDoc(doc(db,'panel','activity'));
     const act = actSnap.exists() ? actSnap.data() : {};
 
     if(finalCfg && finalCfg.criteria){
@@ -108,11 +149,11 @@ async function fbLoad(){
     await Promise.all(APP.groups.map(async g => {
       try{
         const key = 'students_' + prefix + g.id;
-        let snap = await getDoc(doc(db,'panel',key));
+        let snap = await getFreshDoc(doc(db,'panel',key));
         
         // Eğer prefix varsa ama bulunamadıysa prefix'siz hali (eski veri) dene
         if(!snap.exists() && prefix){
-          snap = await getDoc(doc(db,'panel','students_' + g.id));
+          snap = await getFreshDoc(doc(db,'panel','students_' + g.id));
         }
         
         // HALA bulunamadıysa ve view-only moddaysak (prefix yoksa), 
@@ -660,8 +701,8 @@ window.switchGroup = async function switchGroup(id){
     try{
       const prefix2 = APP.currentUser ? APP.currentUser + '_' : '';
       const skey = 'students_' + prefix2 + id;
-      let snap = await getDoc(doc(db,'panel',skey));
-      if(!snap.exists() && prefix2) snap = await getDoc(doc(db,'panel','students_'+id));
+      let snap = await getFreshDoc(doc(db,'panel',skey));
+      if(!snap.exists() && prefix2) snap = await getFreshDoc(doc(db,'panel','students_'+id));
       APP.studentLists[id] = normalizeStudentList(snap.exists() ? (snap.data().list||[]) : []);
       setSyncStatus('ok','Firebase bağlı ✓');
     }catch(e){
@@ -2519,7 +2560,7 @@ setInterval(()=>{ refreshAllStudentsInBackground(false); },30*60*1000);
 
   // Once kullanici listesini yukle (PIN ekrani icin)
   try{
-    const usersSnap=await getDoc(doc(db,'panel','users'));
+    const usersSnap=await getFreshDoc(doc(db,'panel','users'));
     if(usersSnap.exists()) APP.users=usersSnap.data();
   }catch(e){ console.warn('Kullanici listesi yuklenemedi',e); }
 
