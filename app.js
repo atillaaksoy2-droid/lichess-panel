@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.9';
+const APP_VERSION = 'v0.4.10';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -449,13 +449,23 @@ function getBestHistoryStats(username){
     .flatMap(h => (h.items||[]).filter(item=>item.username===u).map(item=>({history:h,item})))
     .sort((a,b)=>(b.history.weekStart||'').localeCompare(a.history.weekStart||''));
   if(!hits.length) return null;
+  const weekHits = new Map();
+  hits.forEach(hit => {
+    const key = hit.history.weekStart || hit.history.id;
+    if(!weekHits.has(key)) weekHits.set(key, hit);
+  });
   const leaderHits = hits.filter(h => (h.item.rank || 99) === 1);
+  const leaderWeeks = new Map();
+  leaderHits.forEach(hit => {
+    const key = hit.history.weekStart || hit.history.id;
+    if(!leaderWeeks.has(key)) leaderWeeks.set(key, hit);
+  });
   return {
-    count: hits.length,
-    last: hits[0].history,
+    count: weekHits.size,
+    last: weekHits.values().next().value.history,
     bestRank: Math.min(...hits.map(h=>h.item.rank || 99)),
-    leaderCount: leaderHits.length,
-    lastLeader: leaderHits[0]?.history || null
+    leaderCount: leaderWeeks.size,
+    lastLeader: leaderWeeks.values().next().value?.history || null
   };
 }
 
@@ -2287,8 +2297,28 @@ window.autoCreateBestGroup = async () => {
   const selectedBest = allStudents.slice(0, count);
   const bestStudents = selectedBest.map(s => s.student);
 
-  // 3. "Haftanın En İyileri" grubunu bul veya oluştur
+  const weekStartDate = weekStart();
+  const weekEndDate = addDaysStr(weekStartDate, 6);
+  const levelLabel = selectedLevel || 'Tümü';
+
+  // 3. "Haftanın En İyileri" grubu için kayıt onayı al
   const groupName = selectedLevel ? `Haftanın En İyileri - ${selectedLevel}` : "Haftanın En İyileri";
+  const preview = selectedBest.slice(0,5).map((s,i)=>{
+    const u = studentUsername(s.student);
+    return `${i+1}. ${s.student.n || APP.liveData[u]?.displayName || u} (${s.pts} puan)`;
+  }).join('\n');
+  const ok = confirm(
+    `${formatWeekRange(weekStartDate, weekEndDate)} haftası için "${groupName}" güncellenecek ve arşive kaydedilecek.\n\n` +
+    `Seviye: ${levelLabel}\nSporcu sayısı: ${bestStudents.length}\n\n` +
+    `${preview}${selectedBest.length>5?'\n...':''}\n\nDevam edilsin mi?`
+  );
+  if(!ok){
+    setSyncStatus('ok', 'Firebase bağlı ✓');
+    showToast('Haftanın en iyileri güncellemesi iptal edildi');
+    return;
+  }
+
+  // 4. "Haftanın En İyileri" grubunu bul veya oluştur
   let targetGroup = APP.groups.find(g => g.name === groupName);
   
   if(!targetGroup) {
@@ -2299,13 +2329,10 @@ window.autoCreateBestGroup = async () => {
     targetGroup.level = selectedLevel || targetGroup.level || 'Genel';
   }
 
-  // 4. Öğrenci listesini güncelle ve kaydet
+  // 5. Öğrenci listesini güncelle ve kaydet
   APP.studentLists[targetGroup.id] = normalizeStudentList(bestStudents);
   APP.activeGid = targetGroup.id;
 
-  const weekStartDate = weekStart();
-  const weekEndDate = addDaysStr(weekStartDate, 6);
-  const levelLabel = selectedLevel || 'Tümü';
   const historyId = `${weekStartDate}_${selectedLevel || 'all'}`;
   const historyEntry = {
     id: historyId,
