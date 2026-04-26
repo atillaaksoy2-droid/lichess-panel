@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.11';
+const APP_VERSION = 'v0.4.12';
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -274,13 +274,13 @@ const APP = {
 };
 
 const BEHAVIOR_BADGES = [
-  { key:'notation', icon:'N', label:'Notasyon', tip:'Turnuvalarda düzenli, anlaşılır notasyon tutar' },
-  { key:'analysis', icon:'A', label:'Analiz', tip:'Turnuva maçlarını Lichess çalışmalarına analiz için kaydeder' },
-  { key:'time', icon:'Z', label:'Zaman', tip:'Maçlarda süresini dengeli kullanır' },
-  { key:'opening', icon:'O', label:'Açılış', tip:'Beyaz ve siyah taşlarla repertuar belirlemiş ve uygular' },
-  { key:'endgame', icon:'S', label:'Oyun Sonu', tip:'Temel piyon ve kale oyun sonu kurallarını bilir' },
-  { key:'fighter', icon:'M', label:'Mücadeleci', tip:'Moral bozmadan mücadele edebilir' },
-  { key:'hunter', icon:'V', label:'Avcı', tip:'Kendisinden 200+ puanlı rakipten puan almıştır' }
+  { key:'notation', icon:'✎', short:'Not', label:'Notasyon', tip:'Turnuvalarda düzenli, anlaşılır notasyon tutar' },
+  { key:'analysis', icon:'◆', short:'Anlz', label:'Analiz', tip:'Turnuva maçlarını Lichess çalışmalarına analiz için kaydeder' },
+  { key:'time', icon:'⏱', short:'Zmn', label:'Zaman', tip:'Maçlarda süresini dengeli kullanır' },
+  { key:'opening', icon:'♙', short:'Açl', label:'Açılış', tip:'Beyaz ve siyah taşlarla repertuar belirlemiş ve uygular' },
+  { key:'endgame', icon:'♜', short:'Son', label:'Oyun Sonu', tip:'Temel piyon ve kale oyun sonu kurallarını bilir' },
+  { key:'fighter', icon:'🔥', short:'Müc', label:'Mücadeleci', tip:'Moral bozmadan mücadele edebilir' },
+  { key:'hunter', icon:'🎯', short:'Avcı', label:'Avcı', tip:'Kendisinden 200+ puanlı rakipten puan almıştır' }
 ];
 const BEHAVIOR_BADGE_MAP = Object.fromEntries(BEHAVIOR_BADGES.map(b => [b.key, b]));
 
@@ -404,8 +404,11 @@ function behaviorBadgesHtml(u, compact=false){
   if(keys.length === 0) return '';
   return keys.map(key => {
     const b = BEHAVIOR_BADGE_MAP[key];
-    const label = compact ? b.icon : b.label;
-    return `<span class="${compact?'fc-behavior-badge':'badge b-behavior'}" title="${escHtml(b.tip)}">${escHtml(label)}</span>`;
+    const content = compact
+      ? `<span class="behavior-symbol">${escHtml(b.icon)}</span><span>${escHtml(b.short)}</span>`
+      : `<span class="behavior-symbol">${escHtml(b.icon)}</span><span>${escHtml(b.label)}</span>`;
+    const cls = compact ? 'fc-behavior-badge' : 'badge b-behavior';
+    return `<span class="${cls} behavior-${escHtml(b.key)}" title="${escHtml(b.label)}: ${escHtml(b.tip)}" data-tip="${escHtml(b.label)}: ${escHtml(b.tip)}">${content}</span>`;
   }).join('');
 }
 function setStudents(arr){
@@ -799,7 +802,7 @@ window.openBehaviorBadgesModal = function(username){
   document.getElementById('behaviorBadgeGrid').innerHTML = BEHAVIOR_BADGES.map(b => `
     <label class="behavior-check">
       <input type="checkbox" value="${escHtml(b.key)}" ${selected.has(b.key)?'checked':''}>
-      <span class="behavior-check-icon">${escHtml(b.icon)}</span>
+      <span class="behavior-check-icon behavior-${escHtml(b.key)}">${escHtml(b.icon)}</span>
       <span>
         <b>${escHtml(b.label)}</b>
         <small>${escHtml(b.tip)}</small>
