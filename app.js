@@ -1,7 +1,33 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, getDocFromServer, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.14';
+const APP_VERSION = 'v0.4.15';
+const THEME_KEY = 'lichessPanelTheme';
+const THEMES = {
+  dark: { className: '', label: 'Klasik Koyu' },
+  wood: { className: 'theme-wood', label: 'Ahşap Satranç' },
+  light: { className: 'theme-light', label: 'Açık Kulüp' }
+};
+
+function normalizeTheme(theme){
+  return THEMES[theme] ? theme : 'dark';
+}
+
+function applyTheme(theme){
+  const selected = normalizeTheme(theme);
+  document.body.classList.remove('theme-wood','theme-light');
+  if(THEMES[selected].className) document.body.classList.add(THEMES[selected].className);
+  const select = document.getElementById('themeSelect');
+  if(select) select.value = selected;
+  return selected;
+}
+
+window.setTheme = function(theme){
+  const selected = applyTheme(theme);
+  localStorage.setItem(THEME_KEY, selected);
+};
+
+applyTheme(localStorage.getItem(THEME_KEY));
 // Firebase Storage kullanılmıyor — fotoğraflar Firestore'da saklanıyor
 
 // ── FIREBASE YAPILANDIRMA ──────────────────────────────
@@ -2579,6 +2605,8 @@ setInterval(()=>{ refreshAllStudentsInBackground(false); },30*60*1000);
 
 // ── BAŞLANGIÇ ────────────────────────────────────────
 (async()=>{
+  applyTheme(localStorage.getItem(THEME_KEY));
+
   const versionBadge = document.getElementById('versionBadge');
   if(versionBadge) versionBadge.textContent = APP_VERSION;
 
