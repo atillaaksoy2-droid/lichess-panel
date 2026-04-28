@@ -314,7 +314,7 @@ const APP = {
   backgroundRefresh: { running: false, loadedAt: 0 }
 };
 
-const BEHAVIOR_BADGES = [
+const ADVANCED_BEHAVIOR_BADGES = [
   { key:'notation', icon:'✎', short:'Not', label:'Notasyon', tip:'Turnuvalarda düzenli, anlaşılır notasyon tutar' },
   { key:'analysis', icon:'◆', short:'Anlz', label:'Analiz', tip:'Turnuva maçlarını Lichess çalışmalarına analiz için kaydeder' },
   { key:'time', icon:'⏱', short:'Zmn', label:'Zaman', tip:'Maçlarda süresini dengeli kullanır' },
@@ -323,7 +323,22 @@ const BEHAVIOR_BADGES = [
   { key:'fighter', icon:'🔥', short:'Müc', label:'Mücadeleci', tip:'Moral bozmadan mücadele edebilir' },
   { key:'hunter', icon:'🎯', short:'Avcı', label:'Avcı', tip:'Kendisinden 200+ puanlı rakipten puan almıştır' }
 ];
-const BEHAVIOR_BADGE_MAP = Object.fromEntries(BEHAVIOR_BADGES.map(b => [b.key, b]));
+const BEGINNER_BEHAVIOR_BADGES = [
+  { key:'rules', icon:'♟', short:'Krl', label:'Kural', tip:'Taşların hareketlerini tam öğrenen ve doğru uygulayan' },
+  { key:'beginner-notation', icon:'✎', short:'Not', label:'Notasyon', tip:'Notasyon tutmayı öğrenen ve uygulayabilen' },
+  { key:'mate', icon:'♚', short:'Mat', label:'Mat', tip:'Temel mat kalıplarını uygulayabilen' },
+  { key:'first-tournament', icon:'🏅', short:'Trn', label:'İlk Turnuva', tip:'İlk resmi turnuvasına katılan' },
+  { key:'defender', icon:'🛡', short:'Sav', label:'Savunmacı', tip:'Taşlarını koruyan ve boşta bırakmayan' },
+  { key:'castling', icon:'♖', short:'Rok', label:'Rok Ustası', tip:'Oyunların çoğunda geç kalmadan rok yapan' }
+];
+const BEHAVIOR_BADGE_SETS = {
+  beginner: BEGINNER_BEHAVIOR_BADGES,
+  advanced: ADVANCED_BEHAVIOR_BADGES
+};
+const BEHAVIOR_BADGES = ADVANCED_BEHAVIOR_BADGES;
+const BEHAVIOR_BADGE_MAP = Object.fromEntries(
+  [...ADVANCED_BEHAVIOR_BADGES, ...BEGINNER_BEHAVIOR_BADGES].map(b => [b.key, b])
+);
 
 function normalizeStudentRecord(student){
   if(typeof student === 'string') return { u: student.trim().toLowerCase() };
@@ -396,6 +411,14 @@ function getStudentLevelInfo(u){
   return { level: 'Genel', group: activeGroup?.name || '' };
 }
 
+function getBehaviorBadgesForLevel(level){
+  return level === 'Başlangıç' ? BEHAVIOR_BADGE_SETS.beginner : BEHAVIOR_BADGE_SETS.advanced;
+}
+
+function getBehaviorBadgeMapForLevel(level){
+  return Object.fromEntries(getBehaviorBadgesForLevel(level).map(b => [b.key, b]));
+}
+
 function collectBestCandidates(levelFilter=null){
   const map = new Map();
   APP.groups.forEach(g => {
@@ -438,7 +461,8 @@ function getStudentLic(u){
 function getStudentBehaviorBadges(u){
   const s = findStudent(u);
   if(!s || !Array.isArray(s.behaviorBadges)) return [];
-  return s.behaviorBadges.filter(key => BEHAVIOR_BADGE_MAP[key]);
+  const levelBadges = getBehaviorBadgeMapForLevel(getStudentLevelInfo(u).level);
+  return s.behaviorBadges.filter(key => levelBadges[key]);
 }
 function behaviorBadgesHtml(u, compact=false){
   const keys = getStudentBehaviorBadges(u);
@@ -838,9 +862,11 @@ window.openBehaviorBadgesModal = function(username){
   const student = findStudent(username);
   if(!student){ showToast('Sporcu bulunamadı', true); return; }
   const selected = new Set(getStudentBehaviorBadges(username));
+  const levelInfo = getStudentLevelInfo(username);
+  const badges = getBehaviorBadgesForLevel(levelInfo.level);
   document.getElementById('behaviorBadgeUser').value = username;
-  document.getElementById('behaviorBadgeTitle').textContent = getStudentDisplayName(username);
-  document.getElementById('behaviorBadgeGrid').innerHTML = BEHAVIOR_BADGES.map(b => `
+  document.getElementById('behaviorBadgeTitle').textContent = `${getStudentDisplayName(username)} · ${levelInfo.level}`;
+  document.getElementById('behaviorBadgeGrid').innerHTML = badges.map(b => `
     <label class="behavior-check">
       <input type="checkbox" value="${escHtml(b.key)}" ${selected.has(b.key)?'checked':''}>
       <span class="behavior-check-icon behavior-${escHtml(b.key)}">${escHtml(b.icon)}</span>
@@ -856,7 +882,10 @@ window.openBehaviorBadgesModal = function(username){
 window.saveBehaviorBadges = async function(){
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli', true); return; }
   const username = document.getElementById('behaviorBadgeUser').value;
-  const selected = [...document.querySelectorAll('#behaviorBadgeGrid input:checked')].map(i => i.value);
+  const levelBadges = getBehaviorBadgeMapForLevel(getStudentLevelInfo(username).level);
+  const selected = [...document.querySelectorAll('#behaviorBadgeGrid input:checked')]
+    .map(i => i.value)
+    .filter(key => levelBadges[key]);
   const list = getStudentList().map(student => {
     if(student.u !== username) return student;
     return normalizeStudentRecord({ ...student, behaviorBadges: selected });
