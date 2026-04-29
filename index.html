@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lichess Koç Paneli</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.4.16">
+<link rel="stylesheet" href="styles.css?v=0.4.17">
 </head>
 <body>
 
@@ -88,7 +88,6 @@
       <button class="icon-btn danger" id="btnDeleteGroup" class="edit-only" onclick="confirmDeleteGroup()">🗑 Grubu Sil</button>
       <button class="icon-btn" id="btnChangePin" onclick="PIN.change()" title="PIN degistir" style="display:none">🔑 PIN</button>
       <button class="icon-btn" id="btnAddUser" onclick="PIN.addUser()" title="Yeni hoca ekle" style="display:none">👤+ Hoca</button>
-      <button class="icon-btn" id="btnClubLogo" onclick="setClubLogo()" title="Kulüp logosu" style="display:none">🏅 Logo</button>
       <button class="icon-btn" id="btnBulkUkd" onclick="openBulkUkdModal()" title="UKD Toplu Güncelle" style="display:none">📊 UKD Güncelle</button>
       <button class="icon-btn" id="btnStudentList" onclick="openStudentListModal()" title="Tüm Sporcu Listesini Al" style="display:none">📋 Liste Al</button>
       <button class="icon-btn" id="btnStats" onclick="openStatsModal()" title="Uygulama kullanım istatistikleri" style="display:none">📈 İstatistikler</button>
@@ -99,8 +98,7 @@
 
   <div class="add-row edit-only">
     <label>Öğrenci Ekle →</label>
-    <input type="text" id="addInput" placeholder="Ad Soyad; lichess; chess.com; UKD; Lisans  veya  lichess_adi (İsim)..." onkeydown="if(event.key==='Enter') addStudent()">
-    <button class="add-btn" onclick="addStudent()">+ Ekle</button>
+    <button class="add-btn" onclick="openStudentModal()">+ Sporcu Bilgileriyle Ekle</button>
     <div class="err" id="addErr"></div>
   </div>
 
@@ -174,7 +172,11 @@
   <div id="viewChesscard" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-size:11px;color:var(--text-muted)">Fotoğraf eklemek için karta tıkla · PNG indirmek için ⬇ butonunu kullan</div>
-      <button class="icon-btn" onclick="downloadAllCards()" title="Tüm kartları indir">⬇ Tümünü İndir</button>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="icon-btn edit-only" onclick="setClubLogo()" title="Kartlara kulüp logosu ekle">🏅 Logo</button>
+        <button class="icon-btn danger edit-only" onclick="removeClubLogo()" title="Kart logosunu kaldır">✕ Logo</button>
+        <button class="icon-btn" onclick="downloadAllCards()" title="Tüm kartları indir">⬇ Tümünü İndir</button>
+      </div>
     </div>
     <div class="chesscard-grid" id="chesscardGrid"></div>
   </div>
@@ -294,6 +296,39 @@
     </div>
   </div>
 </div>
+<div class="modal-bg" id="modalStudent" style="display:none" onclick="if(event.target===this)closeModal('modalStudent')">
+  <div class="modal student-modal">
+    <h3 id="studentModalTitle">Sporcu Bilgileri</h3>
+    <input type="hidden" id="studentEditId">
+    <div class="student-form-grid">
+      <div class="student-form-wide">
+        <label>Ad Soyad</label>
+        <input type="text" id="studentNameInput" placeholder="Örn: Ahmet Yılmaz" maxlength="60">
+      </div>
+      <div>
+        <label>Lichess Kullanıcı Adı</label>
+        <input type="text" id="studentLichessInput" placeholder="lichess_adi" maxlength="40">
+      </div>
+      <div>
+        <label>Chess.com Kullanıcı Adı</label>
+        <input type="text" id="studentChesscomInput" placeholder="chesscom_adi" maxlength="40">
+      </div>
+      <div>
+        <label>UKD</label>
+        <input type="text" id="studentUkdInput" placeholder="Örn: 1450" maxlength="8">
+      </div>
+      <div>
+        <label>Lisans No</label>
+        <input type="text" id="studentLicInput" placeholder="Lisans no" maxlength="30">
+      </div>
+    </div>
+    <div class="err" id="studentFormErr"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('modalStudent')">İptal</button>
+      <button class="modal-ok" onclick="saveStudentModal()">Kaydet</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="modalBehaviorBadges" style="display:none" onclick="if(event.target===this)closeModal('modalBehaviorBadges')">
   <div class="modal behavior-modal">
     <h3>Davranış Rozetleri</h3>
@@ -307,9 +342,9 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.16</div>
+<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.17</div>
 
 <!-- FIREBASE SDK -->
-<script type="module" src="app.js?v=0.4.16"></script>
+<script type="module" src="app.js?v=0.4.17"></script>
 </body>
 </html>

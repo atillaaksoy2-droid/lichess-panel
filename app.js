@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, getDocFromServer, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.16';
+const APP_VERSION = 'v0.4.17';
 const THEME_KEY = 'lichessPanelTheme';
 const THEMES = {
   dark: { className: '', label: 'Klasik Koyu' },
@@ -342,7 +342,8 @@ const APP = {
   scorePeriod: 'week',
   refreshId: 0,
   configUpdatedAt: 0,
-  backgroundRefresh: { running: false, loadedAt: 0 }
+  backgroundRefresh: { running: false, loadedAt: 0 },
+  clubLogoUrl: localStorage.getItem('chess_club_logo') || ''
 };
 
 const ADVANCED_BEHAVIOR_BADGES = [
@@ -872,59 +873,64 @@ function renderHeader(){
 }
 
 // ── ÖĞRENCİ EKLE / ÇIKAR ─────────────────────────────
-window.addStudent=async()=>{
+window.addStudent=()=>openStudentModal();
+
+window.openStudentModal=function(studentId=''){
   if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
-  const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
-  const val=inp.value.trim(); errEl.textContent='';
-  if(!val) return;
+  const s = studentId ? findStudent(studentId) : null;
+  document.getElementById('studentModalTitle').textContent = s ? 'Sporcu Bilgilerini Düzenle' : 'Yeni Sporcu Ekle';
+  document.getElementById('studentEditId').value = s?.u || '';
+  document.getElementById('studentNameInput').value = s?.n || '';
+  document.getElementById('studentLichessInput').value = s?.lichess || '';
+  document.getElementById('studentChesscomInput').value = s?.chesscom || '';
+  document.getElementById('studentUkdInput').value = s?.ukd || '';
+  document.getElementById('studentLicInput').value = s?.lic || '';
+  document.getElementById('studentFormErr').textContent = '';
+  document.getElementById('modalStudent').style.display = 'flex';
+  setTimeout(()=>document.getElementById('studentNameInput').focus(),50);
+};
 
-  let studentObj;
-  if(val.includes(';') || val.includes('|')){
-    const parts = val.split(/[;|]/).map(x => x.trim());
-    const [name, lichess, chesscom, ukd, lic] = parts;
-    studentObj = {
-      id: (lichess && normalizeAccountName(lichess)) || (chesscom && `cc:${normalizeAccountName(chesscom)}`) || `manual:${Date.now()}`,
-      n: name || '',
-      lichess: normalizeAccountName(lichess || ''),
-      chesscom: normalizeAccountName(chesscom || ''),
-      ukd: ukd || '',
-      lic: lic || ''
-    };
-  } else {
-    const matches = [...val.matchAll(/\((.+?)\)/g)];
-    if(matches.length > 0){
-      const lichess = normalizeAccountName(val.split('(')[0]);
-      studentObj = {
-        id: lichess,
-        lichess,
-        n: matches[0] ? matches[0][1].trim() : '',
-        ukd: matches[1] ? matches[1][1].trim() : '',
-        lic: matches[2] ? matches[2][1].trim() : ''
-      };
-    } else {
-      const lichess = normalizeAccountName(val);
-      studentObj = { id: lichess, lichess };
-    }
+window.saveStudentModal=async function(){
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  if(!APP.activeGid){ showToast('Önce bir grup seç',true); return; }
+  const errEl = document.getElementById('studentFormErr');
+  const editId = document.getElementById('studentEditId').value;
+  const current = editId ? findStudent(editId) : null;
+  const name = document.getElementById('studentNameInput').value.trim();
+  const lichess = normalizeAccountName(document.getElementById('studentLichessInput').value);
+  const chesscom = normalizeAccountName(document.getElementById('studentChesscomInput').value);
+  const ukd = document.getElementById('studentUkdInput').value.trim();
+  const lic = document.getElementById('studentLicInput').value.trim();
+  const id = editId || lichess || (chesscom ? `cc:${chesscom}` : `manual:${Date.now()}`);
+  const normalized = normalizeStudentRecord({
+    ...(current || {}),
+    id,
+    u: id,
+    n: name,
+    lichess,
+    chesscom,
+    ukd,
+    lic
+  });
+  if(!normalized){
+    errEl.textContent = '⚠ Ad soyad veya en az bir platform hesabı girin.';
+    return;
   }
-
-  const normalized = normalizeStudentRecord(studentObj);
-  if(!normalized){ errEl.textContent='⚠ Sporcu adı veya en az bir kullanıcı adı girin.'; return; }
-  const students=getStudents();
-  if(students.includes(normalized.u)){ errEl.textContent='⚠ Bu sporcu zaten listede.'; return; }
-  inp.disabled=true;
-  try{
-    const list = getStudentList();
-    list.push(normalized);
-    APP.studentLists[APP.activeGid] = normalizeStudentList(list);
-    fbSaveStudents(APP.activeGid);
-    
-    inp.value='';
-    renderGroupBar(); renderGrid();
-    loadOneStudent(normalized.u,0);
-    showToast(`${normalized.n || normalized.lichess || normalized.chesscom || 'Sporcu'} eklendi ✓`);
-  }catch(e){ errEl.textContent=e.name==='AbortError'?'✗ Zaman aşımı.':'✗ Bağlantı hatası.'; }
-  finally{ inp.disabled=false; inp.focus(); }
+  const list = getStudentList();
+  if(!editId && list.some(s => s.u === normalized.u)){
+    errEl.textContent = '⚠ Bu sporcu zaten listede.';
+    return;
+  }
+  APP.studentLists[APP.activeGid] = editId
+    ? normalizeStudentList(list.map(s => s.u === editId ? normalized : s))
+    : normalizeStudentList([...list, normalized]);
+  await fbSaveStudents(APP.activeGid);
+  delete APP.liveData[normalized.u];
+  closeModal('modalStudent');
+  renderGroupBar(); renderGrid();
+  loadOneStudent(normalized.u,0).then(()=>{ updateOneCard(normalized.u,0); renderChamps(); renderScoreTable(); if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards(); });
+  showToast(`${normalized.n || normalized.lichess || normalized.chesscom || 'Sporcu'} kaydedildi ✓`);
 };
 
 window.retryStudent=async(username)=>{
@@ -1735,6 +1741,7 @@ function buildCard(username,d,rank){
             </div>
           </div>
           <div class="card-actions">
+            <button class="rm-btn student-edit-btn edit-only" data-editstudent="${escHtml(username)}" title="Sporcu bilgileri">✎</button>
             <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Çıkar">✕</button>
           </div>
         </div>
@@ -1815,8 +1822,9 @@ function buildCard(username,d,rank){
             </div>
           </div>
         </div>
-        <div class="card-actions">
+          <div class="card-actions">
           <div class="s-dot ${d.online?'on':''}" title="${d.online?'Çevrimiçi':'Çevrimdışı'}"></div>
+          <button class="rm-btn student-edit-btn edit-only" data-editstudent="${escHtml(username)}" title="Sporcu bilgileri">✎</button>
           <button class="rm-btn behavior-edit-btn edit-only" data-badgesuser="${escHtml(username)}" title="Davranış rozetleri">🏅</button>
           <button class="rm-btn" data-rmuser="${escHtml(username)}" title="Çıkar">✕</button>
         </div>
@@ -1894,6 +1902,7 @@ window.updateCrit=async(key,val)=>{
   APP.crit[key]=Math.max(0,parseFloat(val)||0); await fbSaveConfig(); renderGrid(); renderChamps(); renderScoreTable(); 
 };
 window.setClubLogo=()=>{
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
   const input=document.createElement('input');
   input.type='file'; input.accept='image/*';
   input.onchange=e=>{
@@ -1908,6 +1917,14 @@ window.setClubLogo=()=>{
     reader.readAsDataURL(file);
   };
   input.click();
+};
+window.removeClubLogo=()=>{
+  if(!PIN.getIsAdmin()){ showToast('Bu işlem için yönetici girişi gerekli',true); return; }
+  if(!APP.clubLogoUrl){ showToast('Kayıtlı logo yok', true); return; }
+  APP.clubLogoUrl='';
+  localStorage.removeItem('chess_club_logo');
+  if(document.getElementById('viewChesscard').style.display!=='none') renderChesscards();
+  showToast('Kart logosu kaldırıldı ✓');
 };
 
 window.toggleBullet=async(checked)=>{
@@ -1953,6 +1970,8 @@ function showToast(msg,isErr=false){ const t=document.getElementById('toast'); t
 
 // Event delegation
 document.addEventListener('click',e=>{
+  const edit=e.target.closest('.student-edit-btn');
+  if(edit){ const u=edit.dataset.editstudent; if(u) openStudentModal(u); return; }
   const eb=e.target.closest('.behavior-edit-btn');
   if(eb){ const u=eb.dataset.badgesuser; if(u) openBehaviorBadgesModal(u); }
   const b=e.target.closest('.rm-btn');
@@ -2105,7 +2124,6 @@ window.PIN = (function(){
       const al=document.getElementById('btnAdminLogin'); if(al) al.style.display='none';
       const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='flex';
       const bau=document.getElementById('btnAddUser');  if(bau) bau.style.display='flex';
-      const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='flex';
       const buk=document.getElementById('btnBulkUkd');  if(buk) buk.style.display='flex';
       const bsl=document.getElementById('btnStudentList'); if(bsl) bsl.style.display='flex';
       const bst=document.getElementById('btnStats');    if(bst) bst.style.display='flex';
@@ -2160,7 +2178,6 @@ window.PIN = (function(){
     const bp=document.getElementById('btnChangePin'); if(bp) bp.style.display='none';
     const bl=document.getElementById('btnLogout');   if(bl) bl.style.display='none';
     const bau=document.getElementById('btnAddUser'); if(bau) bau.style.display='none';
-    const bcl=document.getElementById('btnClubLogo'); if(bcl) bcl.style.display='none';
     const buk=document.getElementById('btnBulkUkd'); if(buk) buk.style.display='none';
     const bsl=document.getElementById('btnStudentList'); if(bsl) bsl.style.display='none';
     const bst=document.getElementById('btnStats');    if(bst) bst.style.display='none';
@@ -2330,6 +2347,7 @@ async function renderChesscards(){
     const levelInfo = getStudentLevelInfo(u);
     const levelCls = levelSlug(levelInfo.level);
     const behaviorFcHtml = behaviorBadgesHtml(u, true);
+    const logoHtml = APP.clubLogoUrl ? `<div class="fc-club-logo"><img src="${APP.clubLogoUrl}" alt="Kulüp logosu"></div>` : '';
 
     const card = document.createElement('div');
     card.className = `chesscard ${fcCls}`;
@@ -2344,6 +2362,7 @@ async function renderChesscards(){
         <div class="fc-level-mark lvl-${levelCls}" title="${escHtml(levelInfo.group || levelInfo.level)}">
           <span class="fc-level-piece">${levelPiece(levelInfo.level)}</span>
         </div>
+        ${logoHtml}
         
         <div class="fc-photo-wrap" onclick="fcPhotoClick('${escHtml(u)}')">
           <div class="fc-photo-container" id="fc-photo-${idx}">
