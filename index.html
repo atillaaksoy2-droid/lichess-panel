@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lichess Koç Paneli</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.4.17">
+<link rel="stylesheet" href="styles.css?v=0.4.18">
 </head>
 <body>
 
@@ -175,6 +175,7 @@
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         <button class="icon-btn edit-only" onclick="setClubLogo()" title="Kartlara kulüp logosu ekle">🏅 Logo</button>
         <button class="icon-btn danger edit-only" onclick="removeClubLogo()" title="Kart logosunu kaldır">✕ Logo</button>
+        <button class="icon-btn" onclick="downloadCardsPdf()" title="Kartları A4 PDF olarak indir">📄 A4 PDF</button>
         <button class="icon-btn" onclick="downloadAllCards()" title="Tüm kartları indir">⬇ Tümünü İndir</button>
       </div>
     </div>
@@ -342,9 +343,9 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.17</div>
+<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.18</div>
 
 <!-- FIREBASE SDK -->
-<script type="module" src="app.js?v=0.4.17"></script>
+<script type="module" src="app.js?v=0.4.18"></script>
 </body>
 </html>

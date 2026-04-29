@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, getDocFromServer, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.17';
+const APP_VERSION = 'v0.4.18';
 const THEME_KEY = 'lichessPanelTheme';
 const THEMES = {
   dark: { className: '', label: 'Klasik Koyu' },
@@ -2280,11 +2280,12 @@ window.fcPreparePhoto = function(dataUrl) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Kart boyutuna uygun ve Firebase 1MB doküman limitini aşmayacak şekilde boyutu optimize edelim
-      const targetWidth = 240; 
-      const scale = targetWidth / img.width;
-      canvas.width = targetWidth;
-      canvas.height = img.height * scale;
+      // Kart ve PDF çıktısı için daha yüksek çözünürlük, oranı koruyarak optimize edilir.
+      const maxWidth = 420;
+      const maxHeight = 620;
+      const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
 
       // KANVASIN TAMAMEN ŞEFFAF OLDUĞUNDAN EMİN OLALIM
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2292,9 +2293,8 @@ window.fcPreparePhoto = function(dataUrl) {
       // Fotoğrafı çiz (Arka plan eklemeden)
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-      // WEBP OLARAK KAYDET (Şeffaflığı korur, PNG'den çok daha az yer kaplar)
-      // Varsayılan kalite (0.85) ile boyut ciddi oranda düşer
-      resolve(canvas.toDataURL('image/webp', 0.85));
+      // WEBP olarak sakla; kaliteyi baskı/PDF çıktısı için biraz yüksek tut.
+      resolve(canvas.toDataURL('image/webp', 0.92));
     };
     img.src = dataUrl;
   });
@@ -2440,62 +2440,97 @@ window.fcPhotoClick = function(username){
   input.click();
 };
 // Tek kart PNG indir
-window.downloadCard = async function(username){
+const CARD_EXPORT = {
+  targetW: 1000,
+  targetH: 1550,
+  renderW: 200,
+  scale: 5
+};
+CARD_EXPORT.renderH = Math.round(CARD_EXPORT.renderW * CARD_EXPORT.targetH / CARD_EXPORT.targetW);
+
+async function ensureHtml2Canvas(){
+  if(!window.html2canvas){
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  }
+}
+
+async function ensureJsPdf(){
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  }
+}
+
+async function waitCardImages(card){
+  const imgs = card.querySelectorAll('img');
+  await Promise.all(Array.from(imgs).map(img =>
+    img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
+  ));
+}
+
+async function captureChesscardCanvas(username){
   const card = document.querySelector(`.chesscard[data-user="${CSS.escape(username)}"]`);
-  if(!card){ showToast('Kart bulunamadı',true); return; }
+  if(!card) throw new Error('Kart bulunamadı');
+  await ensureHtml2Canvas();
+
+  const originalStyle = card.style.cssText;
+  const hideEls = card.querySelectorAll('.fc-screen-only, .fc-delete-btn');
+  hideEls.forEach(el=>{ el.style.visibility='hidden'; });
+
+  card.style.transform  = 'none';
+  card.style.transition = 'none';
+  card.style.width      = CARD_EXPORT.renderW + 'px';
+  card.style.height     = CARD_EXPORT.renderH + 'px';
+  card.style.overflow   = 'hidden';
+
   try{
-    if(!window.html2canvas){
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-    }
-
-    const TARGET_W = 1000;
-    const TARGET_H = 1550;
-
-    // Kart stilini geçici olarak sabit boyuta getir
-    const originalStyle = card.style.cssText;
-    const RENDER_W = 200; // ekrandaki kart genişliği
-    const RENDER_H = Math.round(RENDER_W * TARGET_H / TARGET_W); // 310px
-
-    const hideEls = card.querySelectorAll('.fc-screen-only, .fc-delete-btn');
-    hideEls.forEach(el=>{ el.style.visibility='hidden'; });
-
-    card.style.transform  = 'none';
-    card.style.transition = 'none';
-    card.style.width      = RENDER_W + 'px';
-    card.style.height     = RENDER_H + 'px';
-    card.style.overflow   = 'hidden';
-
-    // img etiketlerinin yüklenmesini bekle
-    const imgs = card.querySelectorAll('img');
-    await Promise.all(Array.from(imgs).map(img =>
-      img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
-    ));
-
-    // html2canvas ile yakalama
-    const captured = await html2canvas(card, {
+    await waitCardImages(card);
+    return await html2canvas(card, {
       backgroundColor: null,
-      scale: 4,
+      scale: CARD_EXPORT.scale,
       useCORS: true,
       logging: false,
       allowTaint: true,
       imageTimeout: 15000,
-      width: RENDER_W,
-      height: RENDER_H,
-      onclone: (clonedDoc) => {
+      width: CARD_EXPORT.renderW,
+      height: CARD_EXPORT.renderH,
+      onclone: clonedDoc => {
         const clonedCard = clonedDoc.querySelector(`.chesscard[data-user="${CSS.escape(username)}"]`);
-        if(clonedCard){
-          clonedCard.style.transform = 'none';
-          clonedCard.style.boxShadow = 'none';
-        }
+        if(!clonedCard) return;
+        clonedCard.style.transform = 'none';
+        clonedCard.style.boxShadow = 'none';
+        clonedCard.style.width = CARD_EXPORT.renderW + 'px';
+        clonedCard.style.height = CARD_EXPORT.renderH + 'px';
+        clonedCard.querySelectorAll('.fc-screen-only, .fc-delete-btn').forEach(el => {
+          el.style.visibility = 'hidden';
+        });
       }
     });
-
-    // Orijinal stilleri geri yükle
+  } finally {
     card.style.cssText = originalStyle;
     hideEls.forEach(el=>{ el.style.visibility=''; });
+  }
+}
 
-    // Sabit 1000x1550 canvas'a çiz (captured zaten 1000x310 ~ ama biz tam 1550 istiyoruz)
-    // captured: 1000 x (TARGET_W/RENDER_W * RENDER_H) = 1000 x 1550 — zaten doğru boyut
+function sortedChesscardUsers(){
+  const period = APP.scorePeriod || 'week';
+  return getStudents()
+    .filter(u => APP.liveData[u] && !APP.liveData[u].error)
+    .map(u => ({ u, pts: calcScore(u, period) }))
+    .sort((a,b) => b.pts - a.pts)
+    .map(x => x.u);
+}
+
+function safeFilePart(text){
+  return String(text || 'sporcu-kartlari')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .slice(0, 80) || 'sporcu-kartlari';
+}
+
+window.downloadCard = async function(username){
+  try{
+    const captured = await captureChesscardCanvas(username);
     const link = document.createElement('a');
     link.download = `chesscard-${username}.png`;
     link.href = captured.toDataURL('image/png');
@@ -2506,11 +2541,9 @@ window.downloadCard = async function(username){
 
 // Tüm kartları indir
 window.downloadAllCards = async function(){
-  const students = getStudents().filter(u=>APP.liveData[u]&&!APP.liveData[u].error);
+  const students = sortedChesscardUsers();
   if(students.length===0) return;
-  if(!window.html2canvas){
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-  }
+  await ensureHtml2Canvas();
   showToast('Kartlar hazırlanıyor…');
   for(const u of students){
     await downloadCard(u);
@@ -2518,9 +2551,63 @@ window.downloadAllCards = async function(){
   }
 };
 
+// A4 baskıya hazır PDF indir
+window.downloadCardsPdf = async function(){
+  const students = sortedChesscardUsers();
+  if(students.length===0){ showToast('PDF için kart bulunamadı', true); return; }
+  try{
+    if(document.getElementById('viewChesscard').style.display === 'none'){
+      switchView('chesscard');
+      await new Promise(r => setTimeout(r, 80));
+    } else {
+      await renderChesscards();
+    }
+    await ensureHtml2Canvas();
+    await ensureJsPdf();
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4', compress:true });
+    const pageW = 210;
+    const pageH = 297;
+    const cardW = 88;
+    const cardH = cardW * CARD_EXPORT.targetH / CARD_EXPORT.targetW;
+    const gapX = 8;
+    const gapY = 6;
+    const marginX = (pageW - (cardW * 2 + gapX)) / 2;
+    const marginY = (pageH - (cardH * 2 + gapY)) / 2;
+
+    showToast('A4 PDF hazırlanıyor...');
+    for(let i=0; i<students.length; i++){
+      if(i > 0 && i % 4 === 0) pdf.addPage();
+      const slot = i % 4;
+      const x = marginX + (slot % 2) * (cardW + gapX);
+      const y = marginY + Math.floor(slot / 2) * (cardH + gapY);
+      const canvas = await captureChesscardCanvas(students[i]);
+      const imgData = canvas.toDataURL('image/jpeg', 0.96);
+      pdf.addImage(imgData, 'JPEG', x, y, cardW, cardH, undefined, 'SLOW');
+      if(students.length > 4) showToast(`PDF hazırlanıyor... ${i + 1}/${students.length}`);
+    }
+
+    const groupName = APP.groups?.[APP.activeGid]?.name || 'sporcu-kartlari';
+    pdf.save(`${safeFilePart(groupName)}-a4-kartlar.pdf`);
+    showToast('A4 PDF indirildi ✓');
+  }catch(e){
+    showToast('PDF hatası: ' + e.message, true);
+    console.error(e);
+  }
+};
+
 function loadScript(src){
   return new Promise((res,rej)=>{
-    const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej;
+    const existing = Array.from(document.scripts).find(s => s.src === src);
+    if(existing){
+      if(existing.dataset.loaded === '1') return res();
+      existing.addEventListener('load', res, { once:true });
+      existing.addEventListener('error', rej, { once:true });
+      return;
+    }
+    const s=document.createElement('script'); s.src=src; s.onerror=rej;
+    s.onload = () => { s.dataset.loaded = '1'; res(); };
     document.head.appendChild(s);
   });
 }
