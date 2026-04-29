@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lichess Koç Paneli</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.4.15">
+<link rel="stylesheet" href="styles.css?v=0.4.16">
 </head>
 <body>
 
@@ -99,7 +99,7 @@
 
   <div class="add-row edit-only">
     <label>Öğrenci Ekle →</label>
-    <input type="text" id="addInput" placeholder="lichess_adi (İsim) (UKD) (Lisans)..." onkeydown="if(event.key==='Enter') addStudent()">
+    <input type="text" id="addInput" placeholder="Ad Soyad; lichess; chess.com; UKD; Lisans  veya  lichess_adi (İsim)..." onkeydown="if(event.key==='Enter') addStudent()">
     <button class="add-btn" onclick="addStudent()">+ Ekle</button>
     <div class="err" id="addErr"></div>
   </div>
@@ -254,7 +254,7 @@
           <tr>
             <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">Grup</th>
             <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">Ad Soyad</th>
-            <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">Lichess Adı</th>
+            <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">Hesaplar</th>
             <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">UKD</th>
             <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">Lisans No</th>
           </tr>
@@ -307,9 +307,9 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.15</div>
+<div class="version-badge" id="versionBadge" title="Yuklu uygulama surumu">v0.4.16</div>
 
 <!-- FIREBASE SDK -->
-<script type="module" src="app.js?v=0.4.15"></script>
+<script type="module" src="app.js?v=0.4.16"></script>
 </body>
 </html>

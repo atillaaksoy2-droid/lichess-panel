@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, getDocFromServer, setDoc, deleteDoc, onSnapshot, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const APP_VERSION = 'v0.4.15';
+const APP_VERSION = 'v0.4.16';
 const THEME_KEY = 'lichessPanelTheme';
 const THEMES = {
   dark: { className: '', label: 'Klasik Koyu' },
@@ -305,8 +305,13 @@ function fbListen(){
     for(const [u,days] of Object.entries(newAct)){
       if(!APP.actLog[u]) APP.actLog[u]={};
       for(const [d,v] of Object.entries(days)){
-        const p=APP.actLog[u][d]||{games:0,puzzles:0};
-        APP.actLog[u][d]={games:Math.max(p.games,v.games||0),puzzles:Math.max(p.puzzles,v.puzzles||0)};
+        const p=APP.actLog[u][d]||{games:0,puzzles:0,wins:0};
+        APP.actLog[u][d]={
+          ...p,
+          games:Math.max(p.games,v.games||0),
+          puzzles:Math.max(p.puzzles,v.puzzles||0),
+          wins:Math.max(p.wins||0,v.wins||0)
+        };
       }
     }
     renderGrid(); renderChamps(); renderScoreTable(); renderBestHistory();
@@ -366,16 +371,45 @@ const BEHAVIOR_BADGE_MAP = Object.fromEntries(
   [...ADVANCED_BEHAVIOR_BADGES, ...BEGINNER_BEHAVIOR_BADGES].map(b => [b.key, b])
 );
 
+function slugifyId(text){
+  return String(text || 'sporcu')
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/ı/g,'i')
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'') || 'sporcu';
+}
+
+function normalizeAccountName(value){
+  const raw = String(value || '').trim();
+  if(!raw) return '';
+  return raw
+    .replace(/^https?:\/\/(www\.)?lichess\.org\/@?\//i,'')
+    .replace(/^https?:\/\/(www\.)?chess\.com\/member\//i,'')
+    .replace(/^@/,'')
+    .trim()
+    .toLowerCase();
+}
+
 function normalizeStudentRecord(student){
-  if(typeof student === 'string') return { u: student.trim().toLowerCase() };
+  if(typeof student === 'string'){
+    const u = normalizeAccountName(student);
+    return u ? { id: u, u, lichess: u, platform: 'lichess' } : null;
+  }
   if(student && typeof student === 'object'){
-    const u = String(student.u || student.username || '').trim().toLowerCase();
-    if(!u) return null;
-    const out = { ...student, u };
+    const lichess = normalizeAccountName(student.lichess || student.l || student.u || student.username || '');
+    const chesscom = normalizeAccountName(student.chesscom || student.chessCom || student.cc || '');
+    const name = String(student.n || student.name || student.realName || '').trim();
+    const id = String(student.id || student.sid || student.u || (lichess ? lichess : chesscom ? `cc:${chesscom}` : `manual:${slugifyId(name)}`)).trim();
+    if(!id || (!name && !lichess && !chesscom)) return null;
+    const out = { ...student, id, u: id, lichess, chesscom };
+    if(name) out.n = name;
+    out.platform = lichess ? (chesscom ? 'both' : 'lichess') : chesscom ? 'chesscom' : 'manual';
     out.behaviorBadges = Array.isArray(out.behaviorBadges)
       ? [...new Set(out.behaviorBadges)].filter(key => BEHAVIOR_BADGE_MAP[key])
       : [];
-    delete out.username;
+    delete out.username; delete out.l; delete out.cc; delete out.chessCom; delete out.name; delete out.realName; delete out.sid;
     return out;
   }
   return null;
@@ -466,6 +500,27 @@ function hasFreshLiveData(username, maxAge=45*60*1000){
 
 function getStudents(){ 
   return getStudentList().map(s => s.u);
+}
+function getStudentAccounts(u){
+  const s = findStudent(u);
+  return {
+    lichess: s?.lichess || '',
+    chesscom: s?.chesscom || ''
+  };
+}
+function getStudentProfileUrl(u){
+  const a = getStudentAccounts(u);
+  if(a.lichess) return `https://lichess.org/@/${encodeURIComponent(a.lichess)}`;
+  if(a.chesscom) return `https://www.chess.com/member/${encodeURIComponent(a.chesscom)}`;
+  return '';
+}
+function studentPlatformHtml(u){
+  const a = getStudentAccounts(u);
+  const parts = [];
+  if(a.lichess) parts.push(`<span class="platform-tag lichess">Lichess: ${escHtml(a.lichess)}</span>`);
+  if(a.chesscom) parts.push(`<span class="platform-tag chesscom">Chess.com: ${escHtml(a.chesscom)}</span>`);
+  if(parts.length === 0) parts.push('<span class="platform-tag manual">Manuel Kart</span>');
+  return parts.join('');
 }
 function getStudentDisplayName(u){
   const s = findStudent(u);
@@ -657,7 +712,7 @@ function calcScore(username, period='week'){
     if(period==='week' && daysBetween(todayStr(),date)>6) continue;
     const games=entry.games||0, puzzles=entry.puzzles||0;
     const d=APP.liveData[username];
-    const wins=(date===todayStr()&&d&&!d.error)?(d.wins||0):0;
+    const wins=(date===todayStr()&&d&&!d.error)?Math.max(entry.wins||0,d.wins||0):(entry.wins||0);
     pts += wins*APP.crit.ptWin + Math.max(0,games-wins)*APP.crit.ptPlay;
     pts += puzzles*APP.crit.ptPuzzle;
     if(games>=APP.crit.minDailyGames)   pts+=APP.crit.ptDailyBonus;
@@ -823,43 +878,51 @@ window.addStudent=async()=>{
   const inp=document.getElementById('addInput'), errEl=document.getElementById('addErr');
   const val=inp.value.trim(); errEl.textContent='';
   if(!val) return;
-  
-  // Format: "user (Real Name) (UKD) (Lic)" veya sadece "user"
-  let user = val, realName = null, ukd = null, lic = null;
-  
-  // Parantez içindeki verileri yakala: user (İsim) (UKD) (Lisans)
-  const matches = [...val.matchAll(/\((.+?)\)/g)];
-  if(matches.length > 0){
-    user = val.split('(')[0].trim().toLowerCase();
-    realName = matches[0] ? matches[0][1].trim() : null;
-    ukd = matches[1] ? matches[1][1].trim() : null;
-    lic = matches[2] ? matches[2][1].trim() : null;
+
+  let studentObj;
+  if(val.includes(';') || val.includes('|')){
+    const parts = val.split(/[;|]/).map(x => x.trim());
+    const [name, lichess, chesscom, ukd, lic] = parts;
+    studentObj = {
+      id: (lichess && normalizeAccountName(lichess)) || (chesscom && `cc:${normalizeAccountName(chesscom)}`) || `manual:${Date.now()}`,
+      n: name || '',
+      lichess: normalizeAccountName(lichess || ''),
+      chesscom: normalizeAccountName(chesscom || ''),
+      ukd: ukd || '',
+      lic: lic || ''
+    };
   } else {
-    user = val.toLowerCase();
+    const matches = [...val.matchAll(/\((.+?)\)/g)];
+    if(matches.length > 0){
+      const lichess = normalizeAccountName(val.split('(')[0]);
+      studentObj = {
+        id: lichess,
+        lichess,
+        n: matches[0] ? matches[0][1].trim() : '',
+        ukd: matches[1] ? matches[1][1].trim() : '',
+        lic: matches[2] ? matches[2][1].trim() : ''
+      };
+    } else {
+      const lichess = normalizeAccountName(val);
+      studentObj = { id: lichess, lichess };
+    }
   }
-  
+
+  const normalized = normalizeStudentRecord(studentObj);
+  if(!normalized){ errEl.textContent='⚠ Sporcu adı veya en az bir kullanıcı adı girin.'; return; }
   const students=getStudents();
-  if(students.includes(user)){ errEl.textContent='⚠ Bu kullanıcı zaten listede.'; return; }
+  if(students.includes(normalized.u)){ errEl.textContent='⚠ Bu sporcu zaten listede.'; return; }
   inp.disabled=true;
   try{
-    const res=await fetchWT(`https://lichess.org/api/user/${user}`,{},8000);
-    if(!res.ok){ errEl.textContent='✗ Kullanıcı bulunamadı.'; return; }
-    const data=await res.json();
-    
-    // Listeye ekle (obje olarak)
     const list = getStudentList();
-    const studentObj = { u: user };
-    if(realName) studentObj.n = realName;
-    if(ukd) studentObj.ukd = ukd;
-    if(lic) studentObj.lic = lic;
-    
-    list.push(normalizeStudentRecord(studentObj));
+    list.push(normalized);
     APP.studentLists[APP.activeGid] = normalizeStudentList(list);
     fbSaveStudents(APP.activeGid);
     
     inp.value='';
     renderGroupBar(); renderGrid();
-    loadOneStudent(user,0); showToast(`${realName || data.username} eklendi ✓`);
+    loadOneStudent(normalized.u,0);
+    showToast(`${normalized.n || normalized.lichess || normalized.chesscom || 'Sporcu'} eklendi ✓`);
   }catch(e){ errEl.textContent=e.name==='AbortError'?'✗ Zaman aşımı.':'✗ Bağlantı hatası.'; }
   finally{ inp.disabled=false; inp.focus(); }
 };
@@ -1028,7 +1091,7 @@ async function fetchAndParseGames(username, fetchSince, todayMidnight) {
   return { wins, losses, draws, recent, topOpenings };
 }
 
-async function fetchAndParseActivity(username) {
+async function fetchAndParseActivity(username, logKey=username) {
   let puzzlesSolved = 0;
   const today = todayStr();
   const cacheKey = `${username}:${today}:${APP.crit.countBullet ? 1 : 0}`;
@@ -1051,10 +1114,10 @@ async function fetchAndParseActivity(username) {
     return puzzlesSolved;
   }
 
-  if (!APP.actLog[username]) APP.actLog[username] = {};
+  if (!APP.actLog[logKey]) APP.actLog[logKey] = {};
   for (let di=0; di<=14; di++) {
     const dk = dateStr(-di);
-    if (dk !== today) APP.actLog[username][dk] = {games:0, puzzles:0};
+    if (dk !== today && !APP.actLog[logKey][dk]) APP.actLog[logKey][dk] = {games:0, puzzles:0};
   }
 
   for (const entry of aData) {
@@ -1086,8 +1149,8 @@ async function fetchAndParseActivity(username) {
     const ep = getPuzzleCount(entry);
 
     if (eDate === today) {
-      const prevT = APP.actLog[username][today] || {games:0, puzzles:0, wins:0};
-      APP.actLog[username][today] = {games:prevT.games, puzzles:ep, wins:prevT.wins||0};
+      const prevT = APP.actLog[logKey][today] || {games:0, puzzles:0, wins:0};
+      APP.actLog[logKey][today] = {...prevT, lPuzzles:ep, puzzles:Math.max(prevT.puzzles||0, ep), wins:prevT.wins||0};
     } else {
       let ew=0;
       if (entry.games && typeof entry.games==='object') {
@@ -1098,62 +1161,222 @@ async function fetchAndParseActivity(username) {
           if (v && typeof v==='object' && !skip.has(fmt)) ew += (v.win||0);
         }
       }
-      APP.actLog[username][eDate] = {games:eg, puzzles:ep, wins:ew};
+      const prev = APP.actLog[logKey][eDate] || {games:0,puzzles:0,wins:0};
+      APP.actLog[logKey][eDate] = {
+        ...prev,
+        lGames: eg,
+        lWins: ew,
+        lPuzzles: ep,
+        games: eg + (prev.cGames||0),
+        puzzles: Math.max(prev.puzzles||0, ep),
+        wins: ew + (prev.cWins||0)
+      };
     }
   }
   APP.activityCache[cacheKey] = { loadedAt: Date.now(), puzzlesSolved };
   return puzzlesSolved;
 }
 
-async function loadOneStudent(username,myId){
-  try{
-    const userRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},12000);
-    if(!userRes.ok) throw new Error('not_found');
-    const user=await userRes.json();
-    if(myId&&myId!==APP.refreshId) return;
+async function loadLichessStudent(account, logKey, myId){
+  const userRes=await fetchWT(`https://lichess.org/api/user/${account}`,{},12000);
+  if(!userRes.ok) throw new Error('lichess_not_found');
+  const user=await userRes.json();
+  if(myId&&myId!==APP.refreshId) return null;
 
-    let online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
-    const now=new Date(), todayMidnight=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
-    const weekAgo = todayMidnight - 7 * 24 * 60 * 60 * 1000;
+  const online=user.online===true||(user.seenAt&&(Date.now()-user.seenAt)<5*60*1000);
+  const now=new Date(), todayMidnight=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+  const weekAgo = todayMidnight - 7 * 24 * 60 * 60 * 1000;
+  const { wins, losses, draws, recent, topOpenings } = await fetchAndParseGames(account, weekAgo, todayMidnight);
+  if(myId&&myId!==APP.refreshId) return null;
 
-    // 1. Maçları Çek ve Ayıkla (Modüler Fonksiyon)
-    const { wins, losses, draws, recent, topOpenings } = await fetchAndParseGames(username, weekAgo, todayMidnight);
-    if(myId&&myId!==APP.refreshId) return;
-
-    // 2. Rating'leri Hesapla
-    const ratings={}, perf=user.perfs||{};
-    for(const k of ['bullet','blitz','rapid','classical']) if(perf[k]&&perf[k].games>0) ratings[k]={int:perf[k].rating,prog:perf[k].prog||0};
-    let puzzleRating=perf.puzzle?perf.puzzle.rating:null;
-
-    // 3. Aktivite / Bulmaca Çek ve Ayıkla (Modüler Fonksiyon)
-    let puzzlesSolved=0;
-    try{
-      puzzlesSolved = await fetchAndParseActivity(username);
-    }catch(e){ console.warn(`[${username}] aktivite:`,e.message); }
-    if(myId&&myId!==APP.refreshId) return;
-
-    APP.liveData[username]={displayName:user.username,title:user.title||'',online,ratings,wins,losses,draws,puzzlesSolved,puzzleRating,recentGames:recent,topOpenings,loadedAt:Date.now()};
-    logActivity(username,wins+losses+draws,puzzlesSolved,wins);
-  }catch(err){
-    console.warn(`[${username}]:`,err.message);
-    // İlk hata — 3 saniye bekleyip bir kez daha dene
-    if(!APP.liveData[username] || !APP.liveData[username].retried){
-      await new Promise(r=>setTimeout(r,8000)); // Rate limit için bekleme
-      if(myId && myId!==APP.refreshId) return; // grup değiştiyse iptal
-      try{
-        const retryRes=await fetchWT(`https://lichess.org/api/user/${username}`,{},10000);
-        if(retryRes.ok){
-          // Yeniden deneme başarılı — loadOneStudent'ı tekrar çağır ama retry flag'i ile
-          APP.liveData[username]={retried:true,displayName:username};
-          await loadOneStudent(username,myId);
-          return;
-        }
-      }catch(e2){ console.warn(`[${username}] yeniden deneme de başarısız:`,e2.message); }
-      APP.liveData[username]={error:true,displayName:username};
-    } else {
-      APP.liveData[username]={error:true,displayName:username};
+  const ratings={}, ratingRows=[], perf=user.perfs||{};
+  for(const k of ['bullet','blitz','rapid','classical']){
+    if(perf[k]&&perf[k].games>0){
+      ratings[k]={int:perf[k].rating,prog:perf[k].prog||0};
+      ratingRows.push({platform:'L', key:k, label:k==='bullet'?'BLT':k==='blitz'?'BLZ':k==='rapid'?'RPD':'CLS', int:perf[k].rating, prog:perf[k].prog||0});
     }
   }
+  const puzzleRating=perf.puzzle?perf.puzzle.rating:null;
+  let puzzlesSolved=0;
+  try{
+    puzzlesSolved = await fetchAndParseActivity(account, logKey);
+  }catch(e){ console.warn(`[${account}] aktivite:`,e.message); }
+
+  return {
+    source:'lichess',
+    displayName:user.username,
+    title:user.title||'',
+    online,
+    ratings,
+    ratingRows,
+    wins, losses, draws,
+    puzzlesSolved,
+    puzzleRating,
+    recentGames: recent.map(g => ({...g, platform:'L'})),
+    topOpenings
+  };
+}
+
+function chessComResult(result){
+  if(result === 'win') return 'win';
+  if(['agreed','repetition','stalemate','insufficient','50move','timevsinsufficient'].includes(result)) return 'draw';
+  return 'loss';
+}
+
+async function fetchChessComMonth(username, date){
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth()+1).padStart(2,'0');
+  const res = await fetchWT(`https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/${y}/${m}`, {}, 15000);
+  if(!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data.games) ? data.games : [];
+}
+
+async function loadChessComStudent(account, logKey, myId){
+  const profileRes = await fetchWT(`https://api.chess.com/pub/player/${encodeURIComponent(account)}`, {}, 12000);
+  if(!profileRes.ok) throw new Error('chesscom_not_found');
+  const profile = await profileRes.json();
+  if(myId&&myId!==APP.refreshId) return null;
+
+  let stats = {};
+  try{
+    const statsRes = await fetchWT(`https://api.chess.com/pub/player/${encodeURIComponent(account)}/stats`, {}, 12000);
+    if(statsRes.ok) stats = await statsRes.json();
+  }catch(e){ console.warn(`[${account}] chess.com stats:`, e.message); }
+
+  const ratingRows = [];
+  const ratingMap = [
+    ['chess_bullet','bullet','BLT'],
+    ['chess_blitz','blitz','BLZ'],
+    ['chess_rapid','rapid','RPD'],
+    ['chess_daily','classical','DLY']
+  ];
+  const ratings = {};
+  for(const [apiKey,key,label] of ratingMap){
+    const last = stats[apiKey]?.last;
+    if(last?.rating){
+      ratings[key] = { int:last.rating, prog:0 };
+      ratingRows.push({platform:'C', key, label, int:last.rating, prog:0});
+    }
+  }
+
+  const today = todayStr();
+  const todayMidnight = Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  const monthNow = new Date();
+  const monthPrev = new Date(Date.UTC(monthNow.getUTCFullYear(), monthNow.getUTCMonth()-1, 1));
+  const games = [...await fetchChessComMonth(account, monthNow), ...await fetchChessComMonth(account, monthPrev)];
+  if(myId&&myId!==APP.refreshId) return null;
+
+  const chessDayCounts = {};
+  let wins=0, losses=0, draws=0;
+  const recentGames = [];
+
+  for(const g of games){
+    if(g.rules && g.rules !== 'chess') continue;
+    if(!APP.crit.countBullet && g.time_class === 'bullet') continue;
+    const endMs = (g.end_time || 0) * 1000;
+    if(!endMs) continue;
+    const d = new Date(endMs);
+    const dk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const diff = daysBetween(today, dk);
+    if(diff < 0 || diff > 14) continue;
+    const isWhite = String(g.white?.username || '').toLowerCase() === account;
+    const me = isWhite ? g.white : g.black;
+    const opp = isWhite ? g.black : g.white;
+    const result = chessComResult(me?.result || '');
+    if(!chessDayCounts[dk]) chessDayCounts[dk] = {games:0,wins:0};
+    chessDayCounts[dk].games += 1;
+    if(result==='win') chessDayCounts[dk].wins += 1;
+    if(dk === today){
+      if(result==='win') wins++;
+      else if(result==='draw') draws++;
+      else losses++;
+      recentGames.push({result, opponent: opp?.username || 'Anonim', speed:g.time_class || '', time:fmtTime(d), platform:'C'});
+    }
+  }
+
+  if(!APP.actLog[logKey]) APP.actLog[logKey] = {};
+  for(let di=0; di<=14; di++){
+    const dk = dateStr(-di);
+    const prev = APP.actLog[logKey][dk] || {games:0,puzzles:0,wins:0};
+    const cc = chessDayCounts[dk] || {games:0,wins:0};
+    APP.actLog[logKey][dk] = {
+      ...prev,
+      cGames: cc.games||0,
+      cWins: cc.wins||0,
+      games: (prev.lGames||0) + (cc.games||0),
+      puzzles: prev.puzzles||0,
+      wins: (prev.lWins||0) + (cc.wins||0)
+    };
+  }
+
+  const tactics = stats.tactics?.highest?.rating || stats.tactics?.last?.rating || null;
+  return {
+    source:'chesscom',
+    displayName:profile.username || account,
+    title:'',
+    online:false,
+    ratings,
+    ratingRows,
+    wins, losses, draws,
+    puzzlesSolved:0,
+    puzzleRating:tactics,
+    recentGames,
+    topOpenings:null
+  };
+}
+
+function mergeLiveSources(student, sources){
+  const valid = sources.filter(Boolean);
+  const ratings = {};
+  const ratingRows = [];
+  let wins=0, losses=0, draws=0, puzzlesSolved=0, puzzleRating=null, online=false;
+  let title = '', displayName = student.n || valid[0]?.displayName || student.lichess || student.chesscom || 'Sporcu';
+  const recentGames = [];
+  let topOpenings = null;
+
+  for(const s of valid){
+    wins += s.wins||0; losses += s.losses||0; draws += s.draws||0;
+    puzzlesSolved += s.puzzlesSolved||0;
+    if(s.puzzleRating && !puzzleRating) puzzleRating = s.puzzleRating;
+    if(s.online) online = true;
+    if(s.title) title = s.title;
+    Object.assign(ratings, s.ratings || {});
+    ratingRows.push(...(s.ratingRows || []));
+    recentGames.push(...(s.recentGames || []));
+    if(s.topOpenings && !topOpenings) topOpenings = s.topOpenings;
+  }
+
+  return {
+    displayName, title, online, ratings, ratingRows,
+    wins, losses, draws, puzzlesSolved, puzzleRating,
+    recentGames: recentGames.slice(0,8),
+    topOpenings,
+    manual: valid.length === 0,
+    platforms: { lichess: student.lichess || '', chesscom: student.chesscom || '' },
+    loadedAt: Date.now()
+  };
+}
+
+async function loadOneStudent(studentId,myId){
+  const student = findStudent(studentId) || normalizeStudentRecord({ id: studentId, lichess: studentId });
+  if(!student) return;
+  const sources = [];
+  try{
+    if(student.lichess) sources.push(await loadLichessStudent(student.lichess, student.u, myId));
+  }catch(err){ console.warn(`[${student.u}] Lichess (${student.lichess}):`, err.message); }
+  try{
+    if(student.chesscom) sources.push(await loadChessComStudent(student.chesscom, student.u, myId));
+  }catch(err){ console.warn(`[${student.u}] Chess.com (${student.chesscom}):`, err.message); }
+  if(myId&&myId!==APP.refreshId) return;
+
+  const merged = mergeLiveSources(student, sources);
+  if((student.lichess || student.chesscom) && sources.filter(Boolean).length === 0){
+    APP.liveData[student.u] = { ...merged, error:true };
+    return;
+  }
+  APP.liveData[student.u] = merged;
+  logActivity(student.u, merged.wins+merged.losses+merged.draws, merged.puzzlesSolved, merged.wins);
 }
 
 async function refreshAllStudentsInBackground(force=false){
@@ -1282,7 +1505,7 @@ function renderGrid(){
     return;
   }
   const students=getStudents();
-  if(students.length===0){ grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan lichess kullanıcı adı ekle.</p></div>'; return; }
+  if(students.length===0){ grid.innerHTML='<div class="empty"><div class="ei">♟</div><h3>Henüz öğrenci yok</h3><p>Yukarıdan sporcu adı veya platform kullanıcı adı ekle.</p></div>'; return; }
   const allLoaded=students.every(u=>APP.liveData[u]);
   const sorted=allLoaded?[...students].sort((a,b)=>scoreForSort(b)-scoreForSort(a)):[...students];
   const rankMap=Object.fromEntries(sorted.map((u,i)=>[u,i+1]));
@@ -1494,16 +1717,21 @@ function skeletonCard(u){
 function buildCard(username,d,rank){
   // Hata durumunda minimal kart göster
   if(d.error){
+    const profileUrl = getStudentProfileUrl(username);
+    const nameHtml = profileUrl
+      ? `<a href="${profileUrl}" target="_blank" class="s-name">${escHtml(getStudentDisplayName(username))}</a>`
+      : `<span class="s-name">${escHtml(getStudentDisplayName(username))}</span>`;
     return `<div class="s-card faded" data-user="${escHtml(username)}">
       <div class="card-head">
         <div class="card-top">
           <div class="s-info">
             <div class="avatar">${escHtml(username[0].toUpperCase())}</div>
             <div>
-              <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(getStudentDisplayName(username))}</a>
+              ${nameHtml}
             <div class="s-sub" style="color:var(--loss)">⚠ Yüklenemedi
               <button onclick="retryStudent('${escHtml(username)}')" style="margin-left:6px;background:rgba(224,90,90,.15);border:1px solid rgba(224,90,90,.3);color:var(--loss);border-radius:4px;padding:1px 8px;cursor:pointer;font-family:inherit;font-size:9px">↺ Tekrar Dene</button>
             </div>
+            <div class="platform-tags">${studentPlatformHtml(username)}</div>
             </div>
           </div>
           <div class="card-actions">
@@ -1521,10 +1749,12 @@ function buildCard(username,d,rank){
   const pSt=periodStats(username,APP.scorePeriod||'week');
   const crown=rank===1?'👑':rank===2?'🥈':rank===3?'🥉':'';
   const cardCls=rank===1?'t1':rank===2?'t2':rank===3?'t3':'';
-  const rHTML=['bullet','blitz','rapid','classical'].map(k=>{
-    const r=d.ratings?.[k]; if(!r) return '';
+  const ratingRows = Array.isArray(d.ratingRows) && d.ratingRows.length
+    ? d.ratingRows
+    : ['bullet','blitz','rapid','classical'].map(k => d.ratings?.[k] ? {platform:'L',label:k==='bullet'?'BLT':k==='blitz'?'BLZ':k==='rapid'?'RPD':'CLS',...d.ratings[k]} : null).filter(Boolean);
+  const rHTML=ratingRows.slice(0,5).map(r=>{
     const dif=r.prog||0,cc=dif>0?'up':dif<0?'dn':'eq',ct=dif>0?`▲${dif}`:dif<0?`▼${Math.abs(dif)}`:'—';
-    return `<div class="r-item"><div class="r-type">${k==='bullet'?'BLT':k==='blitz'?'BLZ':k==='rapid'?'RPD':'CLS'}</div><div class="r-val">${r.int}</div><div class="r-chg ${cc}">${ct}</div></div>`;
+    return `<div class="r-item" title="${r.platform==='C'?'Chess.com':'Lichess'} ${escHtml(r.label)}"><div class="r-type">${escHtml(r.platform||'')} ${escHtml(r.label)}</div><div class="r-val">${r.int}</div><div class="r-chg ${cc}">${ct}</div></div>`;
   }).join('');
   const ukd = getStudentUkd(username);
    let ukdDiffHTML = '<div class="r-chg eq">—</div>';
@@ -1568,15 +1798,20 @@ function buildCard(username,d,rank){
   const levelInfo = getStudentLevelInfo(username);
   const levelTag = `<div class="level-tag lvl-${levelSlug(levelInfo.level)}" title="${escHtml(levelInfo.group || levelInfo.level)}"><span class="level-piece">${levelPiece(levelInfo.level)}</span></div>`;
   const levelAndBadges = levelTag + bdgHtml;
+  const profileUrl = getStudentProfileUrl(username);
+  const nameHtml = profileUrl
+    ? `<a href="${profileUrl}" target="_blank" class="s-name">${escHtml(getStudentDisplayName(username))}</a>`
+    : `<span class="s-name">${escHtml(getStudentDisplayName(username))}</span>`;
   return `<div class="s-card ${cardCls} ${total===0?'faded':''}" data-user="${escHtml(username)}">
     <div class="card-head">
       <div class="card-top">
         <div class="s-info">
           <div class="avatar">${escHtml(username[0].toUpperCase())}${crown?`<span class="rank-crown">${crown}</span>`:''}</div>
           <div>
-            <a href="https://lichess.org/@/${encodeURIComponent(username)}" target="_blank" class="s-name">${escHtml(getStudentDisplayName(username))}</a>
+            ${nameHtml}
             <div class="s-sub">${d.title?`<b style="color:var(--accent)">[${escHtml(d.title)}]</b> · `:''}${d.online?'Çevrimiçi':'Çevrimdışı'}
               <div class="day-tag">🎯 ${APP.scorePeriod==='week'?'Haftalık':'14 Günlük'}: ${pSt.totalGames} maç</div><div class="score-tag">⭐ ${score} puan</div>
+              <div class="platform-tags">${studentPlatformHtml(username)}</div>
             </div>
           </div>
         </div>
@@ -2364,7 +2599,7 @@ window.openStudentListModal = () => {
       const sObj = normalizeStudentRecord(s);
       allStudents.push({
         groupName: g.name,
-        username: sObj.u,
+        username: [sObj.lichess ? `Lichess: ${sObj.lichess}` : '', sObj.chesscom ? `Chess.com: ${sObj.chesscom}` : ''].filter(Boolean).join(' / ') || 'Manuel',
         realName: sObj.n || (APP.liveData[sObj.u]?.displayName || sObj.u),
         ukd: sObj.ukd || '—',
         lic: sObj.lic || '—'
@@ -2393,7 +2628,7 @@ window.openStudentListModal = () => {
 
 window.copyStudentList = () => {
   const table = document.getElementById('allStudentTable');
-  let text = "Grup\tAd Soyad\tLichess Adı\tUKD\tLisans No\n";
+  let text = "Grup\tAd Soyad\tHesaplar\tUKD\tLisans No\n";
   const rows = table.querySelectorAll('tbody tr');
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
